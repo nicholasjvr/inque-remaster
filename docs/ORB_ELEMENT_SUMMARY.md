@@ -1,0 +1,3 @@
+# ORB Component Summary
+
+The Orb anchors the inQ Social hero as a luminous 3D center that merges navigation, feedback, and future chat entry. Our Next.js build injects it into `#orb-container`, keeps the sphere fixed in the title block, and drives a Saturn ring of nav items that scroll/drag, snap to lock points, and mirror the active icon/label inside the orb. Pointer tilt, animated rings, optional Three.js glow, and tooltip/star pings deliver motion and context, while Enter or click activates the focused route. Messaging drawers and badges are scaffolded for the upcoming chat system integration.
