@@ -1,6 +1,12 @@
+'use client';
+
 import FloatingOrb from './components/FloatingOrb';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 export default function Home() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-16 px-6 py-24 sm:px-10">
@@ -15,6 +21,20 @@ export default function Home() {
         </header>
 
         <FloatingOrb />
+
+        {/* Quick Access to Widget Studio */}
+        <div className="quick-access">
+          <Link 
+            href="/studio" 
+            className="studio-link"
+          >
+            <span className="studio-icon">🎨</span>
+            <span className="studio-text">
+              {user ? 'Open Widget Studio' : 'Sign in to access Widget Studio'}
+            </span>
+            <span className="studio-arrow">→</span>
+          </Link>
+        </div>
 
         <section className="grid gap-4 text-center text-sm uppercase tracking-[0.32em] text-[#6cdfff]">
           <p>scroll or drag to rotate • release to snap</p>

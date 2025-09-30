@@ -4,6 +4,8 @@ import "./globals.css";
 import "./floating-orb.css";
 import "./profile-hub.css";
 import ProfileHub from "./components/ProfileHub";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ClientOnly from "@/components/ClientOnly";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +31,16 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
       >
-        <ProfileHub />
-        {children}
+        <AuthProvider>
+          <ClientOnly>
+            <div className="profile-hub-container">
+              <ProfileHub />
+            </div>
+          </ClientOnly>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

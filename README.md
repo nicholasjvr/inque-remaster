@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Inque - Creatives Platform
 
-## Getting Started
+A Next.js application with Firebase integration for showcasing and managing interactive widgets.
 
-First, run the development server:
+## Features
+
+- 🎨 **Widget Studio**: Create, upload, and manage interactive widgets
+- 🔐 **Firebase Authentication**: Secure user authentication with Google Sign-in
+- 📊 **Real-time Database**: Firestore for storing widget data
+- 📁 **File Storage**: Firebase Storage for widget files
+- 🎯 **Responsive Design**: Mobile-first design with floating orb navigation
+
+## Setup
+
+### 1. Environment Variables
+
+Create a `.env.local` file in the root directory with your Firebase configuration:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBIZcD-L5jD84hEYLxWOwHTE2iTY6EJ0zI
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=inque-31cb5.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://inque-31cb5-default-rtdb.firebaseio.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=inque-31cb5
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=inque-31cb5.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=338722493567
+NEXT_PUBLIC_FIREBASE_APP_ID=1:338722493567:web:4c46ecdfe92ddf2a5d5b4a
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-KQT58LWVSK
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Firebase Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application uses the following Firebase services:
 
-## Learn More
+- **Authentication**: User sign-in/sign-up with email/password and Google
+- **Firestore**: Real-time database for widget data
+- **Storage**: File storage for widget assets
+- **Analytics**: Usage tracking (client-side only)
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/
+├── components/          # React components
+│   ├── WidgetStudio.tsx # Main studio component
+│   ├── WidgetCarousel.tsx # Widget carousel
+│   ├── WidgetCard.tsx   # Individual widget cards
+│   └── UploadWorkspace.tsx # File upload interface
+├── studio/             # Studio page
+├── globals.css         # Global styles
+└── widget-studio.css   # Studio-specific styles
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+lib/
+└── firebase.ts         # Firebase configuration
 
-## Deploy on Vercel
+contexts/
+└── AuthContext.tsx     # Authentication context
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+hooks/
+├── useFirestore.ts     # Firestore data hooks
+└── useStorage.ts       # Storage upload hooks
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Widget Studio Features
+
+### Carousel
+
+- Horizontal scrollable widget timeline
+- Real-time widget previews in iframes
+- Keyboard navigation support
+- Empty slot management
+
+### Upload Workspace
+
+- Drag-and-drop file uploads
+- File validation (HTML, CSS, JS, images)
+- Multiple file support
+- Real-time upload progress
+
+### Authentication
+
+- Email/password authentication
+- Google Sign-in integration
+- User profile management
+- Protected routes
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy automatically on push
+
+### Firebase Hosting
+
+```bash
+npm run build
+npm install -g firebase-tools
+firebase login
+firebase init hosting
+firebase deploy
+```
+
+## Development
+
+### Adding New Features
+
+1. Create components in `app/components/`
+2. Add Firebase hooks in `hooks/`
+3. Update styles in CSS files
+4. Test with Firebase emulators
+
+### Firebase Emulators
+
+```bash
+npm install -g firebase-tools
+firebase emulators:start
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details.

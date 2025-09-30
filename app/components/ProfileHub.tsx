@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 import '../profile-hub.css';
 
@@ -78,12 +79,38 @@ const persistPreferences = (prefs: StoredPreferences) => {
 };
 
 const ProfileHub = () => {
+  const { user, logout } = useAuth();
   const [state, setState] = useState<HubState>('minimized');
   const [theme, setTheme] = useState<HubTheme>(() => loadPreferences().theme);
   const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_MESSAGE]);
   const [messageDraft, setMessageDraft] = useState('');
   const isExpanded = state === 'expanded';
   const isChatbot = state === 'chatbot';
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setState('minimized');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  // Rep Rack functionality
+  const handleUploadProject = () => {
+    // TODO: Implement project upload modal
+    console.log('Upload new project');
+  };
+
+  const handleSelectFromExisting = () => {
+    // TODO: Implement project selection modal
+    console.log('Select from existing projects');
+  };
+
+  const handleRepRackAction = (action: string, slotIndex: number) => {
+    console.log(`Rep Rack action: ${action} on slot ${slotIndex}`);
+    // TODO: Implement like, share, view, remove actions
+  };
 
   useEffect(() => {
     persistPreferences({ theme, scale: 1 });
@@ -153,15 +180,27 @@ const ProfileHub = () => {
           <div className="hub-core">
             <div className="hub-user-section">
               <div className="hub-avatar" aria-hidden="true">
-                <span role="img" aria-label="Guest avatar">
-                  👤
-                </span>
+                {user?.photoURL ? (
+                  <img 
+                    src={user.photoURL} 
+                    alt="User Avatar" 
+                    className="hub-user-photo"
+                  />
+                ) : (
+                  <span role="img" aria-label="User avatar">
+                    {user?.email?.charAt(0).toUpperCase() || '👤'}
+                  </span>
+                )}
               </div>
               <div className="hub-user-info">
-                <span className="hub-user-name">Guest</span>
+                <span className="hub-user-name">
+                  {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                </span>
                 <span className="hub-user-status">Customize your profile hub</span>
                 <span className="hub-user-level">LVL • ?</span>
               </div>
+            </div>
+              <div className="quick-nav-buttons">
             </div>
 
             <div className="hub-controls">
@@ -196,6 +235,39 @@ const ProfileHub = () => {
 
           {isExpanded && (
             <div className="hub-expanded-content">
+              <div className="hub-expanded-nav">
+                <div className="expanded-nav-title">Quick Navigation</div>
+                <div className="expanded-nav-buttons">
+                  <a 
+                    href="/explore"
+                    className="expanded-nav-btn"
+                    title="Explore Projects"
+                  >
+                    <span className="nav-icon">🔍</span>
+                    <span className="nav-label">Explore</span>
+                    <span className="nav-desc">Discover projects</span>
+                  </a>
+                  <a 
+                    href="/users"
+                    className="expanded-nav-btn"
+                    title="Browse Creators"
+                  >
+                    <span className="nav-icon">👥</span>
+                    <span className="nav-label">Creators</span>
+                    <span className="nav-desc">Find creators</span>
+                  </a>
+                  <a 
+                    href="/showcase"
+                    className="expanded-nav-btn"
+                    title="View Showcase"
+                  >
+                    <span className="nav-icon">🏆</span>
+                    <span className="nav-label">Showcase</span>
+                    <span className="nav-desc">Top projects</span>
+                  </a>
+                </div>
+              </div>
+
               <section className="hub-section" aria-labelledby="hub-stats-title">
                 <h3 id="hub-stats-title">Stats</h3>
                 <div className="hub-stats">
@@ -211,6 +283,82 @@ const ProfileHub = () => {
                     <div className="hub-stat-value">0</div>
                     <div className="hub-stat-label">Views</div>
                   </div>
+                </div>
+              </section>
+
+              <section className="hub-section" aria-labelledby="hub-rep-rack-title">
+                <h3 id="hub-rep-rack-title">Rep Rack</h3>
+                <p className="hub-section-description">Showcase your best creative projects to gain followers and engagement</p>
+                <div className="rep-rack-grid">
+                  {Array.from({ length: 9 }, (_, index) => (
+                    <div key={index} className="rep-rack-slot" data-slot-index={index}>
+                      <div className="rep-rack-slot-content">
+                        <div className="rep-rack-slot-placeholder">
+                          <span className="rep-rack-slot-icon">+</span>
+                          <span className="rep-rack-slot-text">Add Project</span>
+                        </div>
+                        <div className="rep-rack-slot-project" style={{ display: 'none' }}>
+                          <div className="rep-rack-project-preview">
+                            <img src="" alt="Project Preview" className="rep-rack-project-image" />
+                          </div>
+                          <div className="rep-rack-project-info">
+                            <h4 className="rep-rack-project-title"></h4>
+                            <div className="rep-rack-project-stats">
+                              <span className="rep-rack-stat likes">0 ❤️</span>
+                              <span className="rep-rack-stat shares">0 🔗</span>
+                              <span className="rep-rack-stat views">0 👁️</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rep-rack-slot-overlay">
+                        <div className="rep-rack-slot-actions">
+                          <button 
+                            className="rep-rack-action-btn" 
+                            title="Like" 
+                            data-action="like"
+                            onClick={() => handleRepRackAction('like', index)}
+                          >
+                            <span>❤️</span>
+                          </button>
+                          <button 
+                            className="rep-rack-action-btn" 
+                            title="Share" 
+                            data-action="share"
+                            onClick={() => handleRepRackAction('share', index)}
+                          >
+                            <span>🔗</span>
+                          </button>
+                          <button 
+                            className="rep-rack-action-btn" 
+                            title="View" 
+                            data-action="view"
+                            onClick={() => handleRepRackAction('view', index)}
+                          >
+                            <span>👁️</span>
+                          </button>
+                          <button 
+                            className="rep-rack-action-btn" 
+                            title="Remove" 
+                            data-action="remove"
+                            onClick={() => handleRepRackAction('remove', index)}
+                          >
+                            <span>🗑️</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="rep-rack-actions">
+                  <button className="rep-rack-upload-btn" onClick={handleUploadProject}>
+                    <span>📤</span>
+                    Upload New Project
+                  </button>
+                  <button className="rep-rack-select-btn" onClick={handleSelectFromExisting}>
+                    <span>📋</span>
+                    Select from Existing
+                  </button>
                 </div>
               </section>
 
@@ -250,20 +398,16 @@ const ProfileHub = () => {
                         </a>
                       ))}
                     </div>
-                  </div>
-
-                  <div className="customization-actions">
-                    <button type="button" className="primary" onClick={() => persistPreferences({ theme, scale: 1 })}>
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTheme('neo');
-                      }}
-                    >
-                      Reset
-                    </button>
+                    <div className="user-actions">
+                      <button 
+                        className="logout-button"
+                        onClick={handleLogout}
+                        title="Sign out"
+                      >
+                        <span>🚪</span>
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>
