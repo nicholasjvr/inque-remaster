@@ -17,14 +17,7 @@ A Next.js application with Firebase integration for showcasing and managing inte
 Create a `.env.local` file in the root directory with your Firebase configuration:
 
 ```env
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBIZcD-L5jD84hEYLxWOwHTE2iTY6EJ0zI
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=inque-31cb5.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://inque-31cb5-default-rtdb.firebaseio.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=inque-31cb5
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=inque-31cb5.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=338722493567
-NEXT_PUBLIC_FIREBASE_APP_ID=1:338722493567:web:4c46ecdfe92ddf2a5d5b4a
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-KQT58LWVSK
+
 ```
 
 ### 2. Install Dependencies
