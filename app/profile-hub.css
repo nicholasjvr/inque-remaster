@@ -5,6 +5,8 @@
     right: 20px;
     z-index: 1000;
     pointer-events: none;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .profile-hub-container>* {
@@ -35,18 +37,6 @@
     pointer-events: none;
 }
 
-.profile-hub-shell--expanded .profile-hub-wrapper {
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .profile-hub-shell {
     display: flex;
     gap: 20px;
@@ -58,29 +48,8 @@
     align-items: stretch;
 }
 
-.profile-hub-shell--expanded .profile-hub {
-    width: calc(100vw - 48px);
-    max-width: calc(100vw - 48px);
-    transition: width 0.3s ease, max-width 0.3s ease;
-    margin: 24px;
-    position: relative;
-    z-index: 1000;
-}
-
 .profile-hub-shell--expanded .hub-modules {
     display: none;
-}
-
-.profile-hub-shell--expanded .profile-hub {
-    width: calc(100vw - 48px);
-    max-width: calc(100vw - 48px);
-    transition: width 0.3s ease, max-width 0.3s ease;
-    margin: 24px;
-    position: relative;
-    z-index: 1000;
-    min-height: calc(100vh - 48px);
-    display: flex;
-    flex-direction: column;
 }
 
 .profile-hub {
@@ -97,15 +66,13 @@
     z-index: 950;
     transform-origin: top right;
     transform: scale(var(--hub-scale));
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    transition: min-height 0.3s ease, padding-bottom 0.3s ease;
-    animation: hub-slide-in 0.3s ease;
+    transition: none;
 }
 
 .profile-hub[data-state="minimized"] {
     min-height: var(--hub-core-height);
     padding-bottom: 0;
-    animation: hub-slide-out 0.3s ease;
+    animation: none;
 }
 
 .profile-hub[data-state="minimized"] .hub-core {
@@ -182,12 +149,12 @@
 .profile-hub[data-state="minimized"] .hub-chatbot,
 .profile-hub[data-state="minimized"] .hub-customization-panel {
     display: none;
-    animation: hub-fade-out 0.2s ease;
+    animation: none;
 }
 
 .profile-hub[data-state="minimized"]+.hub-modules {
     display: none;
-    animation: hub-slide-out 0.2s ease;
+    animation: none;
 }
 
 .profile-hub[data-theme="minimal"] {
@@ -226,6 +193,15 @@
     min-height: 112px;
 }
 
+/* keep header visible when the expanded modal scrolls */
+.profile-hub-shell--expanded .hub-core {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
 .hub-user-section {
     display: flex;
     gap: 16px;
@@ -256,7 +232,7 @@
     inset: 0;
     background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.16) 50%, transparent 100%);
     transform: translateX(-100%);
-    animation: avatar-shine 4s infinite;
+    animation: none;
 }
 
 @keyframes avatar-shine {
@@ -352,67 +328,6 @@
 
 .profile-hub[data-state="expanded"] .hub-toggle span {
     transform: rotate(90deg);
-}
-
-.profile-hub-shell--expanded .hub-expanded-content {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    padding: 24px 32px 32px;
-    border-top: 1px solid var(--hub-border-color);
-    animation: hub-fade-in 0.4s ease;
-}
-
-.profile-hub-shell--expanded .hub-section {
-    min-height: 300px;
-    padding: 24px 20px 28px;
-}
-
-.profile-hub-shell--expanded .hub-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
-    margin-top: 16px;
-}
-
-.profile-hub-shell--expanded .hub-stat-card {
-    padding: 20px 16px 24px;
-    border-radius: 16px;
-}
-
-.profile-hub-shell--expanded .hub-stat-value {
-    font-size: 1.4rem;
-    margin-bottom: 8px;
-}
-
-.profile-hub-shell--expanded .rep-rack-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-top: 20px;
-}
-
-.profile-hub-shell--expanded .rep-rack-slot {
-    border-radius: 16px;
-    border-width: 2px;
-}
-
-.profile-hub-shell--expanded .rep-rack-slot:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 240, 255, 0.2);
-}
-
-.profile-hub-shell--expanded .rep-rack-slot-icon {
-    font-size: 2rem;
-}
-
-.profile-hub-shell--expanded .rep-rack-slot-text {
-    font-size: 0.8rem;
-}
-
-.profile-hub-shell--expanded .rep-rack-action-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 0.9rem;
 }
 
 /* Expanded Quick Navigation */
@@ -534,7 +449,7 @@
     padding: 18px 20px 22px;
     display: grid;
     gap: 20px;
-    animation: hub-fade-in 0.24s ease;
+    animation: none;
 }
 
 .hub-modules {
@@ -543,7 +458,7 @@
     width: min(var(--hub-module-width), calc(100vw - (2 * var(--hub-gap))));
     min-width: clamp(300px, 26vw, 380px);
     pointer-events: auto;
-    animation: hub-slide-in 0.3s ease 0.1s both;
+    animation: none;
 }
 
 @keyframes hub-fade-in {
@@ -594,12 +509,38 @@
     }
 }
 
+/* Rep Rack Section Specific Styling */
+.hub-section--rep-rack {
+    background: var(--hub-bg-secondary);
+    border-radius: 14px;
+    padding: 16px 14px 18px;
+    border: 1px solid rgba(0, 240, 255, 0.08);
+    min-height: auto;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.profile-hub-shell--expanded .hub-section--rep-rack {
+    background: rgba(0, 240, 255, 0.05);
+    border: 1px solid rgba(0, 240, 255, 0.15);
+    border-radius: 16px;
+    padding: 24px;
+    height: auto;
+    min-height: auto;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    flex: 1;
+}
+
 .hub-section {
     background: var(--hub-bg-secondary);
     border-radius: 14px;
     padding: 16px 14px 18px;
     border: 1px solid rgba(0, 240, 255, 0.08);
-    min-height: 210px;
+    min-height: auto;
+    height: auto;
     display: flex;
     flex-direction: column;
 }
@@ -732,7 +673,7 @@
     padding: 18px 20px;
     display: grid;
     gap: 14px;
-    animation: hub-fade-in 0.3s ease;
+    animation: none;
 }
 
 .hub-chat-header {
@@ -747,7 +688,8 @@
     background: var(--hub-bg-secondary);
     border-radius: 12px;
     border: 1px solid rgba(0, 240, 255, 0.1);
-    max-height: 220px;
+    /* allow content to grow */
+    max-height: none;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -836,6 +778,16 @@
     flex: 1 1 auto;
 }
 
+.range-field {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--hub-text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
 .theme-options {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -849,13 +801,23 @@
     background: rgba(255, 255, 255, 0.02);
     color: var(--hub-text-primary);
     font-size: 0.78rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: border-color 0.18s ease, transform 0.18s ease;
+    transition: all 0.2s ease;
+    text-transform: capitalize;
+}
+
+.theme-button:hover {
+    border-color: rgba(0, 240, 255, 0.3);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .theme-button.active {
     border-color: var(--hub-primary);
-    transform: translateY(-2px);
+    background: rgba(0, 240, 255, 0.1);
+    color: var(--hub-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 240, 255, 0.2);
 }
 
 .social-links {
@@ -876,11 +838,6 @@
     text-decoration: none;
     font-size: 0.88rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.social-pill:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 240, 255, 0.32);
 }
 
 .customization-actions {
@@ -941,7 +898,7 @@
         radial-gradient(2px 2px at 160px 30px, rgba(0, 240, 255, 0.2), transparent);
     background-repeat: repeat;
     background-size: 200px 100px;
-    animation: particles-float 20s linear infinite;
+    animation: none;
     pointer-events: none;
 }
 
@@ -994,13 +951,20 @@
 
     .profile-hub-shell--expanded .hub-expanded-content {
         grid-template-columns: 1fr;
-        gap: 16px;
-        padding: 16px 20px 24px;
+        gap: 14px;
+        padding: 16px 20px 20px;
+        overflow: visible;
     }
 
     .profile-hub-shell--expanded .hub-section {
-        min-height: 250px;
+        min-height: auto;
+        height: auto;
         padding: 16px 16px 20px;
+    }
+
+    .profile-hub-shell--expanded .hub-section--rep-rack {
+        padding: 20px;
+        flex: 1;
     }
 
     /* Tablet Expanded Navigation */
@@ -1028,7 +992,18 @@
     /* Tablet Rep Rack adjustments */
     .rep-rack-grid {
         grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
+        gap: 8px;
+        min-height: 200px;
+    }
+
+    /* Tablet Theme adjustments */
+    .theme-options {
+        gap: 6px;
+    }
+
+    .theme-button {
+        padding: 8px 0;
+        font-size: 0.72rem;
     }
 
     .rep-rack-slot {
@@ -1136,39 +1111,33 @@
 
 @media (max-width: 480px) {
     .profile-hub-wrapper {
-        top: auto;
-        bottom: 18px;
-        right: 18px;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        bottom: auto;
+        width: calc(100vw - 24px);
+        position: fixed;
+        z-index: 1000;
     }
 
-    .profile-hub-shell--expanded .profile-hub-wrapper {
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .profile-hub-shell--expanded .profile-hub {
-        width: calc(100vw - 16px);
-        max-width: calc(100vw - 16px);
-        margin: 8px;
-        min-height: calc(100vh - 16px);
-    }
+    /* Mobile modal styles handled by main modal CSS */
 
     .profile-hub-shell--expanded .hub-expanded-content {
         grid-template-columns: 1fr;
-        gap: 12px;
-        padding: 12px 16px 20px;
+        gap: 10px;
+        padding: 12px 16px 16px;
+        overflow: visible;
     }
 
     .profile-hub-shell--expanded .hub-section {
-        min-height: 200px;
+        min-height: auto;
+        height: auto;
         padding: 12px 12px 16px;
+    }
+
+    .profile-hub-shell--expanded .hub-section--rep-rack {
+        padding: 16px;
+        flex: 1;
     }
 
     /* Mobile Expanded Navigation */
@@ -1200,8 +1169,24 @@
 
     /* Mobile Rep Rack adjustments */
     .rep-rack-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        min-height: 180px;
+    }
+
+    /* Mobile Theme adjustments */
+    .theme-options {
+        gap: 4px;
+    }
+
+    .theme-button {
+        padding: 6px 0;
+        font-size: 0.68rem;
+    }
+
+    .range-field {
+        font-size: 0.7rem;
+        margin-bottom: 6px;
     }
 
     .rep-rack-slot {
@@ -1259,20 +1244,123 @@
     }
 
     .profile-hub {
-        width: calc(100vw - 36px);
-        min-width: 280px;
+        width: 100%;
+        min-width: auto;
+        max-width: none;
+        border-radius: 16px;
+        box-shadow:
+            0 8px 32px rgba(0, 240, 255, 0.15),
+            0 0 0 1px rgba(0, 240, 255, 0.1);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
     }
 
     .profile-hub-overlay {
-        top: auto;
-        bottom: 18px;
-        right: 18px;
-        width: calc(100vw - 36px);
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
     }
 
     .hub-modules {
         width: 100%;
         min-width: 280px;
+    }
+
+    /* Mobile Header Floating Island Styling */
+    .profile-hub[data-state="minimized"] {
+        background: linear-gradient(135deg,
+                rgba(6, 10, 18, 0.95) 0%,
+                rgba(13, 20, 32, 0.92) 50%,
+                rgba(6, 10, 18, 0.95) 100%);
+        border: 2px solid rgba(0, 240, 255, 0.2);
+        box-shadow:
+            0 12px 40px rgba(0, 240, 255, 0.2),
+            0 0 0 1px rgba(0, 240, 255, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    /* Mobile Header Core Styling */
+    .hub-core {
+        padding: 16px 20px;
+        min-height: 80px;
+        border-radius: 14px;
+        background: linear-gradient(140deg,
+                rgba(0, 240, 255, 0.1),
+                rgba(0, 240, 255, 0.02));
+        box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.08);
+    }
+
+    /* Mobile Header User Section */
+    .hub-user-section {
+        gap: 14px;
+        padding: 4px 0;
+        min-width: 120px;
+    }
+
+    .hub-avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 1rem;
+        border: 2px solid rgba(0, 240, 255, 0.4);
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+    }
+
+    .hub-user-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--hub-text-primary);
+    }
+
+    .hub-user-status {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+
+    .hub-user-level {
+        font-size: 0.65rem;
+    }
+
+    /* Mobile Header Controls */
+    .hub-controls {
+        gap: 10px;
+    }
+
+    .hub-button,
+    .hub-toggle {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 240, 255, 0.3);
+        background: rgba(13, 20, 32, 0.8);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .hub-button:hover,
+    .hub-toggle:hover {
+        background: rgba(0, 240, 255, 0.2);
+        border-color: rgba(0, 240, 255, 0.6);
+        box-shadow: 0 4px 16px rgba(0, 240, 255, 0.3);
+    }
+
+    /* Mobile Header Animation */
+    .profile-hub[data-state="minimized"] {
+        animation: none;
+    }
+
+    @keyframes mobile-header-slide-in {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     /* Mobile-specific user section improvements */
@@ -1309,8 +1397,14 @@
 .rep-rack-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 16px;
+    gap: 10px;
+    margin-top: 12px;
+    min-height: 220px;
+}
+
+/* Modifier when showing favorites (exactly three slots) */
+.rep-rack-grid--favorites {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .rep-rack-slot {
@@ -1479,8 +1573,8 @@
 /* Rep Rack Action Buttons */
 .rep-rack-actions {
     display: flex;
-    gap: 12px;
-    margin-top: 16px;
+    gap: 10px;
+    margin-top: 12px;
     justify-content: center;
 }
 
@@ -1790,7 +1884,7 @@
     border: 3px solid var(--hub-border-color);
     border-top: 3px solid var(--hub-primary);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: none;
     margin-bottom: 1rem;
 }
 
@@ -1900,4 +1994,239 @@
 
 .logout-button:active {
     transform: translateY(0);
+}
+
+/* === MODULAR FLOATING SECTIONS === */
+
+/* Modular styles removed to prevent conflicts */
+
+/* Modular styles removed to prevent conflicts */
+
+/* All modular styles removed to prevent conflicts with centered modal */
+
+/* Centered Modal Layout - Optimized for performance */
+.profile-hub-shell--expanded .profile-hub-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    /* Performance optimizations */
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+.profile-hub-shell--expanded .profile-hub {
+    width: min(92vw, 1200px);
+    min-height: 70vh;
+    /* allow the whole modal to scroll on short viewports */
+    max-height: 90vh;
+    margin: 0;
+    position: relative;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg,
+            rgba(6, 10, 18, 0.98) 0%,
+            rgba(13, 20, 32, 0.95) 50%,
+            rgba(6, 10, 18, 0.98) 100%);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow:
+        0 20px 60px rgba(0, 240, 255, 0.2),
+        0 0 0 1px rgba(0, 240, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    /* visible by default since animations are disabled */
+    opacity: 1;
+    transform: none;
+    animation: none;
+    /* Performance optimizations */
+    will-change: transform, opacity;
+    transform-origin: center center;
+    backface-visibility: hidden;
+    /* enable vertical scroll when content exceeds available height */
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.profile-hub-shell--expanded .profile-hub::-webkit-scrollbar {
+    display: none;
+}
+
+.profile-hub-shell--expanded .profile-hub[data-closing="true"] {
+    animation: none;
+}
+
+/* Genie Modal Animation */
+@keyframes genie-modal-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.3) translateY(30px);
+    }
+
+    80% {
+        opacity: 0.95;
+        transform: scale(1.01) translateY(-1px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes genie-modal-out {
+    0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    80% {
+        opacity: 0.95;
+        transform: scale(0.99) translateY(0px);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.3) translateY(30px);
+    }
+}
+
+/* Modal Content Layout */
+.profile-hub-shell--expanded .hub-expanded-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(10px, 1.6vw, 18px);
+    padding: clamp(10px, 1.8vw, 20px);
+    overflow: visible;
+    min-height: 0;
+}
+
+/* Ensure no inner scrollbars are rendered inside the modal */
+.profile-hub-shell--expanded .hub-expanded-content,
+.profile-hub-shell--expanded .hub-section {
+    -ms-overflow-style: none;
+    /* IE/Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.profile-hub-shell--expanded .hub-expanded-content::-webkit-scrollbar,
+.profile-hub-shell--expanded .hub-section::-webkit-scrollbar {
+    display: none;
+    /* WebKit */
+}
+
+
+
+.profile-hub-shell--expanded .hub-expanded-nav {
+    grid-column: 1 / -1;
+    margin-bottom: 16px;
+}
+
+.profile-hub-shell--expanded .hub-section {
+    background: rgba(0, 240, 255, 0.05);
+    border: 1px solid rgba(0, 240, 255, 0.15);
+    border-radius: 14px;
+    padding: clamp(14px, 1.6vw, 18px);
+    height: auto;
+    min-height: auto;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.profile-hub-shell--expanded .hub-section h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--hub-text-primary);
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, var(--hub-primary), var(--hub-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Responsive adjustments for centered modal */
+@media (max-width: 1200px) {
+    .profile-hub-shell--expanded .profile-hub {
+        width: 95vw;
+        max-height: 92vh;
+    }
+
+    .profile-hub-shell--expanded .hub-expanded-content {
+        grid-template-columns: 1fr 1fr;
+        gap: clamp(12px, 2vw, 20px);
+        padding: clamp(12px, 2vw, 20px);
+        overflow: visible;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-hub-shell--expanded .profile-hub {
+        width: 98vw;
+        max-width: none;
+        min-height: 80vh;
+        max-height: 92vh;
+        border-radius: 16px;
+    }
+
+    .profile-hub-shell--expanded .hub-expanded-content {
+        grid-template-columns: 1fr;
+        gap: clamp(10px, 2.4vw, 16px);
+        padding: clamp(12px, 2.4vw, 16px);
+        overflow: visible;
+    }
+
+    .profile-hub-shell--expanded .hub-section {
+        padding: clamp(16px, 2.6vw, 20px);
+    }
+
+    .profile-hub-shell--expanded .hub-section--rep-rack {
+        padding: clamp(18px, 3vw, 24px);
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-hub-shell--expanded .profile-hub {
+        width: 100vw;
+        height: 100vh;
+        min-height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        border: none;
+    }
+
+    .profile-hub-shell--expanded .hub-expanded-content {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 12px;
+        overflow: visible;
+    }
+
+    .profile-hub-shell--expanded .hub-section {
+        padding: 14px;
+        border-radius: 12px;
+    }
+
+    .profile-hub-shell--expanded .hub-section--rep-rack {
+        padding: 16px;
+        flex: 1;
+    }
+
+    .profile-hub-shell--expanded .hub-section h3 {
+        font-size: 1rem;
+    }
 }

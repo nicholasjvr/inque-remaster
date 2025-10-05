@@ -81,6 +81,7 @@ const persistPreferences = (prefs: StoredPreferences) => {
 const ProfileHub = () => {
   const { user, logout } = useAuth();
   const [state, setState] = useState<HubState>('minimized');
+  const [isClosing, setIsClosing] = useState(false);
   const [theme, setTheme] = useState<HubTheme>(() => loadPreferences().theme);
   const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_MESSAGE]);
   const [messageDraft, setMessageDraft] = useState('');
@@ -94,6 +95,14 @@ const ProfileHub = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  const handleCloseModal = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setState('minimized');
+      setIsClosing(false);
+    }, 600); // Match animation duration
   };
 
   // Rep Rack functionality
@@ -133,15 +142,15 @@ const ProfileHub = () => {
   useEffect(() => {
     let handler: ((e: KeyboardEvent) => void) | null = null;
     handler = (event) => {
-      if (event.key === 'Escape') {
-        setState('minimized');
+      if (event.key === 'Escape' && isExpanded) {
+        handleCloseModal();
       }
     };
     window.addEventListener('keydown', handler);
     return () => {
       if (handler) window.removeEventListener('keydown', handler);
     };
-  }, []);
+  }, [isExpanded]);
 
   const handleSendMessage = () => {
     const trimmed = messageDraft.trim();
@@ -176,6 +185,7 @@ const ProfileHub = () => {
           data-state={state}
           data-theme={themeClass}
           data-customizing={isExpanded ? 'true' : 'false'}
+          data-closing={isClosing ? 'true' : 'false'}
         >
           <div className="hub-core">
             <div className="hub-user-section">
@@ -286,11 +296,11 @@ const ProfileHub = () => {
                 </div>
               </section>
 
-              <section className="hub-section" aria-labelledby="hub-rep-rack-title">
+              <section className="hub-section hub-section--rep-rack" aria-labelledby="hub-rep-rack-title">
                 <h3 id="hub-rep-rack-title">Rep Rack</h3>
-                <p className="hub-section-description">Showcase your best creative projects to gain followers and engagement</p>
-                <div className="rep-rack-grid">
-                  {Array.from({ length: 9 }, (_, index) => (
+                <p className="hub-section-description">Showcase up to three favourite projects to gain followers and engagement</p>
+                <div className="rep-rack-grid rep-rack-grid--favorites">
+                  {Array.from({ length: 3 }, (_, index) => (
                     <div key={index} className="rep-rack-slot" data-slot-index={index}>
                       <div className="rep-rack-slot-content">
                         <div className="rep-rack-slot-placeholder">
@@ -299,7 +309,7 @@ const ProfileHub = () => {
                         </div>
                         <div className="rep-rack-slot-project" style={{ display: 'none' }}>
                           <div className="rep-rack-project-preview">
-                            <img src="" alt="Project Preview" className="rep-rack-project-image" />
+                            <div className="rep-rack-project-image-placeholder">📷</div>
                           </div>
                           <div className="rep-rack-project-info">
                             <h4 className="rep-rack-project-title"></h4>
@@ -484,7 +494,7 @@ const ProfileHub = () => {
           </aside>
         )}
       </div>
-      <div className="profile-hub-overlay" onClick={() => setState('minimized')} />
+      <div className="profile-hub-overlay" onClick={handleCloseModal} />
     </div>
   );
 };

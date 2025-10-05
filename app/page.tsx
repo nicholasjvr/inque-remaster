@@ -1,11 +1,12 @@
 'use client';
 
-import FloatingOrb from './components/FloatingOrb';
-import { useAuth } from '@/contexts/AuthContext';
+import FloatingOrb, { type NavItem, NAV_ITEMS } from './components/FloatingOrb';
 import Link from 'next/link';
+import { useState } from 'react';
 
 export default function Home() {
-  const { user } = useAuth();
+  const [activeNavItem, setActiveNavItem] = useState<NavItem>(NAV_ITEMS[0]);
+  const quickAccessText = `Open ${activeNavItem.label}`;
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
@@ -20,18 +21,16 @@ export default function Home() {
           </p>
         </header>
 
-        <FloatingOrb />
+        <FloatingOrb onActiveChange={setActiveNavItem} />
 
         {/* Quick Access to Widget Studio */}
         <div className="quick-access">
           <Link 
-            href="/studio" 
+            href={activeNavItem.href}
             className="studio-link"
           >
-            <span className="studio-icon">🎨</span>
-            <span className="studio-text">
-              {user ? 'Open Widget Studio' : 'Sign in to access Widget Studio'}
-            </span>
+            <span className="studio-icon">{activeNavItem.icon}</span>
+            <span className="studio-text">{quickAccessText}</span>
             <span className="studio-arrow">→</span>
           </Link>
         </div>

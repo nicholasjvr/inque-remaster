@@ -3,12 +3,7 @@
 # dependencies
 /node_modules
 /.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+.pnp.js
 
 # testing
 /coverage
@@ -28,11 +23,12 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# local env files
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -41,6 +37,31 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-firebase-admin.json
-firebase-config.json
-firebase-storage.rules
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+# runtime data
+pids
+*.pid
+*.seed
+
+# coverage directory used by tools like istanbul
+coverage/
+
+# firebase
+.firebase/
+firebase-debug.log
+
+# temporary folders
+tmp/
+temp/

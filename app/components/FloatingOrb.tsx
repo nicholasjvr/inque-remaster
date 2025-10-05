@@ -1,17 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import '../floating-orb.css';
 
-type NavItem = {
+export type NavItem = {
   id: string;
   icon: string;
   label: string;
   href: string;
 };
 
-const NAV_ITEMS: NavItem[] = [
+export const NAV_ITEMS: NavItem[] = [
   { id: 'nav-home', icon: '🏠', label: 'Home', href: '/' },
   { id: 'nav-explore', icon: '🔍', label: 'Explore', href: '/explore' },
   {
@@ -47,7 +47,17 @@ const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const FloatingOrb = () => {
+type FloatingOrbProps = {
+  onActiveChange?: (item: NavItem) => void;
+};
+
+const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
+  const onActiveChangeRef = useRef(onActiveChange);
+
+  useEffect(() => {
+    onActiveChangeRef.current = onActiveChange;
+  }, [onActiveChange]);
+
   useEffect(() => {
     const container = document.getElementById('orb-container');
     if (!container) return;
@@ -69,6 +79,9 @@ const FloatingOrb = () => {
     const stage = document.createElement('div');
     stage.className = 'floating-orb-stage';
 
+    const webglLayer = document.createElement('div');
+    webglLayer.className = 'orb-webgl-layer';
+
     const scrollLine = document.createElement('div');
     scrollLine.className = 'orb-scroll-line';
 
@@ -81,7 +94,7 @@ const FloatingOrb = () => {
     orbButton.setAttribute('aria-label', NAV_ITEMS[0].label);
     orbButton.setAttribute('tabindex', '0');
 
-    stage.append(scrollLine, navContainer, orbButton);
+    stage.append(webglLayer, scrollLine, navContainer, orbButton);
     wrapper.append(stage);
 
     const tooltip = document.createElement('div');
@@ -126,6 +139,11 @@ const FloatingOrb = () => {
     let lastPointerX = 0;
     let activeIndex = 0;
 
+    const notifyActiveChange = () => {
+      const item = NAV_ITEMS[activeIndex];
+      onActiveChangeRef.current?.(item);
+    };
+
     const scrollState = {
       currentRotation: 0,
       targetRotation: 0,
@@ -145,6 +163,8 @@ const FloatingOrb = () => {
           btn.classList.remove('in-front');
         }
       });
+
+      notifyActiveChange();
     };
 
     const updateActiveFromRotation = () => {
@@ -335,6 +355,94 @@ const FloatingOrb = () => {
 
     window.addEventListener('resize', handleResize);
 
+    let disposeThree: (() => void) | null = null;
+
+    const initThreeLayer = async (host: HTMLDivElement) => {
+      try {
+        const THREE = await import('three');
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0);
+        host.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+        camera.position.z = 3.2;
+
+        const coreGeometry = new THREE.SphereGeometry(1.05, 80, 80);
+        const coreMaterial = new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#52f7ff'),
+          emissive: new THREE.Color('#0bdcff'),
+          emissiveIntensity: 0.6,
+          roughness: 0.25,
+          metalness: 0.05,
+          transparent: true,
+          opacity: 0.95,
+        });
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        scene.add(core);
+
+        const glowGeometry = new THREE.SphereGeometry(1.45, 80, 80);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          color: new THREE.Color('#14e6ff'),
+          transparent: true,
+          opacity: 0.35,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        scene.add(glow);
+
+        const ambient = new THREE.AmbientLight('#93ffff', 0.6);
+        const point = new THREE.PointLight('#62cfff', 1.4, 6, 2.2);
+        point.position.set(1.2, 1.4, 2.6);
+        scene.add(ambient, point);
+
+        const clock = new THREE.Clock();
+        let frameId = 0;
+
+        const setSize = () => {
+          const rect = host.getBoundingClientRect();
+          const width = rect.width || 200;
+          const height = rect.height || 200;
+          renderer.setSize(width, height, false);
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+        };
+
+        setSize();
+        const resizeObserver = new ResizeObserver(setSize);
+        resizeObserver.observe(host);
+
+        const renderScene = () => {
+          const elapsed = clock.getElapsedTime();
+          core.rotation.y = elapsed * 0.25;
+          core.rotation.x = Math.sin(elapsed * 0.4) * 0.12;
+          glow.rotation.y = elapsed * 0.18;
+          renderer.render(scene, camera);
+          frameId = requestAnimationFrame(renderScene);
+        };
+
+        renderScene();
+
+        disposeThree = () => {
+          cancelAnimationFrame(frameId);
+          resizeObserver.disconnect();
+          renderer.dispose();
+          coreGeometry.dispose();
+          coreMaterial.dispose();
+          glowGeometry.dispose();
+          glowMaterial.dispose();
+          host.removeChild(renderer.domElement);
+        };
+      } catch (error) {
+        console.warn('Failed to initialise Three.js orb layer', error);
+      }
+    };
+
+    initThreeLayer(webglLayer);
+
     return () => {
       cancelAnimationFrame(animationFrame);
       if (hideRingTimeout) window.clearTimeout(hideRingTimeout);
@@ -345,6 +453,7 @@ const FloatingOrb = () => {
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('pointercancel', handlePointerUp);
+      disposeThree?.();
       wrapper.remove();
     };
   }, []);
