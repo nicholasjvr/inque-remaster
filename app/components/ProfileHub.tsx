@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import type { PublicUser } from '@/hooks/useFirestore';
+import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore';
+import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
+import RepRackManager from './RepRackManager';
 
 import '../profile-hub.css';
 
@@ -97,6 +99,16 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized' }: 
   const isChatbot = state === 'chatbot';
   const isPublicView = mode === 'public';
 
+  // Load profile for target user (owner or public user)
+  const targetUserId = profileUser?.id || user?.uid || null;
+  const { profile, saveProfile } = useUserProfile(targetUserId || undefined);
+  const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
+  const [showRepRackManager, setShowRepRackManager] = useState(false);
+
+  useEffect(() => {
+    setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+  }, [profile]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -121,13 +133,42 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized' }: 
   };
 
   const handleSelectFromExisting = () => {
-    // TODO: Implement project selection modal
-    console.log('Select from existing projects');
+    setShowRepRackManager(true);
   };
 
   const handleRepRackAction = (action: string, slotIndex: number) => {
     console.log(`Rep Rack action: ${action} on slot ${slotIndex}`);
     // TODO: Implement like, share, view, remove actions
+  };
+
+  const handleRepRackSelect = (project: { id: string; title: string; imageUrl: string }) => {
+    setLocalProfile((prev) => {
+      const next: UserProfile = { ...(prev || {}), repRack: [...(prev?.repRack || [])] };
+      next.repRack = next.repRack || [];
+      // place/replace in first empty slot
+      let placed = false;
+      for (let i = 0; i < 3; i++) {
+        if (!next.repRack[i]) {
+          next.repRack[i] = { type: 'project', refId: project.id, title: project.title, imageUrl: project.imageUrl } as RepRackItem;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        next.repRack[0] = { type: 'project', refId: project.id, title: project.title, imageUrl: project.imageUrl } as RepRackItem;
+      }
+      return next;
+    });
+    setShowRepRackManager(false);
+  };
+
+  const saveRepRack = async () => {
+    if (!user?.uid || isPublicView) return;
+    try {
+      await saveProfile(user.uid, { repRack: localProfile?.repRack?.slice(0, 3) });
+    } catch (e) {
+      console.error('Save rep rack failed', e);
+    }
   };
 
   useEffect(() => {
@@ -311,26 +352,35 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized' }: 
                 <h3 id="hub-rep-rack-title">Rep Rack</h3>
                 <p className="hub-section-description">Showcase up to three favourite projects to gain followers and engagement</p>
                 <div className="rep-rack-grid rep-rack-grid--favorites">
-                  {Array.from({ length: 3 }, (_, index) => (
+                  {Array.from({ length: 3 }, (_, index) => {
+                    const item = localProfile?.repRack?.[index];
+                    return (
                     <div key={index} className="rep-rack-slot" data-slot-index={index}>
                       <div className="rep-rack-slot-content">
-                        <div className="rep-rack-slot-placeholder">
-                          <span className="rep-rack-slot-icon">+</span>
-                          <span className="rep-rack-slot-text">Add Project</span>
-                        </div>
-                        <div className="rep-rack-slot-project" style={{ display: 'none' }}>
-                          <div className="rep-rack-project-preview">
-                            <div className="rep-rack-project-image-placeholder">📷</div>
+                        {!item ? (
+                          <div className="rep-rack-slot-placeholder">
+                            <span className="rep-rack-slot-icon">+</span>
+                            <span className="rep-rack-slot-text">Add Project</span>
                           </div>
-                          <div className="rep-rack-project-info">
-                            <h4 className="rep-rack-project-title"></h4>
-                            <div className="rep-rack-project-stats">
-                              <span className="rep-rack-stat likes">0 ❤️</span>
-                              <span className="rep-rack-stat shares">0 🔗</span>
-                              <span className="rep-rack-stat views">0 👁️</span>
+                        ) : (
+                          <div className="rep-rack-slot-project">
+                            <div className="rep-rack-project-preview">
+                              {item.imageUrl ? (
+                                <img className="rep-rack-project-image" src={item.imageUrl} alt={item.title || 'Project'} />
+                              ) : (
+                                <div className="rep-rack-project-image-placeholder">📷</div>
+                              )}
+                            </div>
+                            <div className="rep-rack-project-info">
+                              <h4 className="rep-rack-project-title">{item.title || 'Project'}</h4>
+                              <div className="rep-rack-project-stats">
+                                <span className="rep-rack-stat likes">0 ❤️</span>
+                                <span className="rep-rack-stat shares">0 🔗</span>
+                                <span className="rep-rack-stat views">0 👁️</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                       <div className="rep-rack-slot-overlay">
                         <div className="rep-rack-slot-actions">
@@ -369,7 +419,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized' }: 
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
                 {!isPublicView && (
                   <div className="rep-rack-actions">
@@ -380,6 +430,10 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized' }: 
                     <button className="rep-rack-select-btn" onClick={handleSelectFromExisting}>
                       <span>📋</span>
                       Select from Existing
+                    </button>
+                    <button className="rep-rack-select-btn" onClick={saveRepRack}>
+                      <span>💾</span>
+                      Save Rep Rack
                     </button>
                   </div>
                 )}
@@ -510,6 +564,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized' }: 
         )}
       </div>
       <div className="profile-hub-overlay" onClick={handleCloseModal} />
+      {!isPublicView && showRepRackManager && (
+        <RepRackManager onProjectSelect={(p) => handleRepRackSelect({ id: p.id, title: p.title, imageUrl: p.imageUrl })} onClose={() => setShowRepRackManager(false)} />
+      )}
     </div>
   );
 };

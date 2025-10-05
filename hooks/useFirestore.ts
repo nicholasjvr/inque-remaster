@@ -32,6 +32,7 @@ export type PublicUser = {
   handle?: string;
   projectsCount?: number;
   lastActiveAt?: any;
+  profile?: UserProfile;
 };
 
 export type WidgetBundle = {
@@ -40,6 +41,79 @@ export type WidgetBundle = {
   uploadId?: string;
   storagePath?: string;
 };
+
+// ---------------------
+// Profile schema
+// ---------------------
+export type RepRackItem = {
+  type: 'widget' | 'project';
+  refId: string; // widgetId or projectId
+  title?: string;
+  imageUrl?: string;
+};
+
+export type UserProfile = {
+  theme?: {
+    accent?: string;
+    bg?: string;
+    mode?: 'neo' | 'minimal' | 'cyber';
+  };
+  repRack?: RepRackItem[]; // up to 3 items
+  sections?: Array<{ id: string; type: string; content?: any; }>; // future
+  links?: Array<{ label: string; url: string }>;
+  updatedAt?: any;
+  publishedAt?: any;
+};
+
+export function useUserProfile(userId?: string) {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(!!userId);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+    const ref = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(
+      ref,
+      (snap) => {
+        const data = snap.data() as any;
+        setProfile((data?.profile ?? null) as UserProfile | null);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching profile:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [userId]);
+
+  const saveProfile = async (userIdParam: string, updates: Partial<UserProfile>) => {
+    const userRef = doc(db, 'users', userIdParam);
+    await updateDoc(userRef, {
+      profile: {
+        ...(profile ?? {}),
+        ...updates,
+      },
+      updatedAt: serverTimestamp(),
+    });
+  };
+
+  const publishProfile = async (userIdParam: string) => {
+    const userRef = doc(db, 'users', userIdParam);
+    await updateDoc(userRef, {
+      'profile.publishedAt': serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  };
+
+  return { profile, loading, error, saveProfile, publishProfile };
+}
 
 // Widget interface
 export interface Widget {
