@@ -1,9 +1,27 @@
-'use client';
+"use client";
 
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import ProfileHub from '@/app/components/ProfileHub';
+import { useExploreProjects } from '@/hooks/useExplore';
 
 export default function UsersPage() {
   const { user } = useAuth();
+  const [search, setSearch] = useState('');
+  const { projects, loading } = useExploreProjects();
+
+  const creators = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; projects: number }>();
+    for (const p of projects) {
+      const id = p.ownerUid || 'unknown';
+      const current = map.get(id) || { id, name: id.slice(0, 6), projects: 0 };
+      current.projects += 1;
+      map.set(id, current);
+    }
+    const list = Array.from(map.values());
+    const term = search.trim().toLowerCase();
+    return term ? list.filter((c) => c.name.toLowerCase().includes(term)) : list;
+  }, [projects, search]);
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
@@ -29,18 +47,23 @@ export default function UsersPage() {
             </a>
           </div>
         </div>
+        <div className="header-profile-hub">
+          <ProfileHub variant="billboard" />
+        </div>
       </header>
 
       {/* Main Content */}
       <main className="users-main">
         {/* Controls Section */}
-        <div className="users-controls">
+          <div className="users-controls">
           <div className="search-container">
             <input
               type="text"
               id="userSearch"
               className="search-input"
               placeholder="Search creators, skills, or interests..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
             <span className="search-icon">🔍</span>
           </div>
@@ -93,49 +116,62 @@ export default function UsersPage() {
         {/* Users Grid */}
         <div className="users-grid-container">
           <div id="users-container" className="users-grid">
-            {/* User cards will be dynamically inserted here */}
-            <div className="user-card">
-              <div className="user-card-header">
-                <div className="user-card-pic" style={{ backgroundImage: 'url(/api/placeholder/80/80)' }}></div>
-                <div className="online-indicator"></div>
+            {loading ? (
+              <div className="users-loading" style={{ gridColumn: '1/-1' }}>
+                <div className="loading-spinner"></div>
+                <div className="loading-text">Loading creators...</div>
               </div>
-              <div className="user-card-content">
-                <h3 className="user-card-name">Sample Creator</h3>
-                <p className="user-card-bio">Creative developer exploring the digital universe! 🚀</p>
-                <div className="user-card-stats">
-                  <div className="stat">
-                    <span className="stat-icon">📊</span>
-                    <span className="stat-value">5</span>
-                    <span className="stat-label">Projects</span>
+            ) : creators.length === 0 ? (
+              <div className="empty-state" style={{ gridColumn: '1/-1' }}>
+                <div className="empty-icon">👥</div>
+                <h3>No creators found</h3>
+                <p>Try a different search.</p>
+              </div>
+            ) : (
+              creators.map((c) => (
+                <div key={c.id} className="user-card">
+                  <div className="user-card-header">
+                    <div className="user-card-pic" style={{ backgroundImage: 'url(/api/placeholder/80/80)' }}></div>
+                    <div className="online-indicator"></div>
                   </div>
-                  <div className="stat">
-                    <span className="stat-icon">🕐</span>
-                    <span className="stat-value">2h ago</span>
-                    <span className="stat-label">Active</span>
+                  <div className="user-card-content">
+                    <h3 className="user-card-name">{c.name}</h3>
+                    <p className="user-card-bio">Creator on inQ — {c.projects} project(s)</p>
+                    <div className="user-card-stats">
+                      <div className="stat">
+                        <span className="stat-icon">📊</span>
+                        <span className="stat-value">{c.projects}</span>
+                        <span className="stat-label">Projects</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-icon">🕐</span>
+                        <span className="stat-value">—</span>
+                        <span className="stat-label">Active</span>
+                      </div>
+                    </div>
+                    <div className="user-card-skills">
+                      <span className="skill-badge">Web</span>
+                      <span className="skill-badge">Creative</span>
+                      <span className="skill-badge">Demo</span>
+                    </div>
+                  </div>
+                  <div className="user-card-actions">
+                    <a href={`/explore?u=${c.id}`} className="view-profile-btn">
+                      <span className="btn-icon">👤</span>
+                      <span className="btn-text">Projects</span>
+                    </a>
+                    <a href={`/explore/reels?focus=owner:${c.id}`} className="follow-btn">
+                      <span className="btn-icon">🎬</span>
+                      <span className="btn-text">Reels</span>
+                    </a>
+                    <button className="chat-btn">
+                      <span className="btn-icon">💬</span>
+                      <span className="btn-text">Chat</span>
+                    </button>
                   </div>
                 </div>
-                <div className="user-card-skills">
-                  <span className="skill-badge">JavaScript</span>
-                  <span className="skill-badge">React</span>
-                  <span className="skill-badge">Design</span>
-                  <span className="skill-badge">Innovation</span>
-                </div>
-              </div>
-              <div className="user-card-actions">
-                <button className="chat-btn">
-                  <span className="btn-icon">💬</span>
-                  <span className="btn-text">Chat</span>
-                </button>
-                <a href="/?user=sample" className="view-profile-btn">
-                  <span className="btn-icon">👤</span>
-                  <span className="btn-text">Profile</span>
-                </a>
-                <button className="follow-btn">
-                  <span className="btn-icon">➕</span>
-                  <span className="btn-text">Follow</span>
-                </button>
-              </div>
-            </div>
+              ))
+            )}
           </div>
 
           {/* Load More */}
