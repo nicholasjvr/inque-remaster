@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if true; // public profile reads
+
+      // Only owner can write their own user document (including profile)
+      allow write: if isOwner(userId) &&
+        // Optional: prevent setting disallowed fields at top-level
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['displayName','photoURL','bio','profile','stats','updatedAt','lastActiveAt']);
+
+      // Validate profile structure on create/update
+      allow update: if isOwner(userId) &&
+        request.resource.data.profile is map && (
+          // repRack max 3 items
+          !('repRack' in request.resource.data.profile) ||
+          (request.resource.data.profile.repRack is list &&
+            request.resource.data.profile.repRack.size() <= 3 &&
+            request.resource.data.profile.repRack.all(item =>
+              item is map && item.type in ['widget','project'] &&
+              item.refId is string
+            )
+          )
+        );
+    }
+
+    // Widgets collection: owner can CRUD their own widgets
+    match /widgets/{widgetId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
+

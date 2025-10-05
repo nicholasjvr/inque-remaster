@@ -1,0 +1,66 @@
+.hero-hub-section {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: clamp(18px, 6vw, 40px) clamp(16px, 5vw, 36px) clamp(8px, 4vw, 24px);
+    margin: 0 auto clamp(12px, 3vw, 32px);
+    width: min(100%, 960px);
+    isolation: isolate;
+}
+
+.hero-hub-section::before {
+    content: "";
+    position: absolute;
+    inset: clamp(0px, 1vw, 12px);
+    background: radial-gradient(120% 140% at 50% -10%, rgba(0, 240, 255, 0.22) 0%, rgba(0, 240, 255, 0.1) 45%, rgba(4, 6, 13, 0.92) 100%);
+    border-radius: clamp(18px, 4vw, 28px);
+    border: 1px solid rgba(0, 240, 255, 0.18);
+    opacity: 0.92;
+    pointer-events: none;
+    filter: drop-shadow(0 24px 72px rgba(0, 240, 255, 0.28));
+}
+
+.hero-hub-section::after {
+    content: "";
+    position: absolute;
+    inset: auto clamp(18px, 5vw, 40px) -42px clamp(18px, 5vw, 40px);
+    height: clamp(56px, 10vw, 80px);
+    background: radial-gradient(60% 120% at 50% 0%, rgba(0, 240, 255, 0.3) 0%, rgba(0, 240, 255, 0) 70%);
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.hero-hub-profile {
+    pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+    .hero-hub-section {
+        width: min(100%, 640px);
+        padding: clamp(18px, 8vw, 36px) clamp(18px, 6vw, 32px) clamp(6px, 5vw, 22px);
+        margin-bottom: clamp(8px, 4vw, 24px);
+    }
+
+    .hero-hub-section::before {
+        border-radius: clamp(16px, 6vw, 24px);
+        inset: clamp(4px, 2vw, 12px);
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-hub-section {
+        margin-top: clamp(6px, 3vw, 18px);
+        padding: clamp(16px, 9vw, 32px) clamp(14px, 7vw, 28px) clamp(4px, 6vw, 18px);
+    }
+
+    .hero-hub-section::before {
+        inset: clamp(6px, 3vw, 16px);
+        border-radius: clamp(14px, 7vw, 22px);
+    }
+
+    .hero-hub-section::after {
+        inset: auto clamp(14px, 7vw, 28px) -36px clamp(14px, 7vw, 28px);
+        height: clamp(42px, 12vw, 68px);
+    }
+}

@@ -2,14 +2,31 @@
 
 import FloatingOrb, { type NavItem, NAV_ITEMS } from './components/FloatingOrb';
 import Link from 'next/link';
-import { useState } from 'react';
+import ProfileHub from './components/ProfileHub';
+import './styles/hero-hub.css';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [activeNavItem, setActiveNavItem] = useState<NavItem>(NAV_ITEMS[0]);
   const quickAccessText = `Open ${activeNavItem.label}`;
 
+  // Legacy redirect: support /?user=ID -> /u/ID
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const legacyUser = params.get('user');
+    if (legacyUser) {
+      const target = `/u/${legacyUser}`;
+      // replace history to avoid back navigation loop
+      window.location.replace(target);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
+      <section className="hero-hub-section">
+        <ProfileHub variant="billboard" />
+      </section>
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-16 px-6 py-24 sm:px-10">
         <header className="flex flex-col items-center gap-6 text-center">
           <span className="text-sm uppercase tracking-[0.8em] text-[#4ff1ff]">inq social</span>

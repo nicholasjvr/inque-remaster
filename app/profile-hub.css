@@ -37,11 +37,109 @@
     pointer-events: none;
 }
 
+.profile-hub-wrapper.profile-hub-wrapper--static {
+    overflow: hidden;
+}
+
+.profile-hub-wrapper.profile-hub-wrapper--static .profile-hub {
+    overflow: hidden;
+}
+
+.profile-hub-wrapper.profile-hub-wrapper--static .profile-hub * {
+    overscroll-behavior: contain;
+}
+
+/* Billboard mode - ensure compact display */
+.profile-hub--billboard {
+    max-width: 280px;
+    min-width: 240px;
+}
+
+.profile-hub[data-billboard="true"] {
+    /* Prevent expansion in billboard mode */
+}
+
+.profile-hub[data-billboard="true"] .hub-expanded-content,
+.profile-hub[data-billboard="true"] .hub-chatbot,
+.profile-hub[data-billboard="true"] .hub-modules {
+    display: none !important;
+}
+
+.profile-hub[data-billboard="true"]:hover .hub-controls {
+    opacity: 1;
+    visibility: visible;
+}
+
+.profile-hub-wrapper[data-variant="billboard"] {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    max-width: clamp(360px, 46vw, 520px);
+    margin: 0;
+    pointer-events: none;
+}
+
+.profile-hub-wrapper[data-variant="billboard"] .profile-hub-shell {
+    pointer-events: auto;
+}
+
+.profile-hub-wrapper[data-variant="billboard"] .profile-hub {
+    width: 100%;
+    min-width: auto;
+    box-shadow:
+        0 14px 38px rgba(0, 240, 255, 0.2),
+        0 0 0 1px rgba(0, 240, 255, 0.18);
+}
+
+.profile-hub-wrapper[data-variant="billboard"] .profile-hub-shell {
+    justify-content: flex-end;
+}
+
 .profile-hub-shell {
     display: flex;
     gap: 20px;
     align-items: stretch;
     pointer-events: all;
+}
+
+.profile-hub-shell[data-variant="billboard"] {
+    align-items: flex-end;
+}
+
+.profile-hub-shell[data-variant="billboard"] .hub-core {
+    padding: clamp(16px, 2.4vw, 22px);
+}
+
+.profile-hub-shell[data-variant="billboard"] .hub-controls {
+    gap: 10px;
+}
+
+.profile-hub-shell[data-variant="billboard"] .hub-button,
+.profile-hub-shell[data-variant="billboard"] .hub-toggle {
+    width: clamp(40px, 4.6vw, 46px);
+    height: clamp(40px, 4.6vw, 46px);
+}
+
+.profile-hub-shell.profile-hub-shell--expanded {
+    align-items: stretch;
+    overflow: hidden;
+    max-height: none;
+}
+
+.profile-hub-shell.profile-hub-shell--expanded .profile-hub {
+    max-height: none;
+    max-width: min(90vw, 1040px);
+    width: min(90vw, 1040px);
+    min-height: clamp(620px, 78vh, 960px);
+}
+
+.profile-hub-shell.profile-hub-shell--expanded .hub-expanded-content,
+.profile-hub-shell.profile-hub-shell--expanded .hub-chatbot,
+.profile-hub-shell.profile-hub-shell--expanded .hub-customization-panel {
+    overflow: visible;
 }
 
 .profile-hub-shell--expanded {
@@ -73,6 +171,7 @@
     min-height: var(--hub-core-height);
     padding-bottom: 0;
     animation: none;
+    overflow: hidden;
 }
 
 .profile-hub[data-state="minimized"] .hub-core {
@@ -882,52 +981,16 @@
     pointer-events: auto;
 }
 
-/* Glowing particles effect */
-.profile-hub-overlay.active::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image:
-        radial-gradient(2px 2px at 20px 30px, rgba(0, 240, 255, 0.3), transparent),
-        radial-gradient(2px 2px at 40px 70px, rgba(255, 0, 255, 0.2), transparent),
-        radial-gradient(1px 1px at 90px 40px, rgba(0, 240, 255, 0.4), transparent),
-        radial-gradient(1px 1px at 130px 80px, rgba(255, 0, 255, 0.3), transparent),
-        radial-gradient(2px 2px at 160px 30px, rgba(0, 240, 255, 0.2), transparent);
-    background-repeat: repeat;
-    background-size: 200px 100px;
-    animation: none;
-    pointer-events: none;
-}
-
-@keyframes particles-float {
-    0% {
-        transform: translateY(0px) translateX(0px);
-    }
-
-    25% {
-        transform: translateY(-10px) translateX(5px);
-    }
-
-    50% {
-        transform: translateY(-5px) translateX(-5px);
-    }
-
-    75% {
-        transform: translateY(-15px) translateX(3px);
-    }
-
-    100% {
-        transform: translateY(0px) translateX(0px);
-    }
-}
 
 @media (max-width: 768px) {
     .profile-hub-wrapper {
         top: 18px;
         right: 18px;
+    }
+
+    .profile-hub-wrapper[data-variant="billboard"] {
+        max-width: none;
+        margin: clamp(18px, 2.6vw, 24px) 0 0 0;
     }
 
     .profile-hub-shell--expanded .profile-hub-wrapper {
@@ -1075,40 +1138,6 @@
     }
 }
 
-@media (max-width: 768px) and (min-width: 481px) {
-
-    /* Tablet-specific improvements */
-    .profile-hub {
-        width: min(var(--hub-width), calc(100vw - 36px));
-        min-width: clamp(300px, 30vw, 360px);
-    }
-
-    .hub-modules {
-        width: min(var(--hub-module-width), calc(100vw - 36px));
-        min-width: clamp(280px, 28vw, 340px);
-    }
-
-    .hub-user-section {
-        gap: 14px;
-        padding: 7px 0;
-        min-width: 110px;
-    }
-
-    .hub-user-info {
-        min-width: 70px;
-    }
-
-    .hub-avatar {
-        width: 52px;
-        height: 52px;
-        font-size: 1.1rem;
-    }
-
-    .hub-user-name {
-        font-size: 0.92rem;
-    }
-}
-
 @media (max-width: 480px) {
     .profile-hub-wrapper {
         top: 12px;
@@ -1118,6 +1147,27 @@
         width: calc(100vw - 24px);
         position: fixed;
         z-index: 1000;
+    }
+
+    .profile-hub-wrapper[data-variant="billboard"] {
+        position: relative;
+        width: 100%;
+        left: auto;
+        right: auto;
+        top: auto;
+        margin: clamp(16px, 4vw, 24px) auto 0;
+    }
+
+    .profile-hub-wrapper[data-variant="billboard"]::before {
+        display: none;
+    }
+
+    .profile-hub-shell[data-variant="billboard"] {
+        justify-content: center;
+    }
+
+    .profile-hub-shell[data-variant="billboard"] .hub-core {
+        padding: 16px;
     }
 
     /* Mobile modal styles handled by main modal CSS */

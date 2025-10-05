@@ -11,20 +11,31 @@
 
 /* === HEADER === */
 .showcase-header {
-    text-align: center;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--bg-tertiary);
     margin-bottom: 3rem;
 }
 
-.showcase-title {
+.showcase-header .header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.showcase-header .showcase-title {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 1rem;
     font-family: "Orbitron", monospace;
-    font-size: 2.5rem;
+    font-size: 2.25rem;
     font-weight: 700;
     color: var(--neon-primary);
-    margin: 0 0 1rem 0;
+    margin: 0;
     text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
 }
 
@@ -33,12 +44,24 @@
     animation: pulse 2s infinite;
 }
 
-.showcase-subtitle {
+.showcase-header .header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.showcase-header .header-profile-hub {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    margin-top: 0.5rem;
+}
+
+.showcase-header .showcase-subtitle {
     font-size: 1.125rem;
     color: var(--text-secondary);
     margin: 0;
     max-width: 600px;
-    margin: 0 auto;
     line-height: 1.6;
 }
 
@@ -532,11 +555,27 @@
 }
 
 @media (max-width: 768px) {
+    .showcase-header .header-content {
+        padding: 1rem 1.25rem;
+        gap: 1.25rem;
+    }
+
+    .showcase-header .header-profile-hub {
+        justify-content: center;
+        margin-top: 1rem;
+    }
+
+    .showcase-header .header-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
     .showcase-container {
         padding: 1rem;
     }
 
-    .showcase-title {
+    .showcase-title,
+    .showcase-header .showcase-title {
         font-size: 2rem;
         flex-direction: column;
         gap: 0.5rem;
@@ -576,6 +615,24 @@
 }
 
 @media (max-width: 480px) {
+    .showcase-header .header-content {
+        padding: 0.85rem 1rem;
+        text-align: center;
+        flex-direction: column;
+    }
+
+    .showcase-header .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .showcase-header .header-profile-hub {
+        order: 3;
+        margin-top: 1rem;
+        width: 100%;
+        justify-content: center;
+    }
+
     .showcase-container {
         padding: 0.75rem;
     }

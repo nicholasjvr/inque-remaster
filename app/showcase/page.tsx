@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import Showcase from '@/app/components/Showcase';
+import ProfileHub from '@/app/components/ProfileHub';
 
 export default function ShowcasePage() {
   const { user } = useAuth();
@@ -29,6 +30,9 @@ export default function ShowcasePage() {
               <span className="btn-text">Creators</span>
             </a>
           </div>
+        </div>
+        <div className="header-profile-hub">
+          <ProfileHub variant="billboard" />
         </div>
       </header>
 

@@ -84,9 +84,10 @@ body {
     margin: 0 auto;
     padding: 1rem var(--section-padding);
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .header-title {
@@ -125,6 +126,14 @@ body {
 .header-actions {
     display: flex;
     gap: 1rem;
+}
+
+.header-profile-hub {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    margin-top: 0.5rem;
 }
 
 .action-btn {
@@ -697,10 +706,16 @@ body {
 @media (max-width: 768px) {
     .header-content {
         padding: 0.75rem 1rem;
+        gap: 1.25rem;
     }
 
     .header-title h1 {
         font-size: 1.5rem;
+    }
+
+    .header-profile-hub {
+        justify-content: center;
+        margin-top: 1rem;
     }
 
     .explore-main {
@@ -772,6 +787,16 @@ body {
 
     .title-icon {
         font-size: 1.25rem;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .header-profile-hub {
+        order: 3;
+        margin-top: 1rem;
     }
 
     .explore-main {

@@ -3,9 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./floating-orb.css";
 import "./profile-hub.css";
-import ProfileHub from "./components/ProfileHub";
 import { AuthProvider } from "@/contexts/AuthContext";
-import ClientOnly from "@/components/ClientOnly";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,11 +39,6 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          <ClientOnly>
-            <div className="profile-hub-container">
-              <ProfileHub />
-            </div>
-          </ClientOnly>
           {children}
         </AuthProvider>
       </body>

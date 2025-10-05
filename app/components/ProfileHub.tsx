@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore';
+import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
+import RepRackManager from './RepRackManager';
 
 import '../profile-hub.css';
 
@@ -78,15 +81,37 @@ const persistPreferences = (prefs: StoredPreferences) => {
   }
 };
 
-const ProfileHub = () => {
+type ProfileHubProps = {
+  mode?: 'public' | 'edit';
+  profileUser?: PublicUser | null;
+  initialState?: 'minimized' | 'expanded' | 'chatbot';
+  variant?: string; // compatibility with existing usage
+};
+
+const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', variant }: ProfileHubProps) => {
   const { user, logout } = useAuth();
-  const [state, setState] = useState<HubState>('minimized');
+  // Handle variant prop for billboard mode
+  const effectiveInitialState = variant === 'billboard' ? 'minimized' : initialState;
+  const isBillboardMode = variant === 'billboard';
+
+  const [state, setState] = useState<HubState>(effectiveInitialState);
   const [isClosing, setIsClosing] = useState(false);
   const [theme, setTheme] = useState<HubTheme>(() => loadPreferences().theme);
   const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_MESSAGE]);
   const [messageDraft, setMessageDraft] = useState('');
   const isExpanded = state === 'expanded';
   const isChatbot = state === 'chatbot';
+  const isPublicView = mode === 'public';
+
+  // Load profile for target user (owner or public user)
+  const targetUserId = profileUser?.id || user?.uid || null;
+  const { profile, saveProfile } = useUserProfile(targetUserId || undefined);
+  const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
+  const [showRepRackManager, setShowRepRackManager] = useState(false);
+
+  useEffect(() => {
+    setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+  }, [profile]);
 
   const handleLogout = async () => {
     try {
@@ -112,13 +137,42 @@ const ProfileHub = () => {
   };
 
   const handleSelectFromExisting = () => {
-    // TODO: Implement project selection modal
-    console.log('Select from existing projects');
+    setShowRepRackManager(true);
   };
 
   const handleRepRackAction = (action: string, slotIndex: number) => {
     console.log(`Rep Rack action: ${action} on slot ${slotIndex}`);
     // TODO: Implement like, share, view, remove actions
+  };
+
+  const handleRepRackSelect = (project: { id: string; title: string; imageUrl: string }) => {
+    setLocalProfile((prev) => {
+      const next: UserProfile = { ...(prev || {}), repRack: [...(prev?.repRack || [])] };
+      next.repRack = next.repRack || [];
+      // place/replace in first empty slot
+      let placed = false;
+      for (let i = 0; i < 3; i++) {
+        if (!next.repRack[i]) {
+          next.repRack[i] = { type: 'project', refId: project.id, title: project.title, imageUrl: project.imageUrl } as RepRackItem;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        next.repRack[0] = { type: 'project', refId: project.id, title: project.title, imageUrl: project.imageUrl } as RepRackItem;
+      }
+      return next;
+    });
+    setShowRepRackManager(false);
+  };
+
+  const saveRepRack = async () => {
+    if (!user?.uid || isPublicView) return;
+    try {
+      await saveProfile(user.uid, { repRack: localProfile?.repRack?.slice(0, 3) });
+    } catch (e) {
+      console.error('Save rep rack failed', e);
+    }
   };
 
   useEffect(() => {
@@ -181,62 +235,71 @@ const ProfileHub = () => {
     <div className="profile-hub-wrapper" aria-live="polite">
       <div className={`profile-hub-shell${isExpanded ? ' profile-hub-shell--expanded' : ''}`}>
         <div
-          className="profile-hub"
+          className={`profile-hub${isBillboardMode ? ' profile-hub--billboard' : ''}`}
           data-state={state}
           data-theme={themeClass}
           data-customizing={isExpanded ? 'true' : 'false'}
           data-closing={isClosing ? 'true' : 'false'}
+          data-billboard={isBillboardMode ? 'true' : 'false'}
         >
           <div className="hub-core">
             <div className="hub-user-section">
               <div className="hub-avatar" aria-hidden="true">
-                {user?.photoURL ? (
+                {(profileUser?.photoURL || user?.photoURL) ? (
                   <img 
-                    src={user.photoURL} 
+                    src={(profileUser?.photoURL || user?.photoURL) as string} 
                     alt="User Avatar" 
                     className="hub-user-photo"
                   />
                 ) : (
                   <span role="img" aria-label="User avatar">
-                    {user?.email?.charAt(0).toUpperCase() || '👤'}
+                    {(profileUser?.displayName?.charAt(0).toUpperCase()) || user?.email?.charAt(0).toUpperCase() || '👤'}
                   </span>
                 )}
               </div>
               <div className="hub-user-info">
                 <span className="hub-user-name">
-                  {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                  {profileUser?.displayName || user?.displayName || user?.email?.split('@')[0] || 'User'}
                 </span>
-                <span className="hub-user-status">Customize your profile hub</span>
+                <span className="hub-user-status">{isPublicView ? 'Welcome to my hub' : 'Customize your profile hub'}</span>
                 <span className="hub-user-level">LVL • ?</span>
               </div>
             </div>
-              <div className="quick-nav-buttons">
+            <div className="quick-nav-buttons">
             </div>
-
             <div className="hub-controls">
-              <button
-                type="button"
-                className="hub-button"
-                title="Toggle chat"
-                onClick={() => setState((prev) => (prev === 'chatbot' ? 'minimized' : 'chatbot'))}
-              >
-                🤖
-              </button>
+              {!isPublicView && (
+                <>
+                  <button
+                    type="button"
+                    className="hub-button"
+                    title="Toggle chat"
+                    onClick={() => setState((prev) => (prev === 'chatbot' ? 'minimized' : 'chatbot'))}
+                  >
+                    🤖
+                  </button>
 
-              <button
-                type="button"
-                className="hub-button"
-                title="Toggle customization panel"
-                onClick={() => setState((prev) => (prev === 'expanded' ? 'minimized' : 'expanded'))}
-              >
-                🎛️
-              </button>
-
+                  <button
+                    type="button"
+                    className="hub-button"
+                    title="Toggle customization panel"
+                    onClick={() => setState((prev) => (prev === 'expanded' ? 'minimized' : 'expanded'))}
+                  >
+                    🎛️
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="hub-toggle"
-                title={isExpanded ? 'Collapse hub' : 'Expand hub'}
-                onClick={() => setState((prev) => (prev === 'expanded' ? 'minimized' : 'expanded'))}
+                title={isBillboardMode ? 'Hub controls' : (isExpanded ? 'Collapse hub' : 'Expand hub')}
+                onClick={() => {
+                  if (isBillboardMode) {
+                    // In billboard mode, don't expand, just show controls or do nothing
+                    return;
+                  }
+                  setState((prev) => (prev === 'expanded' ? 'minimized' : 'expanded'));
+                }}
               >
                 <span>⫷</span>
               </button>
@@ -300,26 +363,35 @@ const ProfileHub = () => {
                 <h3 id="hub-rep-rack-title">Rep Rack</h3>
                 <p className="hub-section-description">Showcase up to three favourite projects to gain followers and engagement</p>
                 <div className="rep-rack-grid rep-rack-grid--favorites">
-                  {Array.from({ length: 3 }, (_, index) => (
+                  {Array.from({ length: 3 }, (_, index) => {
+                    const item = localProfile?.repRack?.[index];
+                    return (
                     <div key={index} className="rep-rack-slot" data-slot-index={index}>
                       <div className="rep-rack-slot-content">
-                        <div className="rep-rack-slot-placeholder">
-                          <span className="rep-rack-slot-icon">+</span>
-                          <span className="rep-rack-slot-text">Add Project</span>
-                        </div>
-                        <div className="rep-rack-slot-project" style={{ display: 'none' }}>
-                          <div className="rep-rack-project-preview">
-                            <div className="rep-rack-project-image-placeholder">📷</div>
+                        {!item ? (
+                          <div className="rep-rack-slot-placeholder">
+                            <span className="rep-rack-slot-icon">+</span>
+                            <span className="rep-rack-slot-text">Add Project</span>
                           </div>
-                          <div className="rep-rack-project-info">
-                            <h4 className="rep-rack-project-title"></h4>
-                            <div className="rep-rack-project-stats">
-                              <span className="rep-rack-stat likes">0 ❤️</span>
-                              <span className="rep-rack-stat shares">0 🔗</span>
-                              <span className="rep-rack-stat views">0 👁️</span>
+                        ) : (
+                          <div className="rep-rack-slot-project">
+                            <div className="rep-rack-project-preview">
+                              {item.imageUrl ? (
+                                <img className="rep-rack-project-image" src={item.imageUrl} alt={item.title || 'Project'} />
+                              ) : (
+                                <div className="rep-rack-project-image-placeholder">📷</div>
+                              )}
+                            </div>
+                            <div className="rep-rack-project-info">
+                              <h4 className="rep-rack-project-title">{item.title || 'Project'}</h4>
+                              <div className="rep-rack-project-stats">
+                                <span className="rep-rack-stat likes">0 ❤️</span>
+                                <span className="rep-rack-stat shares">0 🔗</span>
+                                <span className="rep-rack-stat views">0 👁️</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                       <div className="rep-rack-slot-overlay">
                         <div className="rep-rack-slot-actions">
@@ -358,20 +430,27 @@ const ProfileHub = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
-                <div className="rep-rack-actions">
-                  <button className="rep-rack-upload-btn" onClick={handleUploadProject}>
-                    <span>📤</span>
-                    Upload New Project
-                  </button>
-                  <button className="rep-rack-select-btn" onClick={handleSelectFromExisting}>
-                    <span>📋</span>
-                    Select from Existing
-                  </button>
-                </div>
+                {!isPublicView && (
+                  <div className="rep-rack-actions">
+                    <button className="rep-rack-upload-btn" onClick={handleUploadProject}>
+                      <span>📤</span>
+                      Upload New Project
+                    </button>
+                    <button className="rep-rack-select-btn" onClick={handleSelectFromExisting}>
+                      <span>📋</span>
+                      Select from Existing
+                    </button>
+                    <button className="rep-rack-select-btn" onClick={saveRepRack}>
+                      <span>💾</span>
+                      Save Rep Rack
+                    </button>
+                  </div>
+                )}
               </section>
 
+              {!isPublicView && (
               <section className="hub-section" aria-labelledby="hub-custom-title">
                 <h3 id="hub-custom-title">Customize Hub</h3>
                 <div className="customization-grid">
@@ -421,9 +500,10 @@ const ProfileHub = () => {
                   </div>
                 </div>
               </section>
+              )}
             </div>
           )}
-          {isChatbot && (
+          {!isPublicView && isChatbot && (
             <div className="hub-chatbot" role="dialog" aria-label="Profile hub messenger">
               <header className="hub-chat-header">
                 <span>AI Assistant</span>
@@ -495,6 +575,9 @@ const ProfileHub = () => {
         )}
       </div>
       <div className="profile-hub-overlay" onClick={handleCloseModal} />
+      {!isPublicView && showRepRackManager && (
+        <RepRackManager onProjectSelect={(p) => handleRepRackSelect({ id: p.id, title: p.title, imageUrl: p.imageUrl })} onClose={() => setShowRepRackManager(false)} />
+      )}
     </div>
   );
 };
