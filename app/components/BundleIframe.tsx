@@ -1,0 +1,100 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { WidgetBundle } from '@/hooks/useFirestore';
+import { buildBundleFileMap, findHtmlEntry } from '@/hooks/useStorage';
+
+type BundleIframeProps = {
+  bundle: WidgetBundle;
+  className?: string;
+  title?: string;
+  height?: number | string;
+  sandbox?: string;
+};
+
+export default function BundleIframe({ bundle, className, title, height = 200, sandbox = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-presentation' }: BundleIframeProps) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (!bundle || !iframeRef.current) return;
+    const iframe = iframeRef.current;
+
+    const load = async () => {
+      try {
+        const basePath = bundle.storagePath || (bundle.uploadId ? `uploads/${bundle.uploadId}` : `uploads/${bundle.id}`);
+        const fileMap = await buildBundleFileMap(basePath);
+
+        let entry = findHtmlEntry(fileMap);
+
+        // Fallback: read manifest.json for custom entry
+        if (!entry && fileMap['manifest.json']) {
+          try {
+            const res = await fetch(fileMap['manifest.json']);
+            if (res.ok) {
+              const manifest = await res.json();
+              const candidate: string | undefined = manifest.entry || manifest.index || manifest.main;
+              if (candidate && fileMap[candidate]) entry = candidate;
+            }
+          } catch {/* ignore */}
+        }
+
+        if (!entry) {
+          showError(iframe, 'No entry point found. Include index.html or set entry in manifest.json');
+          return;
+        }
+
+        const res = await fetch(fileMap[entry]);
+        if (!res.ok) {
+          showError(iframe, `Failed to fetch HTML file: ${res.status} ${res.statusText}`);
+          return;
+        }
+
+        const originalHtml = await res.text();
+
+        const resolveMappedUrl = (path: string) => {
+          if (!path) return null;
+          const cleaned = path.replace(/^\.\//, '').replace(/^\//, '');
+          return fileMap[cleaned] || fileMap[cleaned.split('/').pop() || ''] || null;
+        };
+
+        const processedHtml = originalHtml.replace(
+          /(href|src)=["']([^"']+)["']/gi,
+          (match, attr, value) => {
+            // Ignore absolute http(s) or data URIs
+            if (/^(?:https?:)?\/\//i.test(value) || /^data:/i.test(value)) return match;
+            const mapped = resolveMappedUrl(value);
+            return mapped ? `${attr}="${mapped}"` : match;
+          }
+        );
+
+        const blob = new Blob([processedHtml], { type: 'text/html' });
+        iframe.src = URL.createObjectURL(blob);
+      } catch (err) {
+        console.error('Bundle iframe load error:', err);
+        showError(iframe, err instanceof Error ? err.message : 'Unknown error while loading bundle');
+      }
+    };
+
+    load();
+  }, [bundle?.id, bundle?.uploadId, bundle?.storagePath]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      className={className}
+      title={title || `Widget Bundle Preview - ${bundle?.title || bundle?.id}`}
+      style={{ width: '100%', height }}
+      sandbox={sandbox}
+    />
+  );
+}
+
+function showError(iframe: HTMLIFrameElement, message: string) {
+  iframe.srcdoc = `
+    <div style="padding:20px;text-align:center;color:#ff4444;background:rgba(255,68,68,0.1);border-radius:8px;font-family:Arial,sans-serif;">
+      <h3>⚠️ Preview Unavailable</h3>
+      <p>${message}</p>
+      <small>Check console for more details</small>
+    </div>
+  `;
+}

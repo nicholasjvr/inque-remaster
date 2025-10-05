@@ -173,6 +173,7 @@ const ProfileHub = () => {
       { id: 'twitter', label: 'X', href: 'https://x.com/inqsocial' },
       { id: 'discord', label: '💬', href: 'https://discord.gg/inqsocial' },
       { id: 'behance', label: 'Bē', href: 'https://www.behance.net/inqsocial' },
+      { id: 'reels', label: 'Reels', href: '/explore-reels' },
     ],
     []
   );

@@ -1,9 +1,31 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePublicUsers } from '@/hooks/useFirestore';
 
 export default function UsersPage() {
   const { user } = useAuth();
+  const { users, loading } = usePublicUsers({ limitCount: 100 });
+  const [filterBy, setFilterBy] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = [...users];
+    if (q) list = list.filter(u => `${u.displayName || ''} ${u.bio || ''}`.toLowerCase().includes(q));
+    switch (sortBy) {
+      case 'recent':
+        return list.sort((a, b) => (b.lastActiveAt?.toDate?.().getTime?.() ?? 0) - (a.lastActiveAt?.toDate?.().getTime?.() ?? 0));
+      case 'projects':
+        return list.sort((a, b) => (b.projectsCount ?? 0) - (a.projectsCount ?? 0));
+      case 'random':
+        return list.sort(() => Math.random() - 0.5);
+      default:
+        return list.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+    }
+  }, [users, sortBy, query, filterBy]);
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
@@ -41,13 +63,15 @@ export default function UsersPage() {
               id="userSearch"
               className="search-input"
               placeholder="Search creators, skills, or interests..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
             />
             <span className="search-icon">🔍</span>
           </div>
           <div className="filter-container">
             <div className="filter-group">
               <label htmlFor="filterSelect">Filter By</label>
-              <select id="filterSelect" className="filter-select">
+              <select id="filterSelect" className="filter-select" value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
                 <option value="all">All Creators</option>
                 <option value="online">Online Now</option>
                 <option value="recent">Recently Active</option>
@@ -56,18 +80,18 @@ export default function UsersPage() {
             </div>
             <div className="filter-group">
               <label htmlFor="sortSelect">Sort By</label>
-              <select id="sortSelect" className="filter-select">
+              <select id="sortSelect" className="filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="name">Name A-Z</option>
                 <option value="recent">Recently Active</option>
                 <option value="projects">Most Projects</option>
                 <option value="random">Random</option>
               </select>
             </div>
-            <button id="refreshBtn" className="action-btn">
+            <button id="refreshBtn" className="action-btn" onClick={() => window.location.reload()}>
               <span>🔄</span>
               <span className="btn-text">Refresh</span>
             </button>
-            <button id="clearFiltersBtn" className="action-btn">
+            <button id="clearFiltersBtn" className="action-btn" onClick={() => { setQuery(''); setFilterBy('all'); setSortBy('name'); }}>
               <span>🗑️</span>
               <span className="btn-text">Clear</span>
             </button>
@@ -93,54 +117,69 @@ export default function UsersPage() {
         {/* Users Grid */}
         <div className="users-grid-container">
           <div id="users-container" className="users-grid">
-            {/* User cards will be dynamically inserted here */}
-            <div className="user-card">
-              <div className="user-card-header">
-                <div className="user-card-pic" style={{ backgroundImage: 'url(/api/placeholder/80/80)' }}></div>
-                <div className="online-indicator"></div>
+            {loading && (
+              <div className="users-loading">
+                <div className="loading-spinner"></div>
+                <div className="loading-text">Loading creators…</div>
+                <div className="loading-subtitle">Fetching profiles from Firestore</div>
               </div>
-              <div className="user-card-content">
-                <h3 className="user-card-name">Sample Creator</h3>
-                <p className="user-card-bio">Creative developer exploring the digital universe! 🚀</p>
-                <div className="user-card-stats">
-                  <div className="stat">
-                    <span className="stat-icon">📊</span>
-                    <span className="stat-value">5</span>
-                    <span className="stat-label">Projects</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-icon">🕐</span>
-                    <span className="stat-value">2h ago</span>
-                    <span className="stat-label">Active</span>
-                  </div>
-                </div>
-                <div className="user-card-skills">
-                  <span className="skill-badge">JavaScript</span>
-                  <span className="skill-badge">React</span>
-                  <span className="skill-badge">Design</span>
-                  <span className="skill-badge">Innovation</span>
-                </div>
-              </div>
-              <div className="user-card-actions">
-                <button className="chat-btn">
-                  <span className="btn-icon">💬</span>
-                  <span className="btn-text">Chat</span>
-                </button>
-                <a href="/?user=sample" className="view-profile-btn">
-                  <span className="btn-icon">👤</span>
-                  <span className="btn-text">Profile</span>
-                </a>
-                <button className="follow-btn">
-                  <span className="btn-icon">➕</span>
-                  <span className="btn-text">Follow</span>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-icon">👥</div>
+                <h3>No creators found</h3>
+                <p>Try adjusting your search filters or check back later for new creators.</p>
+                <button className="empty-action-btn" onClick={() => window.location.reload()}>
+                  Refresh Page
                 </button>
               </div>
-            </div>
+            )}
+            {!loading && filtered.map((u) => (
+              <div key={u.id} className="user-card">
+                <div className="user-card-header">
+                  <div className="user-card-pic" style={{ backgroundImage: `url(${u.photoURL || '/api/placeholder/80/80'})` }}></div>
+                  <div className="online-indicator"></div>
+                </div>
+                <div className="user-card-content">
+                  <h3 className="user-card-name">{u.displayName || 'Creator'}</h3>
+                  <p className="user-card-bio">{u.bio || 'No bio yet.'}</p>
+                  <div className="user-card-stats">
+                    <div className="stat">
+                      <span className="stat-icon">📊</span>
+                      <span className="stat-value">{u.projectsCount ?? 0}</span>
+                      <span className="stat-label">Projects</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-icon">🕐</span>
+                      <span className="stat-value">{u.lastActiveAt ? 'Active' : '—'}</span>
+                      <span className="stat-label">Active</span>
+                    </div>
+                  </div>
+                  <div className="user-card-skills">
+                    <span className="skill-badge">Creator</span>
+                  </div>
+                </div>
+                <div className="user-card-actions">
+                  <button className="chat-btn">
+                    <span className="btn-icon">💬</span>
+                    <span className="btn-text">Chat</span>
+                  </button>
+                  <a href={`/?user=${u.id}`} className="view-profile-btn">
+                    <span className="btn-icon">👤</span>
+                    <span className="btn-text">Profile</span>
+                  </a>
+                  <button className="follow-btn">
+                    <span className="btn-icon">➕</span>
+                    <span className="btn-text">Follow</span>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Load More */}
-          <div id="loadMoreContainer" className="load-more-container" style={{ display: 'none' }}>
-            <button id="loadMoreBtn" className="load-more-btn">
+          <div id="loadMoreContainer" className="load-more-container" style={{ display: filtered.length >= 100 ? 'flex' : 'none' }}>
+            <button id="loadMoreBtn" className="load-more-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <span className="btn-icon">📄</span>
               <span className="btn-text">Load More</span>
             </button>
