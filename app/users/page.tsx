@@ -126,7 +126,7 @@ export default function UsersPage() {
                   <span className="btn-icon">💬</span>
                   <span className="btn-text">Chat</span>
                 </button>
-                <a href="/?user=sample" className="view-profile-btn">
+                <a href="/u/sample" className="view-profile-btn">
                   <span className="btn-icon">👤</span>
                   <span className="btn-text">Profile</span>
                 </a>

@@ -21,6 +21,100 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+// ---------------------
+// Public user interfaces
+// ---------------------
+export type PublicUser = {
+  id: string;
+  displayName?: string;
+  photoURL?: string;
+  bio?: string;
+  handle?: string;
+  projectsCount?: number;
+  lastActiveAt?: any;
+  profile?: UserProfile;
+};
+
+export type WidgetBundle = {
+  id: string;
+  title?: string;
+  uploadId?: string;
+  storagePath?: string;
+};
+
+// ---------------------
+// Profile schema
+// ---------------------
+export type RepRackItem = {
+  type: 'widget' | 'project';
+  refId: string; // widgetId or projectId
+  title?: string;
+  imageUrl?: string;
+};
+
+export type UserProfile = {
+  theme?: {
+    accent?: string;
+    bg?: string;
+    mode?: 'neo' | 'minimal' | 'cyber';
+  };
+  repRack?: RepRackItem[]; // up to 3 items
+  sections?: Array<{ id: string; type: string; content?: any; }>; // future
+  links?: Array<{ label: string; url: string }>;
+  updatedAt?: any;
+  publishedAt?: any;
+};
+
+export function useUserProfile(userId?: string) {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(!!userId);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+    const ref = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(
+      ref,
+      (snap) => {
+        const data = snap.data() as any;
+        setProfile((data?.profile ?? null) as UserProfile | null);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching profile:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [userId]);
+
+  const saveProfile = async (userIdParam: string, updates: Partial<UserProfile>) => {
+    const userRef = doc(db, 'users', userIdParam);
+    await updateDoc(userRef, {
+      profile: {
+        ...(profile ?? {}),
+        ...updates,
+      },
+      updatedAt: serverTimestamp(),
+    });
+  };
+
+  const publishProfile = async (userIdParam: string) => {
+    const userRef = doc(db, 'users', userIdParam);
+    await updateDoc(userRef, {
+      'profile.publishedAt': serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  };
+
+  return { profile, loading, error, saveProfile, publishProfile };
+}
+
 // Widget interface
 export interface Widget {
   id: string;
@@ -169,6 +263,74 @@ export function useWidget(widgetId: string) {
   }, [widgetId]);
 
   return { widget, loading, error };
+}
+
+// ---------------------
+// Public users listing
+// ---------------------
+export function usePublicUsers({ limitCount = 100 }: { limitCount?: number } = {}) {
+  const [users, setUsers] = useState<PublicUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const usersRef = collection(db, 'users');
+    // Read-mostly: order by displayName; client can re-sort
+    const q = query(usersRef, limit(limitCount));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const list: PublicUser[] = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        setUsers(list);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error fetching users:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [limitCount]);
+
+  return { users, loading, error };
+}
+
+// ---------------------
+// Single public user
+// ---------------------
+export function usePublicUserById(userId?: string) {
+  const [user, setUser] = useState<PublicUser | null>(null);
+  const [loading, setLoading] = useState(!!userId);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    const ref = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(
+      ref,
+      (snap) => {
+        setUser(snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as PublicUser) : null);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error fetching user:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [userId]);
+
+  return { user, loading, error };
 }
 
 // Hook for page visits tracking
