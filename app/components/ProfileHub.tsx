@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import type { PublicUser } from '@/hooks/useFirestore';
 
 import '../profile-hub.css';
 
@@ -78,15 +79,23 @@ const persistPreferences = (prefs: StoredPreferences) => {
   }
 };
 
-const ProfileHub = () => {
+type ProfileHubProps = {
+  mode?: 'public' | 'edit';
+  profileUser?: PublicUser | null;
+  initialState?: 'minimized' | 'expanded' | 'chatbot';
+  variant?: string; // compatibility with existing usage
+};
+
+const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized' }: ProfileHubProps) => {
   const { user, logout } = useAuth();
-  const [state, setState] = useState<HubState>('minimized');
+  const [state, setState] = useState<HubState>(initialState);
   const [isClosing, setIsClosing] = useState(false);
   const [theme, setTheme] = useState<HubTheme>(() => loadPreferences().theme);
   const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_MESSAGE]);
   const [messageDraft, setMessageDraft] = useState('');
   const isExpanded = state === 'expanded';
   const isChatbot = state === 'chatbot';
+  const isPublicView = mode === 'public';
 
   const handleLogout = async () => {
     try {
@@ -190,23 +199,23 @@ const ProfileHub = () => {
           <div className="hub-core">
             <div className="hub-user-section">
               <div className="hub-avatar" aria-hidden="true">
-                {user?.photoURL ? (
+                {(profileUser?.photoURL || user?.photoURL) ? (
                   <img 
-                    src={user.photoURL} 
+                    src={(profileUser?.photoURL || user?.photoURL) as string} 
                     alt="User Avatar" 
                     className="hub-user-photo"
                   />
                 ) : (
                   <span role="img" aria-label="User avatar">
-                    {user?.email?.charAt(0).toUpperCase() || '👤'}
+                    {(profileUser?.displayName?.charAt(0).toUpperCase()) || user?.email?.charAt(0).toUpperCase() || '👤'}
                   </span>
                 )}
               </div>
               <div className="hub-user-info">
                 <span className="hub-user-name">
-                  {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                  {profileUser?.displayName || user?.displayName || user?.email?.split('@')[0] || 'User'}
                 </span>
-                <span className="hub-user-status">Customize your profile hub</span>
+                <span className="hub-user-status">{isPublicView ? 'Welcome to my hub' : 'Customize your profile hub'}</span>
                 <span className="hub-user-level">LVL • ?</span>
               </div>
             </div>
@@ -214,6 +223,7 @@ const ProfileHub = () => {
             </div>
 
             <div className="hub-controls">
+              {!isPublicView && (
               <button
                 type="button"
                 className="hub-button"
@@ -231,6 +241,7 @@ const ProfileHub = () => {
               >
                 🎛️
               </button>
+              )}
 
               <button
                 type="button"
@@ -360,18 +371,21 @@ const ProfileHub = () => {
                     </div>
                   ))}
                 </div>
-                <div className="rep-rack-actions">
-                  <button className="rep-rack-upload-btn" onClick={handleUploadProject}>
-                    <span>📤</span>
-                    Upload New Project
-                  </button>
-                  <button className="rep-rack-select-btn" onClick={handleSelectFromExisting}>
-                    <span>📋</span>
-                    Select from Existing
-                  </button>
-                </div>
+                {!isPublicView && (
+                  <div className="rep-rack-actions">
+                    <button className="rep-rack-upload-btn" onClick={handleUploadProject}>
+                      <span>📤</span>
+                      Upload New Project
+                    </button>
+                    <button className="rep-rack-select-btn" onClick={handleSelectFromExisting}>
+                      <span>📋</span>
+                      Select from Existing
+                    </button>
+                  </div>
+                )}
               </section>
 
+              {!isPublicView && (
               <section className="hub-section" aria-labelledby="hub-custom-title">
                 <h3 id="hub-custom-title">Customize Hub</h3>
                 <div className="customization-grid">
@@ -421,9 +435,10 @@ const ProfileHub = () => {
                   </div>
                 </div>
               </section>
+              )}
             </div>
           )}
-          {isChatbot && (
+          {!isPublicView && isChatbot && (
             <div className="hub-chatbot" role="dialog" aria-label="Profile hub messenger">
               <header className="hub-chat-header">
                 <span>AI Assistant</span>

@@ -89,7 +89,7 @@ export default function ExplorePage() {
                 <div className="no-preview">📦 No Preview Available</div>
               </div>
               <div className="explore-widget-actions">
-                <a href="/?user=sample" className="explore-profile-link">👤 Profile</a>
+                <a href="/u/sample" className="explore-profile-link">👤 Profile</a>
                 <button className="explore-follow-btn">+ Follow</button>
                 <button className="explore-message-btn">💬 Message</button>
               </div>
