@@ -109,6 +109,57 @@ export function useStorage() {
     }
   };
 
+  // Recursively list all files under a path. Useful for bundle directories
+  const listAllFilesRecursive = async (basePath: string): Promise<StorageReference[]> => {
+    const items: StorageReference[] = [];
+    const walk = async (path: string) => {
+      const listRef = ref(storage, path);
+      const result = await listAll(listRef);
+      items.push(...result.items);
+      // Recurse into prefixes (subfolders)
+      await Promise.all(result.prefixes.map((p) => walk(p.fullPath)));
+    };
+    await walk(basePath);
+    return items;
+  };
+
+  // Build a file map for a bundle folder: fileName -> downloadURL
+  const buildBundleFileMap = async (bundleBasePath: string): Promise<Record<string, string>> => {
+    const allRefs = await listAllFilesRecursive(bundleBasePath);
+    const entries = await Promise.all(
+      allRefs.map(async (r) => {
+        const url = await getDownloadURL(r);
+        // Normalize key to be relative to base
+        const key = r.fullPath.replace(new RegExp(`^${bundleBasePath.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/?`), '');
+        return [key, url] as const;
+      })
+    );
+    // Prefer flat keys ("index.html") alongside nested ("public/index.html")
+    const map: Record<string, string> = {};
+    for (const [key, url] of entries) {
+      map[key] = url;
+      const flat = key.split('/').pop();
+      if (flat) map[flat] = url;
+    }
+    return map;
+  };
+
+  // Find an entry HTML file from the file map
+  const findHtmlEntry = (fileMap: Record<string, string>): string | null => {
+    const keys = Object.keys(fileMap);
+    // Common candidates ordered by priority
+    const candidates = [
+      'index.html',
+      'Index.html',
+      'public/index.html',
+      'dist/index.html',
+      'build/index.html',
+      keys.find((k) => /index\.html?$/i.test(k)),
+      keys.find((k) => /\.html?$/i.test(k)),
+    ].filter(Boolean) as string[];
+    return candidates.length ? candidates[0] : null;
+  };
+
   const getFileURL = async (path: string): Promise<string> => {
     try {
       const fileRef = ref(storage, path);
@@ -126,6 +177,9 @@ export function useStorage() {
     uploadMultipleFiles,
     deleteFile,
     listFiles,
+    listAllFilesRecursive,
+    buildBundleFileMap,
+    findHtmlEntry,
     getFileURL,
   };
 }
