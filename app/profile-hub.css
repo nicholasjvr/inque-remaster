@@ -2318,4 +2318,21 @@
     .profile-hub-shell--expanded .hub-section h3 {
         font-size: 1rem;
     }
+
+    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] {
+        pointer-events: auto !important;
+        z-index: 1100 !important;
+    }
+
+    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-controls,
+    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-button,
+    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-toggle {
+        pointer-events: auto !important;
+        cursor: pointer;
+    }
+
+    .hero-profile-integration .profile-hub-overlay {
+        display: none !important;
+        pointer-events: none !important;
+    }
 }
