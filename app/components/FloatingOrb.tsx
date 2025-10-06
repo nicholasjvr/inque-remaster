@@ -47,11 +47,27 @@ const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-type FloatingOrbProps = {
-  onActiveChange?: (item: NavItem) => void;
+type OrbTheme = {
+  primaryColor?: string; // core highlight
+  glowColor?: string; // outer glow and particles
+  accentColor?: string; // ambient hints
 };
 
-const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
+type FlowLinesConfig = {
+  count?: number;
+  thickness?: number; // tube radius
+  color?: string;
+};
+
+type FloatingOrbProps = {
+  onActiveChange?: (item: NavItem) => void;
+  autoRotateDegPerSec?: number;
+  particleCount?: number;
+  theme?: OrbTheme;
+  flowLines?: FlowLinesConfig;
+};
+
+const FloatingOrb = ({ onActiveChange, autoRotateDegPerSec, particleCount, theme, flowLines }: FloatingOrbProps) => {
   const onActiveChangeRef = useRef(onActiveChange);
 
   useEffect(() => {
@@ -93,6 +109,11 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     orbButton.className = 'floating-orb';
     orbButton.setAttribute('aria-label', NAV_ITEMS[0].label);
     orbButton.setAttribute('tabindex', '0');
+
+    // Apply theme via CSS variables if provided
+    if (theme?.primaryColor) wrapper.style.setProperty('--orb-primary', theme.primaryColor);
+    if (theme?.accentColor) wrapper.style.setProperty('--orb-secondary', theme.accentColor);
+    if (theme?.glowColor) wrapper.style.setProperty('--orb-glow', theme.glowColor);
 
     // Swipe indicator (mobile UX)
     const swipeIndicator = document.createElement('div');
@@ -154,7 +175,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     let orbLastX = 0;
     let orbMovedSinceDown = false;
     const AUTO_ROTATE_DELAY_MS = 2200;
-    const AUTO_ROTATE_DEG_PER_SEC = 12; // idle speed
+    const AUTO_ROTATE_DEG_PER_SEC = Math.max(0, autoRotateDegPerSec ?? 12); // idle speed
 
     const recordInteraction = () => {
       lastInteractionAt = performance.now();
@@ -459,8 +480,8 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
 
         const coreGeometry = new THREE.SphereGeometry(1.05, 80, 80);
         const coreMaterial = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#52f7ff'),
-          emissive: new THREE.Color('#0bdcff'),
+          color: new THREE.Color(theme?.primaryColor ?? '#52f7ff'),
+          emissive: new THREE.Color(theme?.accentColor ?? '#0bdcff'),
           emissiveIntensity: 0.6,
           roughness: 0.25,
           metalness: 0.05,
@@ -472,7 +493,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
 
         const glowGeometry = new THREE.SphereGeometry(1.45, 80, 80);
         const glowMaterial = new THREE.MeshBasicMaterial({
-          color: new THREE.Color('#14e6ff'),
+          color: new THREE.Color(theme?.glowColor ?? '#14e6ff'),
           transparent: true,
           opacity: 0.35,
           blending: THREE.AdditiveBlending,
@@ -484,7 +505,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         // Atmospheric rim glow
         const atmosphereGeometry = new THREE.SphereGeometry(1.52, 80, 80);
         const atmosphereMaterial = new THREE.MeshBasicMaterial({
-          color: new THREE.Color('#5ff8ff'),
+          color: new THREE.Color(theme?.glowColor ?? '#5ff8ff'),
           transparent: true,
           opacity: 0.09,
           blending: THREE.AdditiveBlending,
@@ -494,7 +515,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         scene.add(atmosphere);
 
         // Sparkle particle field orbiting the sphere
-        const PARTICLE_COUNT = 1600;
+        const PARTICLE_COUNT = Math.max(300, Math.min(6000, particleCount ?? 1600));
         const particlePositions = new Float32Array(PARTICLE_COUNT * 3);
         const spherical = new THREE.Spherical(1.35);
         for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -511,7 +532,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         const particlesGeometry = new THREE.BufferGeometry();
         particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
         const particlesMaterial = new THREE.PointsMaterial({
-          color: new THREE.Color('#8cf6ff'),
+          color: new THREE.Color(theme?.glowColor ?? '#8cf6ff'),
           size: 0.02,
           transparent: true,
           opacity: 0.9,
@@ -521,6 +542,44 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         });
         const particles = new THREE.Points(particlesGeometry, particlesMaterial);
         scene.add(particles);
+
+        // Flowing line arcs effect around the sphere
+        const flowGroup = new THREE.Group();
+        scene.add(flowGroup);
+        const flowCount = Math.max(6, Math.min(64, flowLines?.count ?? 22));
+        const flowThickness = Math.max(0.004, Math.min(0.04, flowLines?.thickness ?? 0.012));
+        const flowColor = new THREE.Color(flowLines?.color ?? theme?.glowColor ?? '#6ff9ff');
+        const curveSegments = 64;
+        const tubeGeometries: THREE.TubeGeometry[] = [];
+        const tubeMaterials: THREE.MeshBasicMaterial[] = [];
+
+        function randomOnSphere(radius = 1.1): THREE.Vector3 {
+          const u = Math.random() * 2 - 1; // -1..1
+          const t = Math.random() * Math.PI * 2;
+          const s = Math.sqrt(1 - u * u);
+          return new THREE.Vector3(radius * s * Math.cos(t), radius * u, radius * s * Math.sin(t));
+        }
+
+        for (let i = 0; i < flowCount; i++) {
+          const a = randomOnSphere(1.1);
+          const b = randomOnSphere(1.1);
+          const mid = a.clone().add(b).normalize().multiplyScalar(1.12 + Math.random() * 0.06);
+          const curve = new THREE.CatmullRomCurve3([a, mid, b]);
+          const tube = new THREE.TubeGeometry(curve, curveSegments, flowThickness, 6, false);
+          const mat = new THREE.MeshBasicMaterial({
+            color: flowColor,
+            transparent: true,
+            opacity: 0.16 + Math.random() * 0.12,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            toneMapped: false,
+          });
+          const mesh = new THREE.Mesh(tube, mat);
+          mesh.rotation.y = Math.random() * Math.PI * 2;
+          flowGroup.add(mesh);
+          tubeGeometries.push(tube);
+          tubeMaterials.push(mat);
+        }
 
         const ambient = new THREE.AmbientLight('#93ffff', 0.6);
         const point = new THREE.PointLight('#62cfff', 1.4, 6, 2.2);
@@ -550,6 +609,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
           glow.rotation.y = elapsed * 0.18;
           atmosphere.rotation.y = elapsed * 0.12;
           particles.rotation.y = elapsed * 0.22;
+          flowGroup.rotation.y = elapsed * 0.08;
           renderer.render(scene, camera);
           frameId = requestAnimationFrame(renderScene);
         };
@@ -568,6 +628,8 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
           atmosphereMaterial.dispose();
           particlesGeometry.dispose();
           particlesMaterial.dispose();
+          tubeGeometries.forEach((g) => g.dispose());
+          tubeMaterials.forEach((m) => m.dispose());
           host.removeChild(renderer.domElement);
         };
       } catch (error) {
