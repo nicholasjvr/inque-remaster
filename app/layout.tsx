@@ -3,7 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./floating-orb.css";
 import "./profile-hub.css";
+import "./user-onboarding.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import OnboardingWrapper from "@/components/OnboardingWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +41,9 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          {children}
+          <OnboardingWrapper>
+            {children}
+          </OnboardingWrapper>
         </AuthProvider>
       </body>
     </html>

@@ -10,27 +10,33 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Users collection - public profiles with stats
     match /users/{userId} {
-      allow read: if true; // public profile reads
+      // Anyone can read public user profiles
+      allow read: if true;
+      
+      // Users can create their own profile during onboarding
+      allow create: if isOwner(userId);
+      
+      // Only owner can update their own profile
+      allow update: if isOwner(userId);
+      
+      // Never allow deletion of user documents
+      allow delete: if false;
 
-      // Only owner can write their own user document (including profile)
-      allow write: if isOwner(userId) &&
-        // Optional: prevent setting disallowed fields at top-level
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(['displayName','photoURL','bio','profile','stats','updatedAt','lastActiveAt']);
-
-      // Validate profile structure on create/update
-      allow update: if isOwner(userId) &&
-        request.resource.data.profile is map && (
-          // repRack max 3 items
-          !('repRack' in request.resource.data.profile) ||
-          (request.resource.data.profile.repRack is list &&
-            request.resource.data.profile.repRack.size() <= 3 &&
-            request.resource.data.profile.repRack.all(item =>
-              item is map && item.type in ['widget','project'] &&
-              item.refId is string
-            )
-          )
-        );
+      // Subcollection: User's projects
+      match /projects/{projectId} {
+        allow read: if true; // Public read
+        allow create: if isOwner(userId);
+        allow update, delete: if isOwner(userId);
+      }
+      
+      // Subcollection: User's activity log (private)
+      match /activity/{activityId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if false; // Activity is immutable once created
+      }
     }
 
     // Widgets collection: owner can CRUD their own widgets
@@ -38,6 +44,27 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Projects collection: global public projects feed
+    match /projects/{projectId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Engagement collection: likes, views, shares tracking
+    match /engagement/{engagementId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false; // Don't delete engagement data
+    }
+    
+    // Achievements collection: platform achievements/badges
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow write: if false; // Only backend can create achievements
     }
   }
 }

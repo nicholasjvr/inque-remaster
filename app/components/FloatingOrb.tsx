@@ -94,7 +94,16 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     orbButton.setAttribute('aria-label', NAV_ITEMS[0].label);
     orbButton.setAttribute('tabindex', '0');
 
-    stage.append(webglLayer, scrollLine, navContainer, orbButton);
+    // Swipe indicator (mobile UX)
+    const swipeIndicator = document.createElement('div');
+    swipeIndicator.className = 'orb-swipe-indicator';
+    swipeIndicator.innerHTML = `
+      <span class="swipe-arrow left" aria-hidden="true"></span>
+      <span class="swipe-text">Swipe</span>
+      <span class="swipe-arrow right" aria-hidden="true"></span>
+    `;
+
+    stage.append(webglLayer, scrollLine, navContainer, orbButton, swipeIndicator);
     wrapper.append(stage);
 
     const tooltip = document.createElement('div');
@@ -138,6 +147,18 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     let pointerActive = false;
     let lastPointerX = 0;
     let activeIndex = 0;
+    let lastInteractionAt = performance.now();
+    let lastFrameAt = performance.now();
+    // Orb drag UX state
+    let orbDragActive = false;
+    let orbLastX = 0;
+    let orbMovedSinceDown = false;
+    const AUTO_ROTATE_DELAY_MS = 2200;
+    const AUTO_ROTATE_DEG_PER_SEC = 12; // idle speed
+
+    const recordInteraction = () => {
+      lastInteractionAt = performance.now();
+    };
 
     const notifyActiveChange = () => {
       const item = NAV_ITEMS[activeIndex];
@@ -206,6 +227,15 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     };
 
     const animate = () => {
+      const now = performance.now();
+      const dt = (now - lastFrameAt) / 1000;
+      lastFrameAt = now;
+
+      // Idle auto-rotation when user is not interacting
+      if (!prefersReducedMotion() && !pointerActive && now - lastInteractionAt > AUTO_ROTATE_DELAY_MS) {
+        scrollState.targetRotation -= AUTO_ROTATE_DEG_PER_SEC * dt;
+      }
+
       const diff = scrollState.targetRotation - scrollState.currentRotation;
       const damping = prefersReducedMotion() ? 1 : 0.12;
       if (Math.abs(diff) > 0.05) {
@@ -265,16 +295,20 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       event.preventDefault();
       scrollState.targetRotation += event.deltaY * 0.35;
       showRing();
+      recordInteraction();
     };
 
     const handlePointerDown = (event: PointerEvent) => {
-      if ((event.target as HTMLElement).closest('.orb-nav-item')) {
+      // Do not start drag when pressing on center orb or a nav item
+      if ((event.target as HTMLElement).closest('.orb-nav-item') ||
+          (event.target as HTMLElement).closest('.floating-orb')) {
         return;
       }
       pointerActive = true;
       lastPointerX = event.clientX;
       container.setPointerCapture(event.pointerId);
       showRing();
+      recordInteraction();
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -282,6 +316,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       const delta = event.clientX - lastPointerX;
       lastPointerX = event.clientX;
       scrollState.targetRotation += delta * 0.6;
+      recordInteraction();
     };
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -289,6 +324,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       pointerActive = false;
       container.releasePointerCapture(event.pointerId);
       snapToNearestLockPoint();
+      recordInteraction();
     };
 
     const setActiveIndex = (index: number, snap = true) => {
@@ -305,7 +341,43 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       updateCenterPreview();
     };
 
+    // Center ORB drag-and-click behavior with movement threshold
+    orbButton.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      recordInteraction();
+      orbDragActive = true;
+      orbMovedSinceDown = false;
+      orbLastX = e.clientX;
+      try { orbButton.setPointerCapture(e.pointerId); } catch {}
+      showRing();
+    });
+
+    orbButton.addEventListener('pointermove', (e) => {
+      if (!orbDragActive) return;
+      const delta = e.clientX - orbLastX;
+      if (Math.abs(delta) > 2) orbMovedSinceDown = true;
+      orbLastX = e.clientX;
+      if (orbMovedSinceDown) {
+        scrollState.targetRotation += delta * 0.6;
+      }
+    });
+
+    orbButton.addEventListener('pointerup', (e) => {
+      if (!orbDragActive) return;
+      e.stopPropagation();
+      orbDragActive = false;
+      try { orbButton.releasePointerCapture(e.pointerId); } catch {}
+      if (orbMovedSinceDown) {
+        snapToNearestLockPoint();
+      } else {
+        const activeItem = NAV_ITEMS[activeIndex];
+        window.location.href = activeItem.href;
+      }
+    });
+
+    // Fallback click for accessibility/keyboard activation
     orbButton.addEventListener('click', (event) => {
+      if (orbMovedSinceDown) return; // ignore click synthesized after drag
       event.preventDefault();
       const activeItem = NAV_ITEMS[activeIndex];
       window.location.href = activeItem.href;
@@ -338,6 +410,12 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     animate();
 
     try {
+      const isMobile = window.innerWidth <= 768;
+      const swipeSeen = localStorage.getItem('orb-swipe-seen');
+      if (isMobile && !swipeSeen) {
+        swipeIndicator.classList.add('visible');
+      }
+
       if (!localStorage.getItem('orb-tooltip-seen')) {
         tooltip.classList.add('show');
         tooltipTimeout = window.setTimeout(() => {
@@ -348,6 +426,15 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     } catch (error) {
       console.warn('Orb tooltip storage unavailable', error);
     }
+
+    const hideSwipe = () => {
+      swipeIndicator.classList.remove('visible');
+      try { localStorage.setItem('orb-swipe-seen', '1'); } catch {}
+    };
+
+    // Hide swipe hint after first interaction
+    container.addEventListener('pointerdown', hideSwipe, { once: true });
+    container.addEventListener('wheel', hideSwipe, { once: true });
 
     const handleResize = () => {
       updateOrbitPositions();
@@ -394,6 +481,47 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         const glow = new THREE.Mesh(glowGeometry, glowMaterial);
         scene.add(glow);
 
+        // Atmospheric rim glow
+        const atmosphereGeometry = new THREE.SphereGeometry(1.52, 80, 80);
+        const atmosphereMaterial = new THREE.MeshBasicMaterial({
+          color: new THREE.Color('#5ff8ff'),
+          transparent: true,
+          opacity: 0.09,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+        scene.add(atmosphere);
+
+        // Sparkle particle field orbiting the sphere
+        const PARTICLE_COUNT = 1600;
+        const particlePositions = new Float32Array(PARTICLE_COUNT * 3);
+        const spherical = new THREE.Spherical(1.35);
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          // Bias toward bands like aurora streams
+          const phi = Math.acos(1 - Math.random() * 2); // 0..pi
+          const theta = Math.random() * Math.PI * 2; // 0..2pi
+          spherical.phi = phi * 0.82 + 0.09; // avoid poles
+          spherical.theta = theta;
+          const v = new THREE.Vector3().setFromSpherical(spherical);
+          particlePositions[i * 3 + 0] = v.x;
+          particlePositions[i * 3 + 1] = v.y;
+          particlePositions[i * 3 + 2] = v.z;
+        }
+        const particlesGeometry = new THREE.BufferGeometry();
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+          color: new THREE.Color('#8cf6ff'),
+          size: 0.02,
+          transparent: true,
+          opacity: 0.9,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          sizeAttenuation: true,
+        });
+        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particles);
+
         const ambient = new THREE.AmbientLight('#93ffff', 0.6);
         const point = new THREE.PointLight('#62cfff', 1.4, 6, 2.2);
         point.position.set(1.2, 1.4, 2.6);
@@ -420,6 +548,8 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
           core.rotation.y = elapsed * 0.25;
           core.rotation.x = Math.sin(elapsed * 0.4) * 0.12;
           glow.rotation.y = elapsed * 0.18;
+          atmosphere.rotation.y = elapsed * 0.12;
+          particles.rotation.y = elapsed * 0.22;
           renderer.render(scene, camera);
           frameId = requestAnimationFrame(renderScene);
         };
@@ -434,6 +564,10 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
           coreMaterial.dispose();
           glowGeometry.dispose();
           glowMaterial.dispose();
+          atmosphereGeometry.dispose();
+          atmosphereMaterial.dispose();
+          particlesGeometry.dispose();
+          particlesMaterial.dispose();
           host.removeChild(renderer.domElement);
         };
       } catch (error) {

@@ -8,7 +8,7 @@ import RepRackManager from './RepRackManager';
 
 import '../profile-hub.css';
 
-type HubState = 'minimized' | 'expanded' | 'chatbot';
+type HubState = 'minimized' | 'expanded' | 'chatbot' | 'dm';
 type HubTheme = 'neo' | 'minimal' | 'cyber';
 
 type NavigationItem = {
@@ -84,11 +84,12 @@ const persistPreferences = (prefs: StoredPreferences) => {
 type ProfileHubProps = {
   mode?: 'public' | 'edit';
   profileUser?: PublicUser | null;
-  initialState?: 'minimized' | 'expanded' | 'chatbot';
+  initialState?: 'minimized' | 'expanded' | 'chatbot' | 'dm';
   variant?: string; // compatibility with existing usage
+  onStateChange?: (state: HubState) => void;
 };
 
-const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', variant }: ProfileHubProps) => {
+const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', variant, onStateChange }: ProfileHubProps) => {
   const { user, logout } = useAuth();
   const [state, setState] = useState<HubState>(initialState);
   const [isClosing, setIsClosing] = useState(false);
@@ -97,6 +98,8 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const [messageDraft, setMessageDraft] = useState('');
   const isExpanded = state === 'expanded';
   const isChatbot = state === 'chatbot';
+  const isDM = state === 'dm';
+  const isModalOpen = isExpanded || isChatbot || isDM;
   const isPublicView = mode === 'public';
 
   // Load profile for target user (owner or public user)
@@ -183,10 +186,14 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   }, []);
 
   useEffect(() => {
+    onStateChange?.(state);
+  }, [state, onStateChange]);
+
+  useEffect(() => {
     const overlay = document.querySelector('.profile-hub-overlay');
     // Do not use overlay in billboard variant (embedded in hero)
     if (!overlay || variant === 'billboard') return;
-    const shouldShow = state === 'expanded' || state === 'chatbot';
+    const shouldShow = isModalOpen;
     overlay.classList.toggle('active', shouldShow);
 
     // When expanding, focus and scroll the hub into view
@@ -258,7 +265,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
         fontFamily: 'inherit'
       } : undefined}
     >
-      <div className={`profile-hub-shell${isExpanded ? ' profile-hub-shell--expanded' : ''}`}>
+      <div className={`profile-hub-shell${isModalOpen ? ' profile-hub-shell--expanded' : ''}`}>
         <div
           className="profile-hub"
           data-state={state}
@@ -302,14 +309,16 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       🤖
     </button>
   )}
-  <button
-    type="button"
-    className="hub-button"
-    title="Toggle customization panel"
-    onClick={() => setState(prev => (prev === 'expanded' ? 'minimized' : 'expanded'))}
-  >
-    🎛️
-  </button>
+  {!isPublicView && (
+    <button
+      type="button"
+      className="hub-button"
+      title="Direct Messages"
+      onClick={() => setState(prev => (prev === 'dm' ? 'minimized' : 'dm'))}
+    >
+      💬
+    </button>
+  )}
   <button
     type="button"
     className="hub-toggle"
@@ -320,12 +329,12 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   </button>
 </div>
           </div>
-          {isExpanded && (
+          {isExpanded && !isPublicView && (
             <div className="hub-expanded-content">
               <div className="hub-expanded-nav">
                 <div className="expanded-nav-title">Quick Navigation</div>
                 <div className="expanded-nav-buttons">
-                  <a 
+                  <a
                     href="/explore"
                     className="expanded-nav-btn"
                     title="Explore Projects"
@@ -334,7 +343,16 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     <span className="nav-label">Explore</span>
                     <span className="nav-desc">Discover projects</span>
                   </a>
-                  <a 
+                  <a
+                    href="/explore-reels"
+                    className="expanded-nav-btn"
+                    title="Explore Reels"
+                  >
+                    <span className="nav-icon">🎞️</span>
+                    <span className="nav-label">Reels</span>
+                    <span className="nav-desc">Swipe demo videos</span>
+                  </a>
+                  <a
                     href="/users"
                     className="expanded-nav-btn"
                     title="Browse Creators"
@@ -343,7 +361,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     <span className="nav-label">Creators</span>
                     <span className="nav-desc">Find creators</span>
                   </a>
-                  <a 
+                  <a
                     href="/showcase"
                     className="expanded-nav-btn"
                     title="View Showcase"
@@ -359,16 +377,70 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 <h3 id="hub-stats-title">Stats</h3>
                 <div className="hub-stats">
                   <div className="hub-stat-card">
-                    <div className="hub-stat-value">0</div>
-                    <div className="hub-stat-label">Widgets</div>
+                    <div className="hub-stat-value">{localProfile?.repRack?.length || 0}</div>
+                    <div className="hub-stat-label">Featured Projects</div>
+                    <div className="hub-stat-desc">Projects in showcase</div>
                   </div>
                   <div className="hub-stat-card">
-                    <div className="hub-stat-value">0</div>
+                    <div className="hub-stat-value">{profileUser?.stats?.followersCount || profileUser?.followersCount || 0}</div>
                     <div className="hub-stat-label">Followers</div>
+                    <div className="hub-stat-desc">Community supporters</div>
                   </div>
                   <div className="hub-stat-card">
-                    <div className="hub-stat-value">0</div>
-                    <div className="hub-stat-label">Views</div>
+                    <div className="hub-stat-value">{profileUser?.stats?.totalViews || profileUser?.totalViews || 0}</div>
+                    <div className="hub-stat-label">Profile Views</div>
+                    <div className="hub-stat-desc">Times profile visited</div>
+                  </div>
+                  <div className="hub-stat-card">
+                    <div className="hub-stat-value">{profileUser?.stats?.badgesCount || profileUser?.badgesCount || 0}</div>
+                    <div className="hub-stat-label">Badges</div>
+                    <div className="hub-stat-desc">Achievements earned</div>
+                  </div>
+                  <div className="hub-stat-card">
+                    <div className="hub-stat-value">{profileUser?.joinDate ? new Date(profileUser.joinDate.toDate ? profileUser.joinDate.toDate() : profileUser.joinDate).getFullYear() : new Date().getFullYear()}</div>
+                    <div className="hub-stat-label">Member Since</div>
+                    <div className="hub-stat-desc">Year joined platform</div>
+                  </div>
+                  <div className="hub-stat-card">
+                    <div className="hub-stat-value">{profileUser?.stats?.totalLikes || profileUser?.totalLikes || 0}</div>
+                    <div className="hub-stat-label">Total Likes</div>
+                    <div className="hub-stat-desc">Likes received</div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="hub-section" aria-labelledby="hub-achievements-title">
+                <h3 id="hub-achievements-title">Achievements & Badges</h3>
+                <div className="achievements-grid">
+                  <div className={`achievement-badge ${(profileUser?.stats?.projectsCount || profileUser?.projectsCount || 0) > 0 ? 'earned' : 'locked'}`}>
+                    <div className="badge-icon">🏆</div>
+                    <div className="badge-name">First Project</div>
+                    <div className="badge-desc">Created your first project</div>
+                  </div>
+                  <div className={`achievement-badge ${(profileUser?.stats?.followersCount || profileUser?.followersCount || 0) >= 10 ? 'earned' : 'locked'}`}>
+                    <div className="badge-icon">👥</div>
+                    <div className="badge-name">Popular Creator</div>
+                    <div className="badge-desc">Gained 10+ followers</div>
+                  </div>
+                  <div className={`achievement-badge ${(profileUser?.stats?.totalViews || profileUser?.totalViews || 0) >= 100 ? 'earned' : 'locked'}`}>
+                    <div className="badge-icon">👁️</div>
+                    <div className="badge-name">Trending</div>
+                    <div className="badge-desc">100+ profile views</div>
+                  </div>
+                  <div className={`achievement-badge ${(profileUser?.stats?.totalLikes || profileUser?.totalLikes || 0) >= 50 ? 'earned' : 'locked'}`}>
+                    <div className="badge-icon">❤️</div>
+                    <div className="badge-name">Community Favorite</div>
+                    <div className="badge-desc">50+ likes received</div>
+                  </div>
+                  <div className={`achievement-badge ${localProfile?.repRack && localProfile.repRack.length >= 3 ? 'earned' : 'locked'}`}>
+                    <div className="badge-icon">⭐</div>
+                    <div className="badge-name">Complete Showcase</div>
+                    <div className="badge-desc">Filled all rep rack slots</div>
+                  </div>
+                  <div className={`achievement-badge ${profileUser?.isVerified ? 'earned' : 'locked'}`}>
+                    <div className="badge-icon">✓</div>
+                    <div className="badge-name">Verified Creator</div>
+                    <div className="badge-desc">Verified account status</div>
                   </div>
                 </div>
               </section>
@@ -464,6 +536,107 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 )}
               </section>
 
+              <section className="hub-section" aria-labelledby="hub-activity-title">
+                <h3 id="hub-activity-title">Recent Activity</h3>
+                <div className="activity-timeline">
+                  <div className="activity-item">
+                    <div className="activity-icon">📝</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Created a new project</div>
+                      <div className="activity-time">2 hours ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">❤️</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Received a like on "Awesome Widget"</div>
+                      <div className="activity-time">5 hours ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">👥</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Gained a new follower</div>
+                      <div className="activity-time">1 day ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">🏆</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Earned "Popular Creator" badge</div>
+                      <div className="activity-time">3 days ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">⭐</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Added project to showcase</div>
+                      <div className="activity-time">1 week ago</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="hub-section" aria-labelledby="hub-projects-title">
+                <h3 id="hub-projects-title">Recent Projects</h3>
+                <div className="projects-showcase">
+                  <div className="project-card">
+                    <div className="project-image">
+                      <div className="project-placeholder">🎨</div>
+                    </div>
+                    <div className="project-info">
+                      <h4 className="project-title">Interactive Portfolio Widget</h4>
+                      <p className="project-desc">A dynamic portfolio showcase with smooth animations</p>
+                      <div className="project-stats">
+                        <span className="project-stat">❤️ 24</span>
+                        <span className="project-stat">👁️ 156</span>
+                        <span className="project-stat">⭐ 8</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="project-card">
+                    <div className="project-image">
+                      <div className="project-placeholder">📊</div>
+                    </div>
+                    <div className="project-info">
+                      <h4 className="project-title">Data Visualization Tool</h4>
+                      <p className="project-desc">Beautiful charts and graphs for data analysis</p>
+                      <div className="project-stats">
+                        <span className="project-stat">❤️ 18</span>
+                        <span className="project-stat">👁️ 89</span>
+                        <span className="project-stat">⭐ 5</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="project-card">
+                    <div className="project-image">
+                      <div className="project-placeholder">🎮</div>
+                    </div>
+                    <div className="project-info">
+                      <h4 className="project-title">Game Development Kit</h4>
+                      <p className="project-desc">Tools and assets for indie game developers</p>
+                      <div className="project-stats">
+                        <span className="project-stat">❤️ 32</span>
+                        <span className="project-stat">👁️ 203</span>
+                        <span className="project-stat">⭐ 12</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {!isPublicView && (
+                  <div className="projects-actions">
+                    <button className="projects-btn">
+                      <span>➕</span>
+                      Create New Project
+                    </button>
+                    <button className="projects-btn">
+                      <span>📂</span>
+                      Manage Projects
+                    </button>
+                  </div>
+                )}
+              </section>
+
               {!isPublicView && (
               <section className="hub-section" aria-labelledby="hub-custom-title">
                 <h3 id="hub-custom-title">Customize Hub</h3>
@@ -552,6 +725,24 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   <button type="button" onClick={handleSendMessage}>
                     Send
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {!isPublicView && isDM && (
+            <div className="hub-chatbot hub-dm" role="dialog" aria-label="Direct messages">
+              <header className="hub-chat-header">
+                <span>Direct Messages</span>
+                <button type="button" className="hub-button" onClick={() => setState('minimized')}>
+                  ×
+                </button>
+              </header>
+              <div className="hub-chat-body">
+                <div className="hub-chat-messages">
+                  <div className="hub-chat-message">
+                    <span className="avatar" aria-hidden="true">👤</span>
+                    <div className="bubble">This is your inbox. Coming soon.</div>
+                  </div>
                 </div>
               </div>
             </div>

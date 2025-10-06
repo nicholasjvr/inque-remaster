@@ -18,6 +18,9 @@ const SLOGANS = [
 export default function Home() {
   const [activeNavItem, setActiveNavItem] = useState<NavItem>(NAV_ITEMS[0]);
   const quickAccessText = `Open ${activeNavItem.label}`;
+  // Track ProfileHub state to show dedicated section when expanded/chatbot/dm
+  const [hubState, setHubState] = useState<'minimized' | 'expanded' | 'chatbot' | 'dm'>('minimized');
+  const showExtended = hubState === 'expanded' || hubState === 'chatbot' || hubState === 'dm';
 
   // Typing effect state
   const [currentSloganIndex, setCurrentSloganIndex] = useState(0);
@@ -36,23 +39,36 @@ export default function Home() {
     }
   }, []);
 
-  // Prevent scrolling (JavaScript approach)
+  // Prevent scrolling using CSS approach (more reliable and performant)
   useEffect(() => {
-    const preventScroll = (e: WheelEvent | TouchEvent) => {
-      e.preventDefault();
-      return false;
-    };
-
-    // Prevent scroll events
-    window.addEventListener('wheel', preventScroll, { passive: false });
-    window.addEventListener('touchmove', preventScroll, { passive: false });
-
-    // Cleanup
+    // Add no-scroll class to both html and body when component mounts
+    document.documentElement.classList.add('no-scroll');
+    document.body.classList.add('no-scroll');
+    
+    // Cleanup: remove no-scroll class when component unmounts
     return () => {
-      window.removeEventListener('wheel', preventScroll);
-      window.removeEventListener('touchmove', preventScroll);
+      document.documentElement.classList.remove('no-scroll');
+      document.body.classList.remove('no-scroll');
     };
   }, []);
+
+  // When hub opens (expanded/chatbot/dm), temporarily enable scrolling and smooth-scroll to section
+  useEffect(() => {
+    const modalOpen = hubState === 'expanded' || hubState === 'chatbot' || hubState === 'dm';
+    const html = document.documentElement;
+    const body = document.body;
+    if (modalOpen) {
+      html.classList.remove('no-scroll');
+      body.classList.remove('no-scroll');
+      const section = document.getElementById('hub-extended-section');
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      html.classList.add('no-scroll');
+      body.classList.add('no-scroll');
+    }
+  }, [hubState]);
 
   // Typing effect animation
   useEffect(() => {
@@ -105,11 +121,22 @@ export default function Home() {
               }`}
             />
           </p>
-          <div className="hero-profile-integration">
-            <ProfileHub variant="billboard" />
-          </div>
         <FloatingOrb onActiveChange={setActiveNavItem} />
         </header>
+        {!showExtended && (
+          <section>
+            <div className="hero-profile-integration">
+              <ProfileHub variant="billboard" onStateChange={setHubState} />
+            </div>
+          </section>
+        )}
+        {showExtended && (
+          <section id="hub-extended-section">
+            <div className="hero-profile-extended">
+              <ProfileHub variant="billboard" initialState={hubState} onStateChange={setHubState} />
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

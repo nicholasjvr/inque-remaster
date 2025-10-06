@@ -24,15 +24,50 @@ import { db } from '@/lib/firebase';
 // ---------------------
 // Public user interfaces
 // ---------------------
+export type UserStats = {
+  projectsCount: number;
+  widgetsCount: number;
+  followersCount: number;
+  followingCount: number;
+  totalViews: number;
+  totalLikes: number;
+  badgesCount: number;
+  achievementsUnlocked: string[];
+};
+
 export type PublicUser = {
   id: string;
   displayName?: string;
   photoURL?: string;
   bio?: string;
   handle?: string;
-  projectsCount?: number;
-  lastActiveAt?: any;
+  email?: string;
+  
+  // Onboarding data
+  interests?: string[];
+  goals?: string[];
+  
+  // Stats
+  stats?: UserStats;
+  
+  // Profile
   profile?: UserProfile;
+  
+  // Metadata
+  onboardingCompleted?: boolean;
+  joinDate?: any;
+  lastActiveAt?: any;
+  createdAt?: any;
+  updatedAt?: any;
+  isPublic?: boolean;
+  isVerified?: boolean;
+  
+  // Legacy fields for backward compatibility
+  projectsCount?: number;
+  followersCount?: number;
+  totalViews?: number;
+  totalLikes?: number;
+  badgesCount?: number;
 };
 
 export type WidgetBundle = {
@@ -412,4 +447,260 @@ export function usePageVisits() {
   };
 
   return { visits, loading, logPageVisit };
+}
+
+// ---------------------
+// Projects Management
+// ---------------------
+export type Project = {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  demoUrl?: string;
+  repoUrl?: string;
+  tags?: string[];
+  featured?: boolean;
+  
+  // Stats
+  likes: number;
+  views: number;
+  shares: number;
+  
+  // Metadata
+  createdAt: any;
+  updatedAt: any;
+  publishedAt?: any;
+};
+
+export function useProjects(userId?: string) {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+
+    const projectsRef = collection(db, 'projects');
+    const q = query(
+      projectsRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q,
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const projectsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Project[];
+        setProjects(projectsData);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error fetching projects:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'likes' | 'views' | 'shares'>) => {
+    try {
+      const docRef = await addDoc(collection(db, 'projects'), {
+        ...projectData,
+        likes: 0,
+        views: 0,
+        shares: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      
+      // Update user stats
+      if (projectData.userId) {
+        await updateUserStats(projectData.userId, { projectsCount: 1 }, 'increment');
+      }
+      
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding project:', error);
+      throw error;
+    }
+  };
+
+  const updateProject = async (projectId: string, updates: Partial<Project>) => {
+    try {
+      const projectRef = doc(db, 'projects', projectId);
+      await updateDoc(projectRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error updating project:', error);
+      throw error;
+    }
+  };
+
+  const deleteProject = async (projectId: string, userId: string) => {
+    try {
+      await deleteDoc(doc(db, 'projects', projectId));
+      
+      // Update user stats
+      await updateUserStats(userId, { projectsCount: -1 }, 'increment');
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      throw error;
+    }
+  };
+
+  return {
+    projects,
+    loading,
+    error,
+    addProject,
+    updateProject,
+    deleteProject,
+  };
+}
+
+// ---------------------
+// Stats Management
+// ---------------------
+export async function updateUserStats(
+  userId: string,
+  stats: Partial<UserStats>,
+  mode: 'set' | 'increment' = 'set'
+) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) {
+      throw new Error('User document does not exist');
+    }
+    
+    const currentStats = userSnap.data().stats || {};
+    
+    let updatedStats: any = {};
+    
+    if (mode === 'increment') {
+      // Increment stats
+      Object.keys(stats).forEach(key => {
+        const value = stats[key as keyof UserStats];
+        if (typeof value === 'number') {
+          updatedStats[`stats.${key}`] = (currentStats[key] || 0) + value;
+        }
+      });
+    } else {
+      // Set stats
+      updatedStats = {
+        'stats': {
+          ...currentStats,
+          ...stats,
+        }
+      };
+    }
+    
+    await updateDoc(userRef, {
+      ...updatedStats,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating user stats:', error);
+    throw error;
+  }
+}
+
+// Track engagement (likes, views, shares)
+export async function trackEngagement(
+  targetType: 'project' | 'widget' | 'user',
+  targetId: string,
+  engagementType: 'like' | 'view' | 'share',
+  userId?: string
+) {
+  try {
+    // Create engagement record
+    await addDoc(collection(db, 'engagement'), {
+      targetType,
+      targetId,
+      engagementType,
+      userId: userId || null,
+      timestamp: serverTimestamp(),
+    });
+    
+    // Update target document stats
+    let targetRef;
+    if (targetType === 'project') {
+      targetRef = doc(db, 'projects', targetId);
+    } else if (targetType === 'widget') {
+      targetRef = doc(db, 'widgets', targetId);
+    } else if (targetType === 'user') {
+      targetRef = doc(db, 'users', targetId);
+    }
+    
+    if (targetRef) {
+      const targetSnap = await getDoc(targetRef);
+      if (targetSnap.exists()) {
+        const data = targetSnap.data();
+        const statKey = `${engagementType}s`;
+        await updateDoc(targetRef, {
+          [statKey]: (data[statKey] || 0) + 1,
+          updatedAt: serverTimestamp(),
+        });
+        
+        // If it's a user's project/widget, update their total stats
+        if (data.userId) {
+          const userRef = doc(db, 'users', data.userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userStats = userSnap.data().stats || {};
+            await updateDoc(userRef, {
+              [`stats.total${engagementType.charAt(0).toUpperCase() + engagementType.slice(1)}s`]: 
+                (userStats[`total${engagementType.charAt(0).toUpperCase() + engagementType.slice(1)}s`] || 0) + 1,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error tracking engagement:', error);
+    throw error;
+  }
+}
+
+// Hook to use stats
+export function useUserStats(userId?: string) {
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(!!userId);
+
+  useEffect(() => {
+    if (!userId) {
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
+    const userRef = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        setStats(snap.data().stats || null);
+      } else {
+        setStats(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  return { stats, loading };
 }
