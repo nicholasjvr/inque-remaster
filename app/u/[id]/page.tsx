@@ -14,4 +14,3 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
     </div>
   );
 }
-

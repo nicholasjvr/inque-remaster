@@ -4,7 +4,6 @@
     top: 20px;
     right: 20px;
     z-index: 1000;
-    pointer-events: none;
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -34,7 +33,6 @@
     top: 24px;
     right: 24px;
     z-index: 1000;
-    pointer-events: none;
 }
 
 .profile-hub-wrapper.profile-hub-wrapper--static {
@@ -55,8 +53,44 @@
     min-width: 240px;
 }
 
-.profile-hub[data-billboard="true"] {
-    /* Prevent expansion in billboard mode */
+/* Ensure billboard variant buttons work properly */
+.profile-hub-wrapper[data-variant="billboard"] .hub-button,
+.profile-hub-wrapper[data-variant="billboard"] .hub-toggle,
+.profile-hub-wrapper[data-variant="billboard"] .rep-rack-action-btn,
+.profile-hub-wrapper[data-variant="billboard"] button {
+    pointer-events: auto !important;
+}
+
+/* Fix billboard wrapper styling conflicts */
+.profile-hub-wrapper[data-variant="billboard"] {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    /* Reset any inherited text styles */
+    font-size: inherit !important;
+    line-height: inherit !important;
+    text-align: inherit !important;
+    color: inherit !important;
+    font-family: inherit !important;
+    z-index: 1100 !important;
+}
+
+/* Ensure billboard hub remains interactive inside hero */
+.hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .profile-hub,
+.hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-core,
+.hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-controls {
+    pointer-events: auto !important;
+}
+
+/* Never show the modal overlay inside hero billboard embedding */
+.hero-profile-integration .profile-hub-overlay {
+    display: none !important;
+    pointer-events: none !important;
 }
 
 .profile-hub[data-billboard="true"] .hub-expanded-content,
@@ -77,32 +111,37 @@
     bottom: auto;
     left: auto;
     width: 100%;
-    max-width: clamp(360px, 46vw, 520px);
+    max-width: 100%;
     margin: 0;
-    pointer-events: none;
-}
-
-.profile-hub-wrapper[data-variant="billboard"] .profile-hub-shell {
+    /* Allow interactions when embedded in hero */
     pointer-events: auto;
 }
 
 .profile-hub-wrapper[data-variant="billboard"] .profile-hub {
     width: 100%;
     min-width: auto;
-    box-shadow:
-        0 14px 38px rgba(0, 240, 255, 0.2),
-        0 0 0 1px rgba(0, 240, 255, 0.18);
+    max-width: 100%;
+    /* Let the container handle the background styling */
+    box-shadow: none;
+    border: none;
 }
 
 .profile-hub-wrapper[data-variant="billboard"] .profile-hub-shell {
-    justify-content: flex-end;
+    justify-content: center;
+}
+
+/* Enhanced billboard styling for integrated layout */
+.hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .profile-hub {
+    background: rgba(6, 10, 18, 0.4);
+    backdrop-filter: blur(12px);
+    border-radius: clamp(18px, 4vw, 28px);
+    border: 1px solid rgba(0, 240, 255, 0.15);
 }
 
 .profile-hub-shell {
     display: flex;
     gap: 20px;
     align-items: stretch;
-    pointer-events: all;
 }
 
 .profile-hub-shell[data-variant="billboard"] {
@@ -131,9 +170,10 @@
 
 .profile-hub-shell.profile-hub-shell--expanded .profile-hub {
     max-height: none;
-    max-width: min(90vw, 1040px);
-    width: min(90vw, 1040px);
-    min-height: clamp(620px, 78vh, 960px);
+    /* increase modal footprint */
+    max-width: min(96vw, 1280px);
+    width: min(96vw, 1280px);
+    min-height: clamp(680px, 82vh, 1100px);
 }
 
 .profile-hub-shell.profile-hub-shell--expanded .hub-expanded-content,
@@ -151,7 +191,6 @@
 }
 
 .profile-hub {
-    pointer-events: auto;
     font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     border-radius: 18px;
     border: 2px solid var(--hub-border-color);
@@ -2074,10 +2113,10 @@
 }
 
 .profile-hub-shell--expanded .profile-hub {
-    width: min(92vw, 1200px);
-    min-height: 70vh;
+    width: min(96vw, 1320px);
+    min-height: 78vh;
     /* allow the whole modal to scroll on short viewports */
-    max-height: 90vh;
+    max-height: 92vh;
     margin: 0;
     position: relative;
     z-index: 1001;
@@ -2211,8 +2250,8 @@
 /* Responsive adjustments for centered modal */
 @media (max-width: 1200px) {
     .profile-hub-shell--expanded .profile-hub {
-        width: 95vw;
-        max-height: 92vh;
+        width: 97vw;
+        max-height: 94vh;
     }
 
     .profile-hub-shell--expanded .hub-expanded-content {
@@ -2225,10 +2264,10 @@
 
 @media (max-width: 768px) {
     .profile-hub-shell--expanded .profile-hub {
-        width: 98vw;
+        width: 99vw;
         max-width: none;
-        min-height: 80vh;
-        max-height: 92vh;
+        min-height: 82vh;
+        max-height: 94vh;
         border-radius: 16px;
     }
 

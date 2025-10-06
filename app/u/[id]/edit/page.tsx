@@ -29,4 +29,3 @@ export default function EditProfileHubPage({ params }: { params: { id: string } 
     </ProtectedRoute>
   );
 }
-

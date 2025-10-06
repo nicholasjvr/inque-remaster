@@ -90,11 +90,7 @@ type ProfileHubProps = {
 
 const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', variant }: ProfileHubProps) => {
   const { user, logout } = useAuth();
-  // Handle variant prop for billboard mode
-  const effectiveInitialState = variant === 'billboard' ? 'minimized' : initialState;
-  const isBillboardMode = variant === 'billboard';
-
-  const [state, setState] = useState<HubState>(effectiveInitialState);
+  const [state, setState] = useState<HubState>(initialState);
   const [isClosing, setIsClosing] = useState(false);
   const [theme, setTheme] = useState<HubTheme>(() => loadPreferences().theme);
   const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_MESSAGE]);
@@ -188,9 +184,20 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 
   useEffect(() => {
     const overlay = document.querySelector('.profile-hub-overlay');
-    if (!overlay) return;
+    // Do not use overlay in billboard variant (embedded in hero)
+    if (!overlay || variant === 'billboard') return;
     const shouldShow = state === 'expanded' || state === 'chatbot';
     overlay.classList.toggle('active', shouldShow);
+
+    // When expanding, focus and scroll the hub into view
+    if (state === 'expanded') {
+      const hubEl = document.querySelector('.profile-hub') as HTMLElement | null;
+      if (hubEl) {
+        hubEl.setAttribute('tabindex', '-1');
+        hubEl.focus({ preventScroll: true });
+        hubEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      }
+    }
   }, [state]);
 
   useEffect(() => {
@@ -232,15 +239,32 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   );
 
   return (
-    <div className="profile-hub-wrapper" aria-live="polite">
+    <div
+      className="profile-hub-wrapper"
+      data-variant={variant}
+      aria-live="polite"
+      style={variant === 'billboard' ? {
+        position: 'relative',
+        width: '100%',
+        maxWidth: '100%',
+        margin: 0,
+        pointerEvents: 'auto',
+        zIndex: 10,
+        // Reset any inherited text styles
+        fontSize: 'inherit',
+        lineHeight: 'inherit',
+        textAlign: 'inherit',
+        color: 'inherit',
+        fontFamily: 'inherit'
+      } : undefined}
+    >
       <div className={`profile-hub-shell${isExpanded ? ' profile-hub-shell--expanded' : ''}`}>
         <div
-          className={`profile-hub${isBillboardMode ? ' profile-hub--billboard' : ''}`}
+          className="profile-hub"
           data-state={state}
           data-theme={themeClass}
           data-customizing={isExpanded ? 'true' : 'false'}
           data-closing={isClosing ? 'true' : 'false'}
-          data-billboard={isBillboardMode ? 'true' : 'false'}
         >
           <div className="hub-core">
             <div className="hub-user-section">
@@ -265,47 +289,37 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 <span className="hub-user-level">LVL • ?</span>
               </div>
             </div>
-            <div className="quick-nav-buttons">
-            </div>
-            <div className="hub-controls">
-              {!isPublicView && (
-                <>
-                  <button
-                    type="button"
-                    className="hub-button"
-                    title="Toggle chat"
-                    onClick={() => setState((prev) => (prev === 'chatbot' ? 'minimized' : 'chatbot'))}
-                  >
-                    🤖
-                  </button>
+            <div className="quick-nav-buttons"></div>
 
-                  <button
-                    type="button"
-                    className="hub-button"
-                    title="Toggle customization panel"
-                    onClick={() => setState((prev) => (prev === 'expanded' ? 'minimized' : 'expanded'))}
-                  >
-                    🎛️
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                className="hub-toggle"
-                title={isBillboardMode ? 'Hub controls' : (isExpanded ? 'Collapse hub' : 'Expand hub')}
-                onClick={() => {
-                  if (isBillboardMode) {
-                    // In billboard mode, don't expand, just show controls or do nothing
-                    return;
-                  }
-                  setState((prev) => (prev === 'expanded' ? 'minimized' : 'expanded'));
-                }}
-              >
-                <span>⫷</span>
-              </button>
-            </div>
+<div className="hub-controls">
+  {!isPublicView && (
+    <button
+      type="button"
+      className="hub-button"
+      title="Toggle chat"
+      onClick={() => setState(prev => (prev === 'chatbot' ? 'minimized' : 'chatbot'))}
+    >
+      🤖
+    </button>
+  )}
+  <button
+    type="button"
+    className="hub-button"
+    title="Toggle customization panel"
+    onClick={() => setState(prev => (prev === 'expanded' ? 'minimized' : 'expanded'))}
+  >
+    🎛️
+  </button>
+  <button
+    type="button"
+    className="hub-toggle"
+    title={isExpanded ? 'Collapse hub' : 'Expand hub'}
+    onClick={() => setState(prev => (prev === 'expanded' ? 'minimized' : 'expanded'))}
+  >
+    <span>⫷</span>
+  </button>
+</div>
           </div>
-
           {isExpanded && (
             <div className="hub-expanded-content">
               <div className="hub-expanded-nav">
@@ -574,7 +588,10 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           </aside>
         )}
       </div>
-      <div className="profile-hub-overlay" onClick={handleCloseModal} />
+      {/* Only show overlay when expanded/chatbot AND not billboard */}
+      {variant !== 'billboard' ? (
+        <div className="profile-hub-overlay" onClick={handleCloseModal} />
+      ) : null}
       {!isPublicView && showRepRackManager && (
         <RepRackManager onProjectSelect={(p) => handleRepRackSelect({ id: p.id, title: p.title, imageUrl: p.imageUrl })} onClose={() => setShowRepRackManager(false)} />
       )}
