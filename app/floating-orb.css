@@ -6,6 +6,7 @@
     --orb-glow: rgba(0, 229, 255, 0.4);
     --lock-point-size: 12px;
     --orb-ambient: rgba(4, 12, 22, 0.55);
+    --swipe-indicator-size: 28px;
 }
 
 @media (max-width: 768px) {
@@ -74,7 +75,7 @@
     transform: translate(-50%, -50%);
     pointer-events: none;
     overflow: hidden;
-    background-color: #04060d;
+    background: radial-gradient( circle at 50% 40%, rgba(12,20,30,0.9) 0%, rgba(4,6,13,0.85) 55%, rgba(3,6,10,0.8) 100%);
     border-radius: 100%;
 }
 
@@ -111,6 +112,7 @@
     transform: translateX(calc(var(--orbit-size) / 2));
     animation: lock-point-pulse 2s ease-in-out infinite;
     pointer-events: none;
+    background: radial-gradient(circle, rgba(0,240,255,0.95), rgba(0,240,255,0.2) 60%, rgba(0,240,255,0) 70%);
 }
 
 @keyframes lock-point-pulse {
@@ -228,6 +230,7 @@
     z-index: 4;
     will-change: transform, filter;
     transition: transform 0.35s ease, filter 0.35s ease, box-shadow 0.35s ease;
+    box-shadow: inset 0 0 24px rgba(0, 240, 255, 0.35), 0 0 32px rgba(0, 240, 255, 0.25);
 }
 
 .floating-orb:hover {
@@ -269,6 +272,7 @@
     inset: -35%;
     border-radius: 50%;
     opacity: 0.7;
+    background: radial-gradient(circle, rgba(20,180,255,0.18), rgba(20,180,255,0) 60%);
     z-index: -1;
 }
 
@@ -282,6 +286,7 @@
     transform: translate(-50%, -50%);
     border-radius: 50%;
     opacity: 0.5;
+    background: radial-gradient(circle, rgba(146,255,255,0.16), rgba(146,255,255,0) 60%);
     pointer-events: none;
     z-index: -1;
 }
@@ -291,7 +296,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 32px;
+    font-size: 34px;
     z-index: 20;
     pointer-events: none;
     user-select: none;
@@ -409,6 +414,7 @@
     height: calc(var(--orbit-size) + 320px);
     transform: translate(-50%, -50%);
     z-index: 0;
+    background: radial-gradient(circle, rgba(0, 185, 255, 0.12), rgba(0, 185, 255, 0) 70%);
 }
 
 
@@ -424,4 +430,65 @@
     100% {
         transform: translateY(0) translateX(0);
     }
+}
+
+/* Swipe indicator for mobile */
+.orb-swipe-indicator {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    z-index: 6;
+}
+
+.orb-swipe-indicator .swipe-text {
+    color: #bdefff;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(0,240,255,0.35);
+}
+
+.orb-swipe-indicator .swipe-arrow {
+    width: var(--swipe-indicator-size);
+    height: 2px;
+    background: linear-gradient(90deg, rgba(0,240,255,0.0), rgba(0,240,255,0.9));
+    position: relative;
+}
+
+.orb-swipe-indicator .swipe-arrow::after {
+    content: "";
+    position: absolute;
+    right: -2px;
+    top: -3px;
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 6px solid rgba(0,240,255,0.95);
+}
+
+.orb-swipe-indicator .swipe-arrow.left {
+    transform: scaleX(-1);
+}
+
+@keyframes swipe-wiggle {
+    0% { transform: translateX(0); opacity: 0.9; }
+    50% { transform: translateX(10px); opacity: 1; }
+    100% { transform: translateX(0); opacity: 0.9; }
+}
+
+.orb-swipe-indicator.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (min-width: 769px) {
+    .orb-swipe-indicator { display: none; }
 }
