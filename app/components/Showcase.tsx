@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWidgetBundles } from '@/hooks/useFirestore';
 
 interface Project {
   id: string;
@@ -29,10 +30,9 @@ interface ShowcaseProps {
 
 const Showcase = ({ className = '' }: ShowcaseProps) => {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { bundles, loading } = useWidgetBundles({ orderByField: 'likes', limitCount: 50 });
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [timeframe, setTimeframe] = useState('week');
+  const [timeframe, setTimeframe] = useState('all');
 
   const categories = [
     { id: 'all', label: 'All Projects', icon: '🌟' },
@@ -50,73 +50,28 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
     { id: 'all', label: 'All Time' },
   ];
 
-  // Mock data for demonstration
-  useEffect(() => {
-    const mockProjects: Project[] = [
-      {
-        id: '1',
-        title: 'Neural Network Visualizer',
-        description: 'Interactive 3D visualization of neural network training',
-        imageUrl: '/api/placeholder/400/300',
-        author: {
-          name: 'Alex Chen',
-          avatar: '/api/placeholder/60/60',
-          id: 'alex-chen',
-        },
-        stats: {
-          likes: 1247,
-          shares: 89,
-          views: 15632,
-          score: 95.8,
-        },
-        createdAt: '2024-01-15',
-        category: 'ai',
+  // Map bundles -> showcase projects ranked by likes
+  const projects: Project[] = useMemo(() => {
+    return bundles.map((b, idx) => ({
+      id: b.id,
+      title: b.title || `Project ${idx + 1}`,
+      description: 'Live demo bundle',
+      imageUrl: '/api/placeholder/400/300',
+      author: {
+        name: (b.userId || 'creator').slice(0, 10),
+        avatar: '/api/placeholder/60/60',
+        id: b.userId || 'unknown',
       },
-      {
-        id: '2',
-        title: 'EcoTracker Mobile App',
-        description: 'Track your carbon footprint with beautiful animations',
-        imageUrl: '/api/placeholder/400/300',
-        author: {
-          name: 'Sarah Johnson',
-          avatar: '/api/placeholder/60/60',
-          id: 'sarah-johnson',
-        },
-        stats: {
-          likes: 892,
-          shares: 156,
-          views: 12345,
-          score: 92.3,
-        },
-        createdAt: '2024-01-12',
-        category: 'mobile',
+      stats: {
+        likes: (b as any).likes || 0,
+        shares: (b as any).shares || 0,
+        views: (b as any).views || 0,
+        score: (b as any).likes || 0,
       },
-      {
-        id: '3',
-        title: 'Pixel Art Generator',
-        description: 'AI-powered pixel art creation tool',
-        imageUrl: '/api/placeholder/400/300',
-        author: {
-          name: 'Mike Rodriguez',
-          avatar: '/api/placeholder/60/60',
-          id: 'mike-rodriguez',
-        },
-        stats: {
-          likes: 2156,
-          shares: 234,
-          views: 28901,
-          score: 98.1,
-        },
-        createdAt: '2024-01-10',
-        category: 'design',
-      },
-    ];
-
-    setTimeout(() => {
-      setProjects(mockProjects);
-      setLoading(false);
-    }, 1000);
-  }, []);
+      createdAt: (b as any).createdAt ? String((b as any).createdAt) : '',
+      category: 'all',
+    }));
+  }, [bundles]);
 
   const filteredProjects = projects.filter(project => 
     selectedCategory === 'all' || project.category === selectedCategory

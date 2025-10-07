@@ -408,6 +408,19 @@ body {
     flex-wrap: wrap;
 }
 
+/* Responsive social row for smaller screens */
+@media (max-width: 768px) {
+    .explore-widget-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .explore-like-btn, .explore-follow-btn, .explore-demo-btn, .explore-profile-link {
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+}
+
 .explore-profile-link {
     padding: 0.5rem 1rem;
     background: var(--bg-surface);
