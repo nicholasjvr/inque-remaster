@@ -46,6 +46,25 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
     
+    // Public bundles feed used by Explore/Explore Reels
+    match /bundles/{bundleId} {
+      allow read: if true;
+      // Allow clients to atomically update engagement counters only
+      allow update: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['title','uploadId','storagePath','userId','createdAt','updatedAt','likes','views','shares','commentsCount']) &&
+        request.resource.data.title == resource.data.title &&
+        request.resource.data.uploadId == resource.data.uploadId &&
+        request.resource.data.storagePath == resource.data.storagePath &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        // permit +/- 1 adjustments to counters
+        (request.resource.data.likes == resource.data.likes || request.resource.data.likes == resource.data.likes + 1 || request.resource.data.likes == resource.data.likes - 1) &&
+        (request.resource.data.views == resource.data.views || request.resource.data.views == resource.data.views + 1 || request.resource.data.views == resource.data.views - 1) &&
+        (request.resource.data.shares == resource.data.shares || request.resource.data.shares == resource.data.shares + 1 || request.resource.data.shares == resource.data.shares - 1) &&
+        (request.resource.data.commentsCount == resource.data.commentsCount || request.resource.data.commentsCount == resource.data.commentsCount + 1 || request.resource.data.commentsCount == resource.data.commentsCount - 1);
+      allow create, delete: if false;
+    }
+    
     // Projects collection: global public projects feed
     match /projects/{projectId} {
       allow read: if true;
@@ -59,6 +78,28 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if false; // Don't delete engagement data
+    }
+    
+    // Simple like documents: {targetType, targetId, userId, createdAt}
+    match /likes/{likeId} {
+      allow read: if true;
+      // Only the authenticated user can create/delete their own like document
+      allow create, delete: if isSignedIn() && request.auth.uid == (request.resource.data.userId ?? resource.data.userId);
+      allow update: if false;
+    }
+    
+    // Comments collection for projects/widgets
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+    
+    // Followers: {followerId, followingId, createdAt}
+    match /follows/{followId} {
+      allow read: if true;
+      allow create, delete: if isSignedIn() && request.auth.uid == (request.resource.data.followerId ?? resource.data.followerId);
+      allow update: if false;
     }
     
     // Achievements collection: platform achievements/badges

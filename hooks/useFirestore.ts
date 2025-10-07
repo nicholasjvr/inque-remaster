@@ -15,6 +15,7 @@ import {
   limit,
   onSnapshot,
   serverTimestamp,
+  runTransaction,
   DocumentData,
   QuerySnapshot,
   Unsubscribe
@@ -75,6 +76,13 @@ export type WidgetBundle = {
   title?: string;
   uploadId?: string;
   storagePath?: string;
+  userId?: string;
+  createdAt?: any;
+  updatedAt?: any;
+  likes?: number;
+  views?: number;
+  shares?: number;
+  commentsCount?: number;
 };
 
 // ---------------------
@@ -369,7 +377,7 @@ export function usePublicUserById(userId?: string) {
 }
 
 // Hook for widget bundles
-export function useWidgetBundles({ orderByCreated = true, limitCount = 100 }: { orderByCreated?: boolean; limitCount?: number } = {}) {
+export function useWidgetBundles({ orderByCreated = true, limitCount = 100, orderByField }: { orderByCreated?: boolean; limitCount?: number; orderByField?: 'createdAt' | 'likes' } = {}) {
   const [bundles, setBundles] = useState<WidgetBundle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -378,7 +386,9 @@ export function useWidgetBundles({ orderByCreated = true, limitCount = 100 }: { 
     const bundlesRef = collection(db, 'bundles');
 
     let q = query(bundlesRef);
-    if (orderByCreated) {
+    if (orderByField === 'likes') {
+      q = query(bundlesRef, orderBy('likes', 'desc'));
+    } else if (orderByCreated) {
       q = query(bundlesRef, orderBy('createdAt', 'desc'));
     }
     if (limitCount) {
@@ -403,7 +413,7 @@ export function useWidgetBundles({ orderByCreated = true, limitCount = 100 }: { 
     );
 
     return () => unsubscribe();
-  }, [orderByCreated, limitCount]);
+  }, [orderByCreated, limitCount, orderByField]);
 
   return { bundles, loading, error };
 }
@@ -621,7 +631,7 @@ export async function updateUserStats(
 
 // Track engagement (likes, views, shares)
 export async function trackEngagement(
-  targetType: 'project' | 'widget' | 'user',
+  targetType: 'project' | 'widget' | 'user' | 'bundle',
   targetId: string,
   engagementType: 'like' | 'view' | 'share',
   userId?: string
@@ -642,6 +652,8 @@ export async function trackEngagement(
       targetRef = doc(db, 'projects', targetId);
     } else if (targetType === 'widget') {
       targetRef = doc(db, 'widgets', targetId);
+    } else if (targetType === 'bundle') {
+      targetRef = doc(db, 'bundles', targetId);
     } else if (targetType === 'user') {
       targetRef = doc(db, 'users', targetId);
     }
@@ -674,6 +686,110 @@ export async function trackEngagement(
   } catch (error) {
     console.error('Error tracking engagement:', error);
     throw error;
+  }
+}
+
+// ---------------------
+// Social: Likes / Comments / Follows (for bundles)
+// ---------------------
+
+export type BundleComment = {
+  id: string;
+  targetType: 'bundle';
+  targetId: string;
+  userId: string;
+  text: string;
+  createdAt: any;
+};
+
+export function useBundleSocial(bundleId?: string, currentUserId?: string) {
+  const [likes, setLikes] = useState<number>(0);
+  const [comments, setComments] = useState<BundleComment[]>([]);
+  const [likedByMe, setLikedByMe] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(!!bundleId);
+
+  useEffect(() => {
+    if (!bundleId) { setLoading(false); return; }
+
+    // Subscribe bundle doc for counters (likes/commentsCount)
+    const bundleRef = doc(db, 'bundles', bundleId);
+    const unsubA = onSnapshot(bundleRef, (snap) => {
+      const d = snap.data() as any;
+      setLikes((d?.likes ?? 0) as number);
+    });
+
+    // Subscribe to last 20 comments for quick display
+    const commentsRef = collection(db, 'comments');
+    const qC = query(
+      commentsRef,
+      where('targetType', '==', 'bundle'),
+      where('targetId', '==', bundleId),
+      orderBy('createdAt', 'desc'),
+      limit(20)
+    );
+    const unsubB = onSnapshot(qC, (snap) => {
+      setComments(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as BundleComment[]);
+      setLoading(false);
+    });
+
+    // Is liked by me check (presence of like doc)
+    let unsubC: Unsubscribe | null = null;
+    if (currentUserId) {
+      const likeDocId = `bundle_${bundleId}_user_${currentUserId}`;
+      const likeRef = doc(db, 'likes', likeDocId);
+      unsubC = onSnapshot(likeRef, (snap) => setLikedByMe(snap.exists()));
+    }
+
+    return () => { unsubA(); unsubB(); if (unsubC) unsubC(); };
+  }, [bundleId, currentUserId]);
+
+  const toggleLike = async (bundle: { id: string }) => {
+    if (!currentUserId || !bundle?.id) return;
+    const likeDocId = `bundle_${bundle.id}_user_${currentUserId}`;
+    const likeRef = doc(db, 'likes', likeDocId);
+    const bundleRef = doc(db, 'bundles', bundle.id);
+
+    await runTransaction(db, async (tx) => {
+      const likeSnap = await tx.get(likeRef);
+      const bundleSnap = await tx.get(bundleRef);
+      const prevLikes = (bundleSnap.exists() ? ((bundleSnap.data() as any).likes || 0) : 0) as number;
+      if (likeSnap.exists()) {
+        tx.delete(likeRef);
+        tx.update(bundleRef, { likes: Math.max(0, prevLikes - 1), updatedAt: serverTimestamp() });
+      } else {
+        tx.set(likeRef, { targetType: 'bundle', targetId: bundle.id, userId: currentUserId, createdAt: serverTimestamp() });
+        tx.update(bundleRef, { likes: prevLikes + 1, updatedAt: serverTimestamp() });
+      }
+    });
+  };
+
+  const addComment = async (bundle: { id: string }, text: string, userId: string) => {
+    if (!bundle?.id || !userId || !text.trim()) return;
+    await addDoc(collection(db, 'comments'), {
+      targetType: 'bundle',
+      targetId: bundle.id,
+      userId,
+      text: text.trim(),
+      createdAt: serverTimestamp(),
+    });
+  };
+
+  return { likes, comments, likedByMe, loading, toggleLike, addComment };
+}
+
+export async function toggleFollow(followerId: string, followingId: string) {
+  if (!followerId || !followingId || followerId === followingId) return;
+  const id = `${followerId}_${followingId}`;
+  const ref = doc(db, 'follows', id);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    await deleteDoc(ref);
+  } else {
+    await (await import('firebase/firestore')).setDoc(ref, {
+      followerId,
+      followingId,
+      createdAt: serverTimestamp(),
+    });
   }
 }
 
