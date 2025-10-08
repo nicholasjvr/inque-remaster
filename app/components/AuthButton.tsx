@@ -14,15 +14,17 @@ export default function AuthButton() {
 
   return (
     <>
-      <button 
-        className="auth-button"
-        onClick={() => setShowAuthModal(true)}
-      >
-        <span className="auth-icon">🔐</span>
-        Sign In
-      </button>
+      <div className="auth-button-container">
+        <button
+          className="auth-button"
+          onClick={() => setShowAuthModal(true)}
+        >
+          <span className="auth-icon">🔐</span>
+          <span className="auth-text">Sign In</span>
+        </button>
+      </div>
 
-      <AuthModal 
+      <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         initialMode="login"

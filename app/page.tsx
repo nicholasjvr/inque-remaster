@@ -3,6 +3,7 @@
 import FloatingOrb, { type NavItem, NAV_ITEMS } from './components/FloatingOrb';
 import Link from 'next/link';
 import ProfileHub from './components/ProfileHub';
+import AuthButton from './components/AuthButton';
 import './styles/hero-hub.css';
 import { useEffect, useState } from 'react';
 
@@ -73,9 +74,9 @@ export default function Home() {
   // Typing effect animation
   useEffect(() => {
     const currentSlogan = SLOGANS[currentSloganIndex];
-    const typingSpeed = 50; // milliseconds per character
-    const deletingSpeed = 30; // milliseconds per character when deleting
-    const pauseTime = 2000; // pause at the end of a slogan
+    const typingSpeed = 80; // milliseconds per character
+    const deletingSpeed = 80; // milliseconds per character when deleting
+    const pauseTime = 3000; // pause at the end of a slogan
 
     const timer = setTimeout(() => {
       if (isTyping) {
@@ -106,10 +107,10 @@ export default function Home() {
   }, [currentCharIndex, isTyping, currentSloganIndex]);
 
   return (
-    <div className="min-h-screen w-full bg-[#04060d] text-white overflow-hidden">
+    <div className="min-h-screen w-full bg-[#04060d] text-white">
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-16 px-6 py-24 sm:px-10">
         <header className="flex flex-col items-center gap-8 text-center">
-          <span className="text-sm uppercase tracking-[0.8em] text-[#4ff1ff]">inq social</span>
+          <span className="text-sm uppercase tracking-[0.8em] text-[#4ff1ff]">Inque social</span>
           <h1 className="font-orbitron text-4xl text-[#66faff] sm:text-5xl md:text-6xl">
             creatives platform
           </h1>
@@ -122,6 +123,7 @@ export default function Home() {
             />
           </p>
         <FloatingOrb onActiveChange={setActiveNavItem} />
+        <AuthButton />
         </header>
         {!showExtended && (
           <section>

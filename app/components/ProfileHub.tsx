@@ -6,6 +6,27 @@ import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore'
 import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
 import RepRackManager from './RepRackManager';
 
+// Interest and goal option mappings for display
+const INTEREST_OPTIONS = [
+  { id: 'web-dev', label: 'Web Development', icon: '💻', color: '#00f0ff' },
+  { id: 'design', label: 'UI/UX Design', icon: '🎨', color: '#ff6b6b' },
+  { id: 'animation', label: 'Animation', icon: '✨', color: '#ffd93d' },
+  { id: 'games', label: 'Game Development', icon: '🎮', color: '#6bcf7f' },
+  { id: 'data-viz', label: 'Data Visualization', icon: '📊', color: '#4ecdc4' },
+  { id: '3d', label: '3D Graphics', icon: '🧊', color: '#a8e6cf' },
+  { id: 'creative', label: 'Creative Coding', icon: '🌈', color: '#ff8b94' },
+  { id: 'tools', label: 'Developer Tools', icon: '🛠️', color: '#b19cd9' },
+];
+
+const GOAL_OPTIONS = [
+  { id: 'showcase', label: 'Showcase my work', icon: '🏆', color: '#ffd93d' },
+  { id: 'learn', label: 'Learn from others', icon: '📚', color: '#4ecdc4' },
+  { id: 'collaborate', label: 'Find collaborators', icon: '🤝', color: '#6bcf7f' },
+  { id: 'build-portfolio', label: 'Build my portfolio', icon: '💼', color: '#ff8b94' },
+  { id: 'get-feedback', label: 'Get feedback', icon: '💬', color: '#00f0ff' },
+  { id: 'networking', label: 'Network with creators', icon: '🌐', color: '#b19cd9' },
+];
+
 import '../profile-hub.css';
 
 type HubState = 'minimized' | 'expanded' | 'chatbot' | 'dm';
@@ -107,6 +128,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const { profile, saveProfile } = useUserProfile(targetUserId || undefined);
   const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
   const [showRepRackManager, setShowRepRackManager] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   useEffect(() => {
     setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
@@ -245,6 +267,83 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     []
   );
 
+  // Social interaction handlers
+  const handleFollow = async () => {
+    if (!user?.uid || isPublicView) return;
+    // TODO: Implement follow functionality
+    console.log(`Following user ${profileUser?.id}`);
+  };
+
+  const handleMessage = async () => {
+    if (!user?.uid || isPublicView) return;
+    // TODO: Implement messaging functionality
+    console.log(`Messaging user ${profileUser?.id}`);
+  };
+
+  const handleShare = async () => {
+    if (!profileUser?.id) return;
+
+    const shareUrl = `${window.location.origin}/u/${profileUser.id}`;
+    const shareText = `Check out ${profileUser.displayName || 'this creator'}'s profile on inQ! ${shareUrl}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${profileUser.displayName || 'Creator'}'s Profile - inQ`,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+        fallbackShare(shareUrl, shareText);
+      }
+    } else {
+      fallbackShare(shareUrl, shareText);
+    }
+  };
+
+  const fallbackShare = (url: string, text: string) => {
+    navigator.clipboard.writeText(`${text} ${url}`);
+    // TODO: Show toast notification
+    console.log('Profile link copied to clipboard!');
+  };
+
+  const handleShareToTwitter = () => {
+    if (!profileUser?.id) return;
+    const url = `${window.location.origin}/u/${profileUser.id}`;
+    const text = `Check out ${profileUser.displayName || 'this creator'}'s profile on inQ!`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, '_blank', 'width=600,height=400');
+  };
+
+  const handleShareToLinkedIn = () => {
+    if (!profileUser?.id) return;
+    const url = `${window.location.origin}/u/${profileUser.id}`;
+    const title = `${profileUser.displayName || 'Creator'}'s Profile - inQ`;
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+    window.open(linkedInUrl, '_blank', 'width=600,height=400');
+  };
+
+  const handleLikeProject = async (projectId: string) => {
+    if (!user?.uid || isPublicView) return;
+    // TODO: Implement project like functionality
+    console.log(`Liking project ${projectId}`);
+  };
+
+  const handleViewProject = async (projectId: string) => {
+    // TODO: Implement project view tracking
+    console.log(`Viewing project ${projectId}`);
+  };
+
+  // Helper function to get interest/goal display data
+  const getInterestData = (interestId: string) => {
+    return INTEREST_OPTIONS.find(opt => opt.id === interestId) || { label: interestId, icon: '⭐', color: '#666' };
+  };
+
+  const getGoalData = (goalId: string) => {
+    return GOAL_OPTIONS.find(opt => opt.id === goalId) || { label: goalId, icon: '🎯', color: '#666' };
+  };
+
   return (
     <div
       className="profile-hub-wrapper"
@@ -277,9 +376,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
             <div className="hub-user-section">
               <div className="hub-avatar" aria-hidden="true">
                 {(profileUser?.photoURL || user?.photoURL) ? (
-                  <img 
-                    src={(profileUser?.photoURL || user?.photoURL) as string} 
-                    alt="User Avatar" 
+                  <img
+                    src={(profileUser?.photoURL || user?.photoURL) as string}
+                    alt="User Avatar"
                     className="hub-user-photo"
                   />
                 ) : (
@@ -292,11 +391,102 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 <span className="hub-user-name">
                   {profileUser?.displayName || user?.displayName || user?.email?.split('@')[0] || 'User'}
                 </span>
-                <span className="hub-user-status">{isPublicView ? 'Welcome to my hub' : 'Customize your profile hub'}</span>
-                <span className="hub-user-level">LVL • ?</span>
+                <span className="hub-user-handle">
+                  @{profileUser?.handle || user?.uid?.slice(0, 8) || 'user'}
+                </span>
+                <span className="hub-user-status">
+                  {profileUser?.bio || 'Creative developer & designer'}
+                </span>
+                <div className="hub-user-level">
+                  <span className="level-badge">LVL • {Math.floor((profileUser?.stats?.totalViews || 0) / 100) + 1}</span>
+                  <span className="member-since">
+                    Member since {profileUser?.joinDate ? new Date(profileUser.joinDate.toDate ? profileUser.joinDate.toDate() : profileUser.joinDate).getFullYear() : new Date().getFullYear()}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="quick-nav-buttons"></div>
+
+            {/* Public Profile Banner - Only show in public view */}
+            {isPublicView && (
+              <div className="public-profile-banner">
+                <div className="profile-stats-row">
+                  <div className="profile-stat">
+                    <span className="stat-number">{localProfile?.repRack?.length || 0}</span>
+                    <span className="stat-label">Projects</span>
+                  </div>
+                  <div className="profile-stat">
+                    <span className="stat-number">{profileUser?.stats?.followersCount || profileUser?.followersCount || 0}</span>
+                    <span className="stat-label">Followers</span>
+                  </div>
+                  <div className="profile-stat">
+                    <span className="stat-number">{profileUser?.stats?.followingCount || 0}</span>
+                    <span className="stat-label">Following</span>
+                  </div>
+                  <div className="profile-stat">
+                    <span className="stat-number">{profileUser?.stats?.totalViews || profileUser?.totalViews || 0}</span>
+                    <span className="stat-label">Views</span>
+                  </div>
+                </div>
+
+                {/* Bio Section */}
+                {profileUser?.bio && (
+                  <div className="profile-bio-section">
+                    <p className="profile-bio">{profileUser.bio}</p>
+                  </div>
+                )}
+
+                {/* Interests Section */}
+                {profileUser?.interests && profileUser.interests.length > 0 && (
+                  <div className="profile-interests-section">
+                    <h4 className="section-title">Interests</h4>
+                    <div className="interests-grid">
+                      {profileUser.interests.map((interestId) => {
+                        const interestData = getInterestData(interestId);
+                        return (
+                          <div key={interestId} className="interest-tag" style={{ backgroundColor: interestData.color + '20', borderColor: interestData.color }}>
+                            <span className="interest-icon">{interestData.icon}</span>
+                            <span className="interest-label">{interestData.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Goals Section */}
+                {profileUser?.goals && profileUser.goals.length > 0 && (
+                  <div className="profile-goals-section">
+                    <h4 className="section-title">Goals</h4>
+                    <div className="goals-grid">
+                      {profileUser.goals.map((goalId) => {
+                        const goalData = getGoalData(goalId);
+                        return (
+                          <div key={goalId} className="goal-tag" style={{ backgroundColor: goalData.color + '20', borderColor: goalData.color }}>
+                            <span className="goal-icon">{goalData.icon}</span>
+                            <span className="goal-label">{goalData.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Social Links */}
+                {profile && profile.links && profile.links.length > 0 && (
+                  <div className="profile-links-section">
+                    <h4 className="section-title">Links</h4>
+                    <div className="links-grid">
+                      {profile.links.map((link, index) => (
+                        <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="profile-link">
+                          {link.label}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
 <div className="hub-controls">
   {!isPublicView && (
@@ -329,8 +519,242 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   </button>
 </div>
           </div>
-          {isExpanded && !isPublicView && (
+          {isExpanded && (
             <div className="hub-expanded-content">
+              {/* Enhanced Profile Customization Section */}
+              {!isPublicView && (
+                <section className="hub-section hub-section--customization" aria-labelledby="hub-customization-title">
+                  <h3 id="hub-customization-title">🎨 Profile Customization</h3>
+                  <div className="customization-panel">
+                    <div className="customization-group">
+                      <label className="customization-label">Display Name</label>
+                      <input
+                        type="text"
+                        className="customization-input"
+                        value={profileUser?.displayName || ''}
+                        onChange={(e) => {/* TODO: Implement profile editing */}}
+                        placeholder="Your display name"
+                      />
+                    </div>
+                    <div className="customization-group">
+                      <label className="customization-label">Bio</label>
+                      <textarea
+                        className="customization-textarea"
+                        value={profileUser?.bio || ''}
+                        onChange={(e) => {/* TODO: Implement profile editing */}}
+                        placeholder="Tell people about yourself and your creative work..."
+                        rows={3}
+                        maxLength={200}
+                      />
+                    </div>
+                    <div className="customization-group">
+                      <label className="customization-label">Profile Theme</label>
+                      <div className="theme-selector">
+                        {(['neo', 'minimal', 'cyber'] as HubTheme[]).map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            className={`theme-option ${t === theme ? 'active' : ''}`}
+                            onClick={() => setTheme(t)}
+                          >
+                            <div className={`theme-preview theme-${t}`}></div>
+                            <span>{t.charAt(0).toUpperCase() + t.slice(1)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="customization-group">
+                      <label className="customization-label">Accent Color</label>
+                      <div className="color-picker">
+                        {['#00f0ff', '#ff6b6b', '#ffd93d', '#6bcf7f', '#4ecdc4', '#b19cd9'].map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            className="color-option"
+                            style={{ backgroundColor: color }}
+                            onClick={() => {/* TODO: Implement color selection */}}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Featured Projects Section - Enhanced for public view */}
+              <section className="hub-section hub-section--featured" aria-labelledby="hub-featured-title">
+                <h3 id="hub-featured-title">🏆 Featured Projects</h3>
+                <div className="featured-projects-grid">
+                  {Array.from({ length: 6 }, (_, index) => {
+                    const item = localProfile?.repRack?.[index % 3];
+                    return (
+                      <div key={index} className="featured-project-card">
+                        <div className="project-image-container">
+                          {item?.imageUrl ? (
+                            <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
+                          ) : (
+                            <div className="project-image-placeholder">
+                              {item?.title?.charAt(0) || '🎨'}
+                            </div>
+                          )}
+                          <div className="project-overlay">
+                            <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
+                            <div className="project-stats">
+                              <span className="project-stat">❤️ 0</span>
+                              <span className="project-stat">👁️ 0</span>
+                              <span className="project-stat">⭐ 0</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Activity Timeline - Enhanced */}
+              <section className="hub-section" aria-labelledby="hub-activity-title">
+                <h3 id="hub-activity-title">📅 Recent Activity</h3>
+                <div className="activity-timeline">
+                  <div className="activity-item">
+                    <div className="activity-icon">🎨</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Created a new interactive widget</div>
+                      <div className="activity-time">2 hours ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">❤️</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Received 5 likes on "Portfolio Showcase"</div>
+                      <div className="activity-time">5 hours ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">👥</div>
+                    <div className="activity-content">
+                      <div className="activity-text">New follower: @designguru</div>
+                      <div className="activity-time">1 day ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">🏆</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Earned "Popular Creator" badge</div>
+                      <div className="activity-time">3 days ago</div>
+                    </div>
+                  </div>
+                  <div className="activity-item">
+                    <div className="activity-icon">💬</div>
+                    <div className="activity-content">
+                      <div className="activity-text">Commented on "Data Visualization Tool"</div>
+                      <div className="activity-time">1 week ago</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Social Connections - Only in public view */}
+              {isPublicView && (
+                <section className="hub-section" aria-labelledby="hub-social-title">
+                  <h3 id="hub-social-title">🌐 Social Connections</h3>
+                  <div className="social-connections">
+                    <div className="social-stats">
+                      <div className="social-stat">
+                        <span className="social-number">{profileUser?.stats?.followersCount || 0}</span>
+                        <span className="social-label">Followers</span>
+                      </div>
+                      <div className="social-stat">
+                        <span className="social-number">{profileUser?.stats?.followingCount || 0}</span>
+                        <span className="social-label">Following</span>
+                      </div>
+                    </div>
+                    <div className="social-actions">
+                      <button className="social-btn follow-btn" onClick={handleFollow}>
+                        {profileUser?.stats?.followersCount && profileUser.stats.followersCount > 0 ? 'Following' : 'Follow'}
+                      </button>
+                      <button className="social-btn message-btn" onClick={handleMessage}>
+                        Message
+                      </button>
+                      <div className="share-dropdown">
+                        <button
+                          className="social-btn share-btn"
+                          onClick={() => setShowShareMenu(!showShareMenu)}
+                        >
+                          Share Profile
+                        </button>
+                        {showShareMenu && (
+                          <div className="share-menu">
+                            <button className="share-option" onClick={handleShare}>
+                              <span>📱</span>
+                              Share
+                            </button>
+                            <button className="share-option" onClick={handleShareToTwitter}>
+                              <span>🐦</span>
+                              Twitter
+                            </button>
+                            <button className="share-option" onClick={handleShareToLinkedIn}>
+                              <span>💼</span>
+                              LinkedIn
+                            </button>
+                            <button className="share-option" onClick={() => fallbackShare(`${window.location.origin}/u/${profileUser?.id}`, `Check out ${profileUser?.displayName || 'this creator'}'s profile on inQ!`)}>
+                              <span>📋</span>
+                              Copy Link
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Recent Followers Section - Only in public view */}
+              {isPublicView && (
+                <section className="hub-section" aria-labelledby="hub-followers-title">
+                  <h3 id="hub-followers-title">👥 Recent Followers</h3>
+                  <div className="followers-grid">
+                    {Array.from({ length: 6 }, (_, index) => (
+                      <div key={index} className="follower-item">
+                        <div className="follower-avatar">
+                          <span role="img" aria-label="Follower avatar">
+                            {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
+                          </span>
+                        </div>
+                        <div className="follower-info">
+                          <span className="follower-name">Creator {index + 1}</span>
+                          <span className="follower-handle">@creator{index + 1}</span>
+                        </div>
+                        <button className="follower-action">Follow</button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Following Section - Only in edit mode */}
+              {!isPublicView && (
+                <section className="hub-section" aria-labelledby="hub-following-title">
+                  <h3 id="hub-following-title">👥 Following</h3>
+                  <div className="following-grid">
+                    {Array.from({ length: 6 }, (_, index) => (
+                      <div key={index} className="following-item">
+                        <div className="following-avatar">
+                          <span role="img" aria-label="Following avatar">
+                            {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
+                          </span>
+                        </div>
+                        <div className="following-info">
+                          <span className="following-name">Creator {index + 1}</span>
+                          <span className="following-handle">@creator{index + 1}</span>
+                          <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
+                        </div>
+                        <button className="following-action">Unfollow</button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
               <div className="hub-expanded-nav">
                 <div className="expanded-nav-title">Quick Navigation</div>
                 <div className="expanded-nav-buttons">
@@ -373,321 +797,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 </div>
               </div>
 
-              <section className="hub-section" aria-labelledby="hub-stats-title">
-                <h3 id="hub-stats-title">Stats</h3>
-                <div className="hub-stats">
-                  <div className="hub-stat-card">
-                    <div className="hub-stat-value">{localProfile?.repRack?.length || 0}</div>
-                    <div className="hub-stat-label">Featured Projects</div>
-                    <div className="hub-stat-desc">Projects in showcase</div>
-                  </div>
-                  <div className="hub-stat-card">
-                    <div className="hub-stat-value">{profileUser?.stats?.followersCount || profileUser?.followersCount || 0}</div>
-                    <div className="hub-stat-label">Followers</div>
-                    <div className="hub-stat-desc">Community supporters</div>
-                  </div>
-                  <div className="hub-stat-card">
-                    <div className="hub-stat-value">{profileUser?.stats?.totalViews || profileUser?.totalViews || 0}</div>
-                    <div className="hub-stat-label">Profile Views</div>
-                    <div className="hub-stat-desc">Times profile visited</div>
-                  </div>
-                  <div className="hub-stat-card">
-                    <div className="hub-stat-value">{profileUser?.stats?.badgesCount || profileUser?.badgesCount || 0}</div>
-                    <div className="hub-stat-label">Badges</div>
-                    <div className="hub-stat-desc">Achievements earned</div>
-                  </div>
-                  <div className="hub-stat-card">
-                    <div className="hub-stat-value">{profileUser?.joinDate ? new Date(profileUser.joinDate.toDate ? profileUser.joinDate.toDate() : profileUser.joinDate).getFullYear() : new Date().getFullYear()}</div>
-                    <div className="hub-stat-label">Member Since</div>
-                    <div className="hub-stat-desc">Year joined platform</div>
-                  </div>
-                  <div className="hub-stat-card">
-                    <div className="hub-stat-value">{profileUser?.stats?.totalLikes || profileUser?.totalLikes || 0}</div>
-                    <div className="hub-stat-label">Total Likes</div>
-                    <div className="hub-stat-desc">Likes received</div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="hub-section" aria-labelledby="hub-achievements-title">
-                <h3 id="hub-achievements-title">Achievements & Badges</h3>
-                <div className="achievements-grid">
-                  <div className={`achievement-badge ${(profileUser?.stats?.projectsCount || profileUser?.projectsCount || 0) > 0 ? 'earned' : 'locked'}`}>
-                    <div className="badge-icon">🏆</div>
-                    <div className="badge-name">First Project</div>
-                    <div className="badge-desc">Created your first project</div>
-                  </div>
-                  <div className={`achievement-badge ${(profileUser?.stats?.followersCount || profileUser?.followersCount || 0) >= 10 ? 'earned' : 'locked'}`}>
-                    <div className="badge-icon">👥</div>
-                    <div className="badge-name">Popular Creator</div>
-                    <div className="badge-desc">Gained 10+ followers</div>
-                  </div>
-                  <div className={`achievement-badge ${(profileUser?.stats?.totalViews || profileUser?.totalViews || 0) >= 100 ? 'earned' : 'locked'}`}>
-                    <div className="badge-icon">👁️</div>
-                    <div className="badge-name">Trending</div>
-                    <div className="badge-desc">100+ profile views</div>
-                  </div>
-                  <div className={`achievement-badge ${(profileUser?.stats?.totalLikes || profileUser?.totalLikes || 0) >= 50 ? 'earned' : 'locked'}`}>
-                    <div className="badge-icon">❤️</div>
-                    <div className="badge-name">Community Favorite</div>
-                    <div className="badge-desc">50+ likes received</div>
-                  </div>
-                  <div className={`achievement-badge ${localProfile?.repRack && localProfile.repRack.length >= 3 ? 'earned' : 'locked'}`}>
-                    <div className="badge-icon">⭐</div>
-                    <div className="badge-name">Complete Showcase</div>
-                    <div className="badge-desc">Filled all rep rack slots</div>
-                  </div>
-                  <div className={`achievement-badge ${profileUser?.isVerified ? 'earned' : 'locked'}`}>
-                    <div className="badge-icon">✓</div>
-                    <div className="badge-name">Verified Creator</div>
-                    <div className="badge-desc">Verified account status</div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="hub-section hub-section--rep-rack" aria-labelledby="hub-rep-rack-title">
-                <h3 id="hub-rep-rack-title">Rep Rack</h3>
-                <p className="hub-section-description">Showcase up to three favourite projects to gain followers and engagement</p>
-                <div className="rep-rack-grid rep-rack-grid--favorites">
-                  {Array.from({ length: 3 }, (_, index) => {
-                    const item = localProfile?.repRack?.[index];
-                    return (
-                    <div key={index} className="rep-rack-slot" data-slot-index={index}>
-                      <div className="rep-rack-slot-content">
-                        {!item ? (
-                          <div className="rep-rack-slot-placeholder">
-                            <span className="rep-rack-slot-icon">+</span>
-                            <span className="rep-rack-slot-text">Add Project</span>
-                          </div>
-                        ) : (
-                          <div className="rep-rack-slot-project">
-                            <div className="rep-rack-project-preview">
-                              {item.imageUrl ? (
-                                <img className="rep-rack-project-image" src={item.imageUrl} alt={item.title || 'Project'} />
-                              ) : (
-                                <div className="rep-rack-project-image-placeholder">📷</div>
-                              )}
-                            </div>
-                            <div className="rep-rack-project-info">
-                              <h4 className="rep-rack-project-title">{item.title || 'Project'}</h4>
-                              <div className="rep-rack-project-stats">
-                                <span className="rep-rack-stat likes">0 ❤️</span>
-                                <span className="rep-rack-stat shares">0 🔗</span>
-                                <span className="rep-rack-stat views">0 👁️</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="rep-rack-slot-overlay">
-                        <div className="rep-rack-slot-actions">
-                          <button 
-                            className="rep-rack-action-btn" 
-                            title="Like" 
-                            data-action="like"
-                            onClick={() => handleRepRackAction('like', index)}
-                          >
-                            <span>❤️</span>
-                          </button>
-                          <button 
-                            className="rep-rack-action-btn" 
-                            title="Share" 
-                            data-action="share"
-                            onClick={() => handleRepRackAction('share', index)}
-                          >
-                            <span>🔗</span>
-                          </button>
-                          <button 
-                            className="rep-rack-action-btn" 
-                            title="View" 
-                            data-action="view"
-                            onClick={() => handleRepRackAction('view', index)}
-                          >
-                            <span>👁️</span>
-                          </button>
-                          <button 
-                            className="rep-rack-action-btn" 
-                            title="Remove" 
-                            data-action="remove"
-                            onClick={() => handleRepRackAction('remove', index)}
-                          >
-                            <span>🗑️</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )})}
-                </div>
-                {!isPublicView && (
-                  <div className="rep-rack-actions">
-                    <button className="rep-rack-upload-btn" onClick={handleUploadProject}>
-                      <span>📤</span>
-                      Upload New Project
-                    </button>
-                    <button className="rep-rack-select-btn" onClick={handleSelectFromExisting}>
-                      <span>📋</span>
-                      Select from Existing
-                    </button>
-                    <button className="rep-rack-select-btn" onClick={saveRepRack}>
-                      <span>💾</span>
-                      Save Rep Rack
-                    </button>
-                  </div>
-                )}
-              </section>
-
-              <section className="hub-section" aria-labelledby="hub-activity-title">
-                <h3 id="hub-activity-title">Recent Activity</h3>
-                <div className="activity-timeline">
-                  <div className="activity-item">
-                    <div className="activity-icon">📝</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Created a new project</div>
-                      <div className="activity-time">2 hours ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">❤️</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Received a like on "Awesome Widget"</div>
-                      <div className="activity-time">5 hours ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">👥</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Gained a new follower</div>
-                      <div className="activity-time">1 day ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">🏆</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Earned "Popular Creator" badge</div>
-                      <div className="activity-time">3 days ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">⭐</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Added project to showcase</div>
-                      <div className="activity-time">1 week ago</div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="hub-section" aria-labelledby="hub-projects-title">
-                <h3 id="hub-projects-title">Recent Projects</h3>
-                <div className="projects-showcase">
-                  <div className="project-card">
-                    <div className="project-image">
-                      <div className="project-placeholder">🎨</div>
-                    </div>
-                    <div className="project-info">
-                      <h4 className="project-title">Interactive Portfolio Widget</h4>
-                      <p className="project-desc">A dynamic portfolio showcase with smooth animations</p>
-                      <div className="project-stats">
-                        <span className="project-stat">❤️ 24</span>
-                        <span className="project-stat">👁️ 156</span>
-                        <span className="project-stat">⭐ 8</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="project-card">
-                    <div className="project-image">
-                      <div className="project-placeholder">📊</div>
-                    </div>
-                    <div className="project-info">
-                      <h4 className="project-title">Data Visualization Tool</h4>
-                      <p className="project-desc">Beautiful charts and graphs for data analysis</p>
-                      <div className="project-stats">
-                        <span className="project-stat">❤️ 18</span>
-                        <span className="project-stat">👁️ 89</span>
-                        <span className="project-stat">⭐ 5</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="project-card">
-                    <div className="project-image">
-                      <div className="project-placeholder">🎮</div>
-                    </div>
-                    <div className="project-info">
-                      <h4 className="project-title">Game Development Kit</h4>
-                      <p className="project-desc">Tools and assets for indie game developers</p>
-                      <div className="project-stats">
-                        <span className="project-stat">❤️ 32</span>
-                        <span className="project-stat">👁️ 203</span>
-                        <span className="project-stat">⭐ 12</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {!isPublicView && (
-                  <div className="projects-actions">
-                    <button className="projects-btn">
-                      <span>➕</span>
-                      Create New Project
-                    </button>
-                    <button className="projects-btn">
-                      <span>📂</span>
-                      Manage Projects
-                    </button>
-                  </div>
-                )}
-              </section>
-
-              {!isPublicView && (
-              <section className="hub-section" aria-labelledby="hub-custom-title">
-                <h3 id="hub-custom-title">Customize Hub</h3>
-                <div className="customization-grid">
-                  <div>
-                    <span className="range-field">Theme</span>
-                    <div className="theme-options" role="radiogroup" aria-label="Profile hub theme">
-                      {(['neo', 'minimal', 'cyber'] as HubTheme[]).map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          className={`theme-button${t === theme ? ' active' : ''}`}
-                          onClick={() => setTheme(t)}
-                          role="radio"
-                          aria-checked={t === theme}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <h3 id="hub-social-title">Inque Socials</h3>
-                  <div className="customization-actions">
-                    <div className="social-links" aria-label="Connect with inQ Social">
-                      {socialLinks.map((item) => (
-                        <a
-                          key={item.id}
-                          className="social-pill"
-                          href={item.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={item.label}
-                        >
-                          {item.label}
-                        </a>
-                      ))}
-                    </div>
-                    <div className="user-actions">
-                      <button 
-                        className="logout-button"
-                        onClick={handleLogout}
-                        title="Sign out"
-                      >
-                        <span>🚪</span>
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </section>
-              )}
             </div>
           )}
           {!isPublicView && isChatbot && (

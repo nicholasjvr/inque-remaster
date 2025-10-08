@@ -1,15 +1,17 @@
 'use client';
 
+import { use } from 'react';
 import ProfileHub from '@/app/components/ProfileHub';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePublicUserById } from '@/hooks/useFirestore';
 
-export default function EditProfileHubPage({ params }: { params: { id: string } }) {
+export default function EditProfileHubPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const { user: authUser } = useAuth();
-  const { user } = usePublicUserById(params.id);
+  const { user } = usePublicUserById(id);
 
-  const isOwner = authUser?.uid === params.id;
+  const isOwner = authUser?.uid === id;
 
   return (
     <ProtectedRoute>

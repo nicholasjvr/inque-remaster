@@ -23,12 +23,27 @@
     }
 }
 
+.floating-orb-shell {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    touch-action: none;
+    /* Prevent touch scrolling on mobile */
+}
+
 #orb-container {
     position: relative;
     width: var(--orbit-size);
     height: var(--orbit-size);
     display: block;
     margin: 0 auto;
+    touch-action: none;
+    /* Prevent touch scrolling */
+    overscroll-behavior: contain;
+    /* Prevent scroll chaining */
 }
 
 .floating-orb-wrapper {
@@ -40,7 +55,7 @@
     pointer-events: none;
     perspective: 700px;
     transform-style: preserve-3d;
-    z-index: 10;
+    z-index: 8;
     display: block;
     border-radius: 100%;
 }
@@ -53,10 +68,12 @@
     height: calc(var(--orb-size) * 1.35);
     transform: translate(-50%, -50%);
     pointer-events: none;
-    z-index: 0;
+    z-index: 3;
     background: transparent;
-    mix-blend-mode: screen;
     border-radius: 100%;
+    /* Remove mix-blend-mode that might make it invisible */
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .orb-webgl-layer canvas {
@@ -64,6 +81,11 @@
     height: 100%;
     border-radius: 100%;
     background: transparent;
+    /* Temporary debug background - should show magenta circle if WebGL is working */
+    background: radial-gradient(circle, rgba(255, 0, 255, 0.2), transparent 70%);
+    /* Ensure canvas is visible for debugging */
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .floating-orb-stage {
@@ -77,6 +99,10 @@
     overflow: hidden;
     background: radial-gradient(circle at 50% 40%, rgba(12, 20, 30, 0.9) 0%, rgba(4, 6, 13, 0.85) 55%, rgba(3, 6, 10, 0.8) 100%);
     border-radius: 100%;
+    touch-action: none;
+    /* Prevent touch scrolling on the stage */
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .floating-orb-wrapper.lock-snap {
@@ -227,10 +253,15 @@
     border-radius: 50%;
     pointer-events: auto;
     cursor: pointer;
-    z-index: 4;
+    z-index: 5;
     will-change: transform, filter;
     transition: transform 0.35s ease, filter 0.35s ease, box-shadow 0.35s ease;
     box-shadow: inset 0 0 24px rgba(0, 240, 255, 0.35), 0 0 32px rgba(0, 240, 255, 0.25);
+    /* Fallback background gradient for visibility */
+    background: radial-gradient(circle at 35% 35%,
+            rgba(82, 247, 255, 0.7) 0%,
+            rgba(11, 220, 255, 0.5) 45%,
+            rgba(0, 185, 255, 0.3) 100%);
 }
 
 .floating-orb:hover {
@@ -316,6 +347,9 @@
     pointer-events: none;
     user-select: none;
     text-shadow: 0 0 6px rgba(0, 240, 255, 0.35);
+    z-index: 15;
+    opacity: 1;
+    transition: opacity 0.3s ease;
 }
 
 .orb-usage-tooltip {
@@ -395,15 +429,6 @@
     transition: none;
 }
 
-/* Shell around the orb used on the homepage */
-.floating-orb-shell {
-    position: relative;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: visible;
-}
 
 .floating-orb-shell::before {
     content: "";
@@ -502,6 +527,68 @@
 
 @media (min-width: 769px) {
     .orb-swipe-indicator {
+        display: none;
+    }
+}
+
+/* Tooltip styles */
+.orb-tooltip {
+    position: absolute;
+    bottom: calc(100% + 16px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    z-index: 6;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.orb-tooltip.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.orb-tooltip .tooltip-arrow {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, 0.9);
+}
+
+.orb-tooltip .tooltip-arrow::after {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: -5px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid rgba(0, 240, 255, 0.2);
+}
+
+.orb-tooltip .tooltip-text {
+    color: #bdefff;
+    text-shadow: 0 0 4px rgba(0, 240, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+    .orb-tooltip {
         display: none;
     }
 }

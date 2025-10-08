@@ -63,7 +63,12 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     if (!container) return;
 
     const existing = container.querySelector('.floating-orb-wrapper');
-    if (existing) return;
+    if (existing) {
+      console.log('⚠️ Floating orb wrapper already exists, skipping initialization');
+      return;
+    }
+    console.log('🔍 Container element:', container);
+    console.log('🔍 Container children before:', container.children.length);
 
     const previewEl = container.querySelector<HTMLDivElement>(
       '.orb-center-preview',
@@ -71,7 +76,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     const labelEl = container.querySelector<HTMLDivElement>(
       '.orb-center-label',
     );
-
+    
     const wrapper = document.createElement('div');
     wrapper.className = 'floating-orb-wrapper';
     wrapper.setAttribute('data-debug', 'false');
@@ -103,15 +108,30 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       <span class="swipe-arrow right" aria-hidden="true"></span>
     `;
 
-    stage.append(webglLayer, scrollLine, navContainer, orbButton, swipeIndicator);
+    // Tooltip (desktop UX)
+    const tooltip = document.createElement('div');
+    tooltip.className = 'orb-tooltip';
+    tooltip.innerHTML = `
+      <span class="tooltip-arrow" aria-hidden="true"></span>
+      <span class="tooltip-text">Drag to navigate • Click to select</span>
+    `;
+
+    stage.append(webglLayer, scrollLine, navContainer, orbButton, swipeIndicator, tooltip);
     wrapper.append(stage);
 
-    const tooltip = document.createElement('div');
-    tooltip.className = 'orb-usage-tooltip';
-    tooltip.textContent = 'Scroll or drag to rotate • Release to snap';
-    wrapper.append(tooltip);
+    console.log('🏗️ DOM structure created:', {
+      wrapper: wrapper.className,
+      stage: stage.className,
+      webglLayer: webglLayer.className,
+      navContainer: navContainer.className,
+      orbButton: orbButton.className
+    });
 
-    container.append(wrapper);
+    // Actually append the wrapper to the container
+    container.appendChild(wrapper);
+
+    console.log('🔗 Wrapper appended to container');
+    console.log('🔍 Container children after append:', container.children.length);
 
     const navButtons: HTMLButtonElement[] = [];
 
@@ -154,7 +174,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     let orbLastX = 0;
     let orbMovedSinceDown = false;
     const AUTO_ROTATE_DELAY_MS = 2200;
-    const AUTO_ROTATE_DEG_PER_SEC = 12; // idle speed
+    const AUTO_ROTATE_DEG_PER_SEC = 20; 
 
     const recordInteraction = () => {
       lastInteractionAt = performance.now();
@@ -445,13 +465,29 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     let disposeThree: (() => void) | null = null;
 
     const initThreeLayer = async (host: HTMLDivElement) => {
+      console.log('🔮 Initializing Three.js layer for orb...');
       try {
         const THREE = await import('three');
+
+        // Check WebGL support
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (!gl) {
+          console.error('❌ WebGL not supported in this browser');
+          return;
+        }
+        console.log('✅ WebGL context available');
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setClearColor(0x000000, 0);
+
         host.appendChild(renderer.domElement);
+        console.log('✅ Three.js canvas element added to DOM', {
+          width: renderer.domElement.width,
+          height: renderer.domElement.height,
+          style: renderer.domElement.style.cssText
+        });
 
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
@@ -551,10 +587,25 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
           atmosphere.rotation.y = elapsed * 0.12;
           particles.rotation.y = elapsed * 0.22;
           renderer.render(scene, camera);
+
+          // Debug: Log render stats occasionally
+          if (Math.floor(elapsed) % 5 === 0) {
+            console.log('🎯 Rendering frame:', {
+              elapsed: elapsed.toFixed(1),
+              canvasSize: `${renderer.domElement.width}x${renderer.domElement.height}`,
+              sceneChildren: scene.children.length
+            });
+          }
+
           frameId = requestAnimationFrame(renderScene);
         };
 
         renderScene();
+        console.log('🎯 Three.js orb rendering started', {
+          sceneObjects: scene.children.length,
+          cameraPosition: camera.position,
+          rendererSize: `${renderer.domElement.width}x${renderer.domElement.height}`
+        });
 
         disposeThree = () => {
           cancelAnimationFrame(frameId);
@@ -571,7 +622,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
           host.removeChild(renderer.domElement);
         };
       } catch (error) {
-        console.warn('Failed to initialise Three.js orb layer', error);
+        console.error('❌ Failed to initialise Three.js orb layer:', error);
       }
     };
 

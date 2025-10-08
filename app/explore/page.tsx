@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProfileHub from '@/app/components/ProfileHub';
-import { WidgetBundle, useWidgetBundles } from '@/hooks/useFirestore';
+import { WidgetBundle, useWidgetBundles, useBundleSocial, toggleFollow } from '@/hooks/useFirestore';
 import BundleIframe from '@/app/components/BundleIframe';
 
 
@@ -21,7 +21,7 @@ export default function ExplorePage() {
       case 'name':
         return arr.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
       case 'popular':
-        return arr; // TODO: sort by engagement when available
+        return arr.sort((a, b) => ((b as any).likes || 0) - ((a as any).likes || 0));
       case 'random':
         return arr.sort(() => Math.random() - 0.5);
       default:
@@ -155,11 +155,7 @@ export default function ExplorePage() {
                     </button>
                   </div>
                 </div>
-                <div className="explore-widget-actions">
-                  <a href={`/?user=${bundle.id}`} className="explore-profile-link">👤 Profile</a>
-                  <button className="explore-follow-btn">+ Follow</button>
-                  <button className="explore-message-btn">💬 Message</button>
-                </div>
+                <SocialRow bundle={bundle} currentUserId={user?.uid} />
               </div>
             ))}
           </div>
@@ -205,6 +201,19 @@ export default function ExplorePage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
       `}</style>
       <link rel="stylesheet" href="/explore.css" />
+    </div>
+  );
+}
+
+function SocialRow({ bundle, currentUserId }: { bundle: WidgetBundle; currentUserId?: string }) {
+  const social = useBundleSocial(bundle?.id, currentUserId);
+  return (
+    <div className="explore-widget-actions" style={{ display: 'grid', gridTemplateColumns: 'auto auto auto', gap: 8 }}>
+      <a href={`/?user=${bundle.id}`} className="explore-profile-link">👤 Profile</a>
+      <button className="explore-follow-btn" onClick={() => currentUserId && toggleFollow(currentUserId, bundle.userId || '')}>+ Follow</button>
+      <button className="explore-like-btn" onClick={() => social.toggleLike(bundle)}>
+        ❤️ {social.likedByMe ? 'Unlike' : 'Like'} {social.likes ? `(${social.likes})` : ''}
+      </button>
     </div>
   );
 }
