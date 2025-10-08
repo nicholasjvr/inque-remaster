@@ -464,169 +464,21 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
 
     let disposeThree: (() => void) | null = null;
 
-    const initThreeLayer = async (host: HTMLDivElement) => {
-      console.log('🔮 Initializing Three.js layer for orb...');
+    // Mount react-three-fiber canvas into the existing host layer
+    const mountR3F = async (host: HTMLDivElement) => {
+      console.log('🔮 Mounting react-three-fiber GlassOrb...');
       try {
-        const THREE = await import('three');
-
-        // Check WebGL support
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (!gl) {
-          console.error('❌ WebGL not supported in this browser');
-          return;
-        }
-        console.log('✅ WebGL context available');
-
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x000000, 0);
-
-        host.appendChild(renderer.domElement);
-        console.log('✅ Three.js canvas element added to DOM', {
-          width: renderer.domElement.width,
-          height: renderer.domElement.height,
-          style: renderer.domElement.style.cssText
-        });
-
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-        camera.position.z = 3.2;
-
-        const coreGeometry = new THREE.SphereGeometry(1.05, 80, 80);
-        const coreMaterial = new THREE.MeshStandardMaterial({
-          color: new THREE.Color('#52f7ff'),
-          emissive: new THREE.Color('#0bdcff'),
-          emissiveIntensity: 0.6,
-          roughness: 0.25,
-          metalness: 0.05,
-          transparent: true,
-          opacity: 0.95,
-        });
-        const core = new THREE.Mesh(coreGeometry, coreMaterial);
-        scene.add(core);
-
-        const glowGeometry = new THREE.SphereGeometry(1.45, 80, 80);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-          color: new THREE.Color('#14e6ff'),
-          transparent: true,
-          opacity: 0.35,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-        scene.add(glow);
-
-        // Atmospheric rim glow
-        const atmosphereGeometry = new THREE.SphereGeometry(1.52, 80, 80);
-        const atmosphereMaterial = new THREE.MeshBasicMaterial({
-          color: new THREE.Color('#5ff8ff'),
-          transparent: true,
-          opacity: 0.09,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-        scene.add(atmosphere);
-
-        // Sparkle particle field orbiting the sphere
-        const PARTICLE_COUNT = 1600;
-        const particlePositions = new Float32Array(PARTICLE_COUNT * 3);
-        const spherical = new THREE.Spherical(1.35);
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-          // Bias toward bands like aurora streams
-          const phi = Math.acos(1 - Math.random() * 2); // 0..pi
-          const theta = Math.random() * Math.PI * 2; // 0..2pi
-          spherical.phi = phi * 0.82 + 0.09; // avoid poles
-          spherical.theta = theta;
-          const v = new THREE.Vector3().setFromSpherical(spherical);
-          particlePositions[i * 3 + 0] = v.x;
-          particlePositions[i * 3 + 1] = v.y;
-          particlePositions[i * 3 + 2] = v.z;
-        }
-        const particlesGeometry = new THREE.BufferGeometry();
-        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-        const particlesMaterial = new THREE.PointsMaterial({
-          color: new THREE.Color('#8cf6ff'),
-          size: 0.02,
-          transparent: true,
-          opacity: 0.9,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-          sizeAttenuation: true,
-        });
-        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
-        scene.add(particles);
-
-        const ambient = new THREE.AmbientLight('#93ffff', 0.6);
-        const point = new THREE.PointLight('#62cfff', 1.4, 6, 2.2);
-        point.position.set(1.2, 1.4, 2.6);
-        scene.add(ambient, point);
-
-        const clock = new THREE.Clock();
-        let frameId = 0;
-
-        const setSize = () => {
-          const rect = host.getBoundingClientRect();
-          const width = rect.width || 200;
-          const height = rect.height || 200;
-          renderer.setSize(width, height, false);
-          camera.aspect = width / height;
-          camera.updateProjectionMatrix();
-        };
-
-        setSize();
-        const resizeObserver = new ResizeObserver(setSize);
-        resizeObserver.observe(host);
-
-        const renderScene = () => {
-          const elapsed = clock.getElapsedTime();
-          core.rotation.y = elapsed * 0.25;
-          core.rotation.x = Math.sin(elapsed * 0.4) * 0.12;
-          glow.rotation.y = elapsed * 0.18;
-          atmosphere.rotation.y = elapsed * 0.12;
-          particles.rotation.y = elapsed * 0.22;
-          renderer.render(scene, camera);
-
-          // Debug: Log render stats occasionally
-          if (Math.floor(elapsed) % 5 === 0) {
-            console.log('🎯 Rendering frame:', {
-              elapsed: elapsed.toFixed(1),
-              canvasSize: `${renderer.domElement.width}x${renderer.domElement.height}`,
-              sceneChildren: scene.children.length
-            });
-          }
-
-          frameId = requestAnimationFrame(renderScene);
-        };
-
-        renderScene();
-        console.log('🎯 Three.js orb rendering started', {
-          sceneObjects: scene.children.length,
-          cameraPosition: camera.position,
-          rendererSize: `${renderer.domElement.width}x${renderer.domElement.height}`
-        });
-
-        disposeThree = () => {
-          cancelAnimationFrame(frameId);
-          resizeObserver.disconnect();
-          renderer.dispose();
-          coreGeometry.dispose();
-          coreMaterial.dispose();
-          glowGeometry.dispose();
-          glowMaterial.dispose();
-          atmosphereGeometry.dispose();
-          atmosphereMaterial.dispose();
-          particlesGeometry.dispose();
-          particlesMaterial.dispose();
-          host.removeChild(renderer.domElement);
-        };
+        const { createRoot } = await import('react-dom/client');
+        const { default: GlassOrbWithControls } = await import('./GlassOrbWithControls');
+        const root = createRoot(host);
+        root.render(<GlassOrbWithControls />);
+        disposeThree = () => { root.unmount(); };
       } catch (error) {
-        console.error('❌ Failed to initialise Three.js orb layer:', error);
+        console.error('❌ Failed to mount R3F orb:', error);
       }
     };
 
-    initThreeLayer(webglLayer);
+    mountR3F(webglLayer);
 
     return () => {
       cancelAnimationFrame(animationFrame);

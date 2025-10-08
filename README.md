@@ -1,138 +1,140 @@
-# Inque - Creatives Platform
+## inQue — Creatives Platform
 
-A Next.js application with Firebase integration for showcasing and managing interactive widgets.
+A Next.js 15 app with Firebase for building, showcasing, and exploring interactive widgets and projects. Featuring a 3D Floating Orb navigator, a Profile Hub, a Widget Studio with uploads to Firebase Storage, and an Explore page backed by Firestore.
 
-## Features
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/) [![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev/) [![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage-ffca28)](https://firebase.google.com/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)](https://www.typescriptlang.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](#license)
 
-- 🎨 **Widget Studio**: Create, upload, and manage interactive widgets
-- 🔐 **Firebase Authentication**: Secure user authentication with Google Sign-in
-- 📊 **Real-time Database**: Firestore for storing widget data
-- 📁 **File Storage**: Firebase Storage for widget files
-- 🎯 **Responsive Design**: Mobile-first design with floating orb navigation
+### Highlights
+- **Floating Orb navigation**: Glassy 3D orb with a snap-to-ring menu and keyboard/drag support.
+- **Profile Hub**: Public/edit modes, themes (neo/minimal/cyber), quick actions, share links.
+- **Widget Studio**: Upload workspace with ZIP extraction, multi-file upload to Firebase Storage, and Firestore-backed widgets.
+- **Explore**: Live bundles feed (Firestore), filters/sorting, fullscreen demos, basic likes/follow scaffolding.
+- **Auth**: Email/password and Google Sign-in via Firebase.
+- **Data**: Firestore collections for `users`, `projects`, `widgets`, `bundles`, and engagement records.
 
-## Setup
+---
 
-### 1. Environment Variables
+## Getting Started
 
-Create a `.env.local` file in the root directory with your Firebase configuration:
+### 1) Requirements
+- Node 18+ (recommended 20+)
+- A Firebase project (Auth, Firestore, Storage enabled)
 
+### 2) Environment Variables
+Create `.env.local` in the project root:
 ```env
-
+NEXT_PUBLIC_FIREBASE_API_KEY=YOUR_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=000000000000
+NEXT_PUBLIC_FIREBASE_APP_ID=1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
 
-### 2. Install Dependencies
-
+### 3) Install & Run
 ```bash
 npm install
-```
-
-### 3. Run Development Server
-
-```bash
 npm run dev
+# build/start
+npm run build
+npm start
 ```
+Open `http://localhost:3000`.
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+---
 
-## Firebase Configuration
+## What’s in the Box
 
-The application uses the following Firebase services:
+### Tech Stack
+- Next.js 15 (Turbopack), React 19, TypeScript 5
+- Firebase (Auth, Firestore, Storage, Analytics)
+- three.js + react-three-fiber for the Glass Orb visuals
 
-- **Authentication**: User sign-in/sign-up with email/password and Google
-- **Firestore**: Real-time database for widget data
-- **Storage**: File storage for widget assets
-- **Analytics**: Usage tracking (client-side only)
-
-## Project Structure
-
+### Project Structure
 ```
 app/
-├── components/          # React components
-│   ├── WidgetStudio.tsx # Main studio component
-│   ├── WidgetCarousel.tsx # Widget carousel
-│   ├── WidgetCard.tsx   # Individual widget cards
-│   └── UploadWorkspace.tsx # File upload interface
-├── studio/             # Studio page
-├── globals.css         # Global styles
-└── widget-studio.css   # Studio-specific styles
-
-lib/
-└── firebase.ts         # Firebase configuration
-
+  components/
+    FloatingOrb.tsx         # 3D orb + ring navigation
+    GlassOrbCanvas.tsx      # R3F canvas for glass orb glow
+    ProfileHub.tsx          # Public/Edit hub, themes, actions
+    WidgetStudio.tsx        # Studio shell: carousel + uploads
+    UploadWorkspace.tsx     # Drag/drop uploads, ZIP extraction
+  explore/page.tsx          # Explore bundles grid + filters
+  studio/page.tsx           # Protected studio route
+  page.tsx                  # Hero with orb + ProfileHub
 contexts/
-└── AuthContext.tsx     # Authentication context
-
+  AuthContext.tsx           # Firebase auth provider
 hooks/
-├── useFirestore.ts     # Firestore data hooks
-└── useStorage.ts       # Storage upload hooks
+  useFirestore.ts           # Users, projects, widgets, bundles, engagement
+  useStorage.ts             # Storage uploads, validators, ZIP extract
+lib/
+  firebase.ts               # Firebase init (client)
+docs/
+  *.md                      # Detailed documentation
 ```
 
-## Widget Studio Features
+---
 
-### Carousel
+## Core Features
 
-- Horizontal scrollable widget timeline
-- Real-time widget previews in iframes
-- Keyboard navigation support
-- Empty slot management
+- **Floating Orb**
+  - Drag, wheel, keyboard navigation; snap-to-item; accessible labels.
+  - R3F glass orb rendering with configurable settings.
 
-### Upload Workspace
+- **Profile Hub**
+  - Public banner (stats, bio, interests/goals) and edit-mode controls.
+  - Theming presets, "Quick Navigation" and "Quick Actions," share helpers.
 
-- Drag-and-drop file uploads
-- File validation (HTML, CSS, JS, images)
-- Multiple file support
-- Real-time upload progress
+- **Widget Studio**
+  - Real-time widgets from Firestore, multi-file uploads to Storage.
+  - ZIP file extraction, tag entry, per-slot upload actions.
+  - `ProtectedRoute` gate using Firebase Auth.
 
-### Authentication
+- **Explore**
+  - Live bundles feed with recent/popular/name/random sorting and search.
+  - Fullscreen demo modal and basic social actions (likes/follow scaffold).
 
-- Email/password authentication
-- Google Sign-in integration
-- User profile management
-- Protected routes
+---
 
-## Deployment
+## Firebase Setup
 
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy automatically on push
-
-### Firebase Hosting
-
+1) Enable Auth providers you need (Email/Password, Google).
+2) Create Firestore and Storage buckets.
+3) Deploy rules (adjust as needed):
 ```bash
-npm run build
-npm install -g firebase-tools
-firebase login
-firebase init hosting
-firebase deploy
+firebase deploy --only firestore:rules
+firebase deploy --only storage
+```
+Rules live in `firestore.rules` and `firebase-storage.rules`.
+
+---
+
+## Scripts
+```json
+"dev": "next dev --turbopack",
+"build": "next build --turbopack",
+"start": "next start"
 ```
 
-## Development
+---
 
-### Adding New Features
+## Documentation
+See `docs/README.md` for:
+- Data infrastructure
+- Usage examples and hooks
+- Orb and Profile Hub summaries
+- Studio overview
 
-1. Create components in `app/components/`
-2. Add Firebase hooks in `hooks/`
-3. Update styles in CSS files
-4. Test with Firebase emulators
-
-### Firebase Emulators
-
-```bash
-npm install -g firebase-tools
-firebase emulators:start
-```
+---
 
 ## Contributing
+- Keep types in `hooks/useFirestore.ts` up to date.
+- Add/adjust rules in `firestore.rules` when introducing new writes/reads.
+- Prefer hooks over ad-hoc Firestore calls in components.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+---
 
 ## License
-
-MIT License - see LICENSE file for details.
+MIT — see `LICENSE`.
