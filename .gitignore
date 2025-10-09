@@ -65,3 +65,6 @@ firebase-debug.log
 # temporary folders
 tmp/
 temp/
+storage.rules
+firebase.rules
+env.local
