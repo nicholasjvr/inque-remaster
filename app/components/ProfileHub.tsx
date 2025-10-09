@@ -344,6 +344,27 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     return GOAL_OPTIONS.find(opt => opt.id === goalId) || { label: goalId, icon: '🎯', color: '#666' };
   };
 
+  // Collapsible section helper using <details>/<summary>
+  const CollapsibleSection = ({ id, title, defaultOpen, children }: { id: string; title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
+    // Default closed on small screens, open on desktop unless specified
+    const [open, setOpen] = useState<boolean>(() => {
+      if (typeof window === 'undefined') return !!defaultOpen;
+      const isMobile = window.innerWidth <= 768;
+      return defaultOpen ?? !isMobile;
+    });
+    return (
+      <details className="hub-collapsible" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+        <summary className="hub-collapsible__summary" aria-controls={id} aria-expanded={open}>
+          <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
+          <span className="hub-collapsible__title">{title}</span>
+        </summary>
+        <div id={id} className="hub-collapsible__content">
+          {children}
+        </div>
+      </details>
+    );
+  };
+
   return (
     <div
       className="profile-hub-wrapper"
@@ -521,10 +542,8 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           </div>
           {isExpanded && (
             <div className="hub-expanded-content">
-              {/* Enhanced Profile Customization Section */}
               {!isPublicView && (
-                <section className="hub-section hub-section--customization" aria-labelledby="hub-customization-title">
-                  <h3 id="hub-customization-title">🎨 Profile Customization</h3>
+                <CollapsibleSection id="customization" title="🎨 Profile Customization">
                   <div className="customization-panel">
                     <div className="customization-group">
                       <label className="customization-label">Display Name</label>
@@ -578,12 +597,11 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       </div>
                     </div>
                   </div>
-                </section>
+                </CollapsibleSection>
               )}
 
               {/* Featured Projects Section - Enhanced for public view */}
-              <section className="hub-section hub-section--featured" aria-labelledby="hub-featured-title">
-                <h3 id="hub-featured-title">🏆 Featured Projects</h3>
+              <CollapsibleSection id="featured" title="🏆 Featured Projects" defaultOpen={false}>
                 <div className="featured-projects-grid">
                   {Array.from({ length: 6 }, (_, index) => {
                     const item = localProfile?.repRack?.[index % 3];
@@ -610,11 +628,10 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     );
                   })}
                 </div>
-              </section>
+              </CollapsibleSection>
 
               {/* Activity Timeline - Enhanced */}
-              <section className="hub-section" aria-labelledby="hub-activity-title">
-                <h3 id="hub-activity-title">📅 Recent Activity</h3>
+              <CollapsibleSection id="activity" title="📅 Recent Activity" defaultOpen={false}>
                 <div className="activity-timeline">
                   <div className="activity-item">
                     <div className="activity-icon">🎨</div>
@@ -652,12 +669,11 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     </div>
                   </div>
                 </div>
-              </section>
+              </CollapsibleSection>
 
               {/* Social Connections - Only in public view */}
               {isPublicView && (
-                <section className="hub-section" aria-labelledby="hub-social-title">
-                  <h3 id="hub-social-title">🌐 Social Connections</h3>
+                <CollapsibleSection id="social" title="🌐 Social Connections" defaultOpen={false}>
                   <div className="social-connections">
                     <div className="social-stats">
                       <div className="social-stat">
@@ -706,13 +722,12 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       </div>
                     </div>
                   </div>
-                </section>
+                </CollapsibleSection>
               )}
 
               {/* Recent Followers Section - Only in public view */}
               {isPublicView && (
-                <section className="hub-section" aria-labelledby="hub-followers-title">
-                  <h3 id="hub-followers-title">👥 Recent Followers</h3>
+                <CollapsibleSection id="followers" title="👥 Recent Followers" defaultOpen={false}>
                   <div className="followers-grid">
                     {Array.from({ length: 6 }, (_, index) => (
                       <div key={index} className="follower-item">
@@ -729,13 +744,12 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       </div>
                     ))}
                   </div>
-                </section>
+                </CollapsibleSection>
               )}
 
               {/* Following Section - Only in edit mode */}
               {!isPublicView && (
-                <section className="hub-section" aria-labelledby="hub-following-title">
-                  <h3 id="hub-following-title">👥 Following</h3>
+                <CollapsibleSection id="following" title="👥 Following" defaultOpen={false}>
                   <div className="following-grid">
                     {Array.from({ length: 6 }, (_, index) => (
                       <div key={index} className="following-item">
@@ -753,10 +767,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       </div>
                     ))}
                   </div>
-                </section>
+                </CollapsibleSection>
               )}
-              <div className="hub-expanded-nav">
-                <div className="expanded-nav-title">Quick Navigation</div>
+              <CollapsibleSection id="quicknav" title="Quick Navigation" defaultOpen={false}>
                 <div className="expanded-nav-buttons">
                   <a
                     href="/explore"
@@ -795,7 +808,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     <span className="nav-desc">Top projects</span>
                   </a>
                 </div>
-              </div>
+              </CollapsibleSection>
 
             </div>
           )}

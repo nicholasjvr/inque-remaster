@@ -39,35 +39,13 @@ export default function Home() {
       window.location.replace(target);
     }
   }, []);
-
-  // Prevent scrolling using CSS approach (more reliable and performant)
-  useEffect(() => {
-    // Add no-scroll class to both html and body when component mounts
-    document.documentElement.classList.add('no-scroll');
-    document.body.classList.add('no-scroll');
-    
-    // Cleanup: remove no-scroll class when component unmounts
-    return () => {
-      document.documentElement.classList.remove('no-scroll');
-      document.body.classList.remove('no-scroll');
-    };
-  }, []);
-
-  // When hub opens (expanded/chatbot/dm), temporarily enable scrolling and smooth-scroll to section
+  
+  // Smooth scroll to extended hub section when it opens
   useEffect(() => {
     const modalOpen = hubState === 'expanded' || hubState === 'chatbot' || hubState === 'dm';
-    const html = document.documentElement;
-    const body = document.body;
     if (modalOpen) {
-      html.classList.remove('no-scroll');
-      body.classList.remove('no-scroll');
       const section = document.getElementById('hub-extended-section');
-      if (section) {
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    } else {
-      html.classList.add('no-scroll');
-      body.classList.add('no-scroll');
+      if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [hubState]);
 

@@ -1020,6 +1020,52 @@
     pointer-events: auto;
 }
 
+/* Collapsible sections */
+.hub-collapsible {
+    background: var(--hub-bg-secondary);
+    border: 1px solid rgba(0, 240, 255, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.hub-collapsible+.hub-collapsible {
+    margin-top: 12px;
+}
+
+.hub-collapsible__summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 14px;
+    user-select: none;
+    color: var(--hub-text-primary);
+}
+
+.hub-collapsible__summary::-webkit-details-marker {
+    display: none;
+}
+
+.hub-collapsible[open] .hub-collapsible__caret {
+    transform: rotate(90deg);
+}
+
+.hub-collapsible__caret {
+    transition: transform 0.2s ease;
+}
+
+.hub-collapsible__title {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.82rem;
+    color: var(--hub-text-secondary);
+}
+
+.hub-collapsible__content {
+    padding: 12px 14px 16px;
+}
+
 
 @media (max-width: 768px) {
     .profile-hub-wrapper {

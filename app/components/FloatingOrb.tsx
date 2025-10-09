@@ -173,6 +173,10 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     let orbDragActive = false;
     let orbLastX = 0;
     let orbMovedSinceDown = false;
+    // Hidden controls state
+    let showControls = false;
+    let longPressTimer: number | null = null;
+    const LONG_PRESS_MS = 1500;
     const AUTO_ROTATE_DELAY_MS = 2200;
     const AUTO_ROTATE_DEG_PER_SEC = 20; 
 
@@ -361,6 +365,16 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       updateCenterPreview();
     };
 
+    const toggleControls = () => {
+      showControls = !showControls;
+      // re-mount R3F with new prop
+      mountR3F(webglLayer);
+      try {
+        const msg = showControls ? 'Orb controls shown' : 'Orb controls hidden';
+        (window as any).inqToast?.(msg);
+      } catch {}
+    };
+
     // Center ORB drag-and-click behavior with movement threshold
     orbButton.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
@@ -370,6 +384,10 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       orbLastX = e.clientX;
       try { orbButton.setPointerCapture(e.pointerId); } catch {}
       showRing();
+      if (longPressTimer) window.clearTimeout(longPressTimer);
+      longPressTimer = window.setTimeout(() => {
+        if (!orbMovedSinceDown) toggleControls();
+      }, LONG_PRESS_MS);
     });
 
     orbButton.addEventListener('pointermove', (e) => {
@@ -380,6 +398,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       if (orbMovedSinceDown) {
         scrollState.targetRotation += delta * 0.6;
       }
+      if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
     });
 
     orbButton.addEventListener('pointerup', (e) => {
@@ -387,6 +406,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       e.stopPropagation();
       orbDragActive = false;
       try { orbButton.releasePointerCapture(e.pointerId); } catch {}
+      if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
       if (orbMovedSinceDown) {
         snapToNearestLockPoint();
       } else {
@@ -425,6 +445,15 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     container.addEventListener('pointermove', handlePointerMove);
     container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('pointercancel', handlePointerUp);
+
+    // Global keyboard shortcut: Shift+O toggles controls
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.shiftKey && (e.key === 'O' || e.key === 'o')) {
+        e.preventDefault();
+        toggleControls();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
 
     updateCenterPreview();
     animate();
@@ -471,7 +500,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         const { createRoot } = await import('react-dom/client');
         const { default: GlassOrbWithControls } = await import('./GlassOrbWithControls');
         const root = createRoot(host);
-        root.render(<GlassOrbWithControls />);
+        root.render(<GlassOrbWithControls showControls={showControls} />);
         disposeThree = () => { root.unmount(); };
       } catch (error) {
         console.error('❌ Failed to mount R3F orb:', error);
@@ -485,6 +514,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       if (hideRingTimeout) window.clearTimeout(hideRingTimeout);
       if (tooltipTimeout) window.clearTimeout(tooltipTimeout);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKey);
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('pointerdown', handlePointerDown);
       container.removeEventListener('pointermove', handlePointerMove);

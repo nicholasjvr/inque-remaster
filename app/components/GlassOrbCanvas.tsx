@@ -2,10 +2,11 @@
 
 import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, MeshTransmissionMaterial, Sphere } from '@react-three/drei';
+import { Environment, MeshTransmissionMaterial, Sphere, Billboard, useTexture } from '@react-three/drei';
 import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
 import type { OrbConfig } from '../orb-config';
 import type { Group } from 'three';
+import { AdditiveBlending, LinearFilter } from 'three';
 
 function WobblingSphere({ config }: { config: OrbConfig }) {
   // local ref-less wobble using a simple group
@@ -66,6 +67,7 @@ export function GlassOrbCanvas({ config }: { config: OrbConfig }) {
         <Environment preset="sunset" resolution={256} />
 
         {/* Wobbling glass sphere */}
+        <MysticPortal />
         <WobblingSphere config={safe} />
 
         {/* Simple idle wobble via group rotation driven by R3F state */}
@@ -80,5 +82,26 @@ export function GlassOrbCanvas({ config }: { config: OrbConfig }) {
 }
 
 export default GlassOrbCanvas;
+
+function MysticPortal() {
+  const tex = useTexture('/maxime-hemon-gif-solo-portal.gif');
+  // Soften and improve animated gif sampling
+  tex.minFilter = LinearFilter;
+  tex.magFilter = LinearFilter;
+  return (
+    <Billboard position={[0, 0, -0.02]}>
+      <mesh>
+        <planeGeometry args={[2.7, 2.7]} />
+        <meshBasicMaterial
+          map={tex}
+          transparent
+          opacity={0.38}
+          depthWrite={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+    </Billboard>
+  );
+}
 
 
