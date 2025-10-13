@@ -51,7 +51,7 @@ service cloud.firestore {
       allow read: if true;
       // Allow clients to atomically update engagement counters only
       allow update: if isSignedIn() &&
-        request.resource.data.keys().hasOnly(['title','uploadId','storagePath','userId','createdAt','updatedAt','likes','views','shares','commentsCount']) &&
+        request.resource.data.keys().hasOnly(['title','description','uploadId','storagePath','userId','createdAt','updatedAt','likes','views','shares','commentsCount']) &&
         request.resource.data.title == resource.data.title &&
         request.resource.data.uploadId == resource.data.uploadId &&
         request.resource.data.storagePath == resource.data.storagePath &&

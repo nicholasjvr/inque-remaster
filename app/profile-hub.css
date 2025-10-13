@@ -1001,6 +1001,39 @@
     color: #041017;
 }
 
+.customization-btn {
+    flex: 1 1 auto;
+    border-radius: 10px;
+    padding: 10px 16px;
+    border: 1px solid rgba(0, 240, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--hub-text-primary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.customization-btn:hover {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: rgba(0, 240, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.customization-btn.primary {
+    background: var(--hub-primary);
+    color: #041017;
+    border-color: var(--hub-primary);
+}
+
+.customization-btn.primary:hover {
+    background: rgba(0, 240, 255, 0.8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+}
+
 .profile-hub-overlay {
     position: fixed;
     top: 0;

@@ -74,6 +74,7 @@ export type PublicUser = {
 export type WidgetBundle = {
   id: string;
   title?: string;
+  description?: string;
   uploadId?: string;
   storagePath?: string;
   userId?: string;
@@ -96,6 +97,8 @@ export type RepRackItem = {
 };
 
 export type UserProfile = {
+  displayName?: string;
+  bio?: string;
   theme?: {
     accent?: string;
     bg?: string;

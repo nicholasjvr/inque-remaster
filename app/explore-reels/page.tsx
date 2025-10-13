@@ -60,6 +60,14 @@ export default function ExploreReelsPage() {
               </button>
               <button className="explore-demo-btn" onClick={() => go(1)}>Next ⬇</button>
             </div>
+            {current.description && (
+              <div style={{ padding: '0 16px 16px' }}>
+                <div className="project-description">
+                  <h4 style={{ margin: '0 0 8px 0', color: '#66faff', fontSize: '14px', fontWeight: '600' }}>Project Description</h4>
+                  <p style={{ margin: 0, color: '#cbd5e1', fontSize: '13px', lineHeight: '1.5' }}>{current.description}</p>
+                </div>
+              </div>
+            )}
             <div style={{ padding: '0 16px 16px' }}>
               <form onSubmit={async (e) => { e.preventDefault(); const form = e.target as HTMLFormElement; const input = form.elements.namedItem('c') as HTMLInputElement; const v = input.value; if (v.trim() && user) { await social.addComment(current, v.trim(), user.uid); input.value = ''; } }} style={{ display: 'flex', gap: 8 }}>
                 <input name="c" className="search-input" placeholder="Add a comment…" style={{ flex: 1 }} />

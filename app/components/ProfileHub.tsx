@@ -435,13 +435,13 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
               </div>
               <div className="hub-user-info">
                 <span className="hub-user-name">
-                  {profileUser?.displayName || user?.displayName || user?.email?.split('@')[0] || 'User'}
+                  {localProfile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'User'}
                 </span>
                 <span className="hub-user-handle">
                   @{profileUser?.handle || user?.uid?.slice(0, 8) || 'user'}
                 </span>
                 <span className="hub-user-status">
-                  {profileUser?.bio || 'Creative developer & designer'}
+                  {localProfile?.bio || 'Creative developer & designer'}
                 </span>
                 <div className="hub-user-level">
                   <span className="level-badge">LVL • {Math.floor((profileUser?.stats?.totalViews || 0) / 100) + 1}</span>
@@ -575,8 +575,13 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       <input
                         type="text"
                         className="customization-input"
-                        value={profileUser?.displayName || ''}
-                        onChange={(e) => {/* TODO: Implement profile editing */}}
+                        value={localProfile?.displayName || user?.displayName || ''}
+                        onChange={(e) => {
+                          setLocalProfile(prev => ({
+                            ...prev,
+                            displayName: e.target.value
+                          }));
+                        }}
                         placeholder="Your display name"
                       />
                     </div>
@@ -584,8 +589,13 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       <label className="customization-label">Bio</label>
                       <textarea
                         className="customization-textarea"
-                        value={profileUser?.bio || ''}
-                        onChange={(e) => {/* TODO: Implement profile editing */}}
+                        value={localProfile?.bio || ''}
+                        onChange={(e) => {
+                          setLocalProfile(prev => ({
+                            ...prev,
+                            bio: e.target.value
+                          }));
+                        }}
                         placeholder="Tell people about yourself and your creative work..."
                         rows={3}
                         maxLength={200}
@@ -620,6 +630,36 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           />
                         ))}
                       </div>
+                    </div>
+                    <div className="customization-actions">
+                      <button
+                        type="button"
+                        className="customization-btn primary"
+                        onClick={async () => {
+                          if (!user?.uid) return;
+                          try {
+                            await saveProfile(user.uid, {
+                              displayName: localProfile?.displayName,
+                              bio: localProfile?.bio,
+                              theme: { mode: theme }
+                            });
+                            console.log('Profile saved successfully!');
+                          } catch (error) {
+                            console.error('Error saving profile:', error);
+                          }
+                        }}
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        type="button"
+                        className="customization-btn"
+                        onClick={() => {
+                          setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+                        }}
+                      >
+                        Reset
+                      </button>
                     </div>
                   </div>
                 </CollapsibleSection>
