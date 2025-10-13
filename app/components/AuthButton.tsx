@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import AuthModal from './AuthModal';
+import '../widget-studio.css';
 
 export default function AuthButton() {
   const { user } = useAuth();

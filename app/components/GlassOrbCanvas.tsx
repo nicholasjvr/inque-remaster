@@ -9,7 +9,6 @@ import type { Group } from 'three';
 import { AdditiveBlending, LinearFilter } from 'three';
 
 function WobblingSphere({ config }: { config: OrbConfig }) {
-  // local ref-less wobble using a simple group
   const safe = useMemo(() => ({
     wobbleAmp: config.wobbleAmp,
     wobbleSpeed: config.wobbleSpeed,
@@ -49,7 +48,6 @@ function WobblingSphere({ config }: { config: OrbConfig }) {
 }
 
 export function GlassOrbCanvas({ config }: { config: OrbConfig }) {
-  // Clamp a few values defensively to avoid runtime warnings on extreme inputs
   const safe = useMemo(() => ({
     ...config,
     bloom: Math.max(0, config.bloom),

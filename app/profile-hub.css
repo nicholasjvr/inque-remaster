@@ -96,7 +96,7 @@
 .profile-hub[data-billboard="true"] .hub-expanded-content,
 .profile-hub[data-billboard="true"] .hub-chatbot,
 .profile-hub[data-billboard="true"] .hub-modules {
-    display: none !important;
+    display: -moz-box !important;
 }
 
 .profile-hub[data-billboard="true"]:hover .hub-controls {
@@ -1036,23 +1036,31 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    list-style: none;
     cursor: pointer;
     padding: 12px 14px;
     user-select: none;
     color: var(--hub-text-primary);
+    transition: background-color 0.2s ease;
 }
 
-.hub-collapsible__summary::-webkit-details-marker {
-    display: none;
+.hub-collapsible__summary:hover {
+    background-color: rgba(0, 240, 255, 0.05);
 }
 
-.hub-collapsible[open] .hub-collapsible__caret {
+.hub-collapsible__summary:focus {
+    outline: 2px solid var(--hub-primary);
+    outline-offset: -2px;
+    background-color: rgba(0, 240, 255, 0.1);
+}
+
+.hub-collapsible[data-open="true"] .hub-collapsible__caret {
     transform: rotate(90deg);
 }
 
 .hub-collapsible__caret {
     transition: transform 0.2s ease;
+    font-size: 0.8rem;
+    color: var(--hub-text-secondary);
 }
 
 .hub-collapsible__title {
@@ -1060,10 +1068,13 @@
     letter-spacing: 0.18em;
     font-size: 0.82rem;
     color: var(--hub-text-secondary);
+    font-weight: 500;
 }
 
 .hub-collapsible__content {
     padding: 12px 14px 16px;
+    border-top: 1px solid rgba(0, 240, 255, 0.08);
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 

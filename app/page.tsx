@@ -1,7 +1,6 @@
 'use client';
 
 import FloatingOrb, { type NavItem, NAV_ITEMS } from './components/FloatingOrb';
-import Link from 'next/link';
 import ProfileHub from './components/ProfileHub';
 import AuthButton from './components/AuthButton';
 import './styles/hero-hub.css';

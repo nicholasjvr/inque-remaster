@@ -78,6 +78,51 @@ type StoredPreferences = {
   scale: number;
 };
 
+// Collapsible section component - moved outside ProfileHub to prevent re-creation
+const CollapsibleSection = ({ id, title, defaultOpen, children }: { id: string; title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
+  // Initialize with a stable state - no client-side updates that cause glitching
+  const [open, setOpen] = useState<boolean>(() => {
+    // Always use the provided defaultOpen value, or default to false
+    return defaultOpen ?? false;
+  });
+
+  // Handle click with proper event handling
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setOpen(prev => !prev);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setOpen(prev => !prev);
+    }
+  };
+
+  return (
+    <div className="hub-collapsible" data-open={open}>
+      <div 
+        className="hub-collapsible__summary" 
+        aria-controls={id} 
+        aria-expanded={open}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+      >
+        <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
+        <span className="hub-collapsible__title">{title}</span>
+      </div>
+      {open && (
+        <div id={id} className="hub-collapsible__content">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const loadPreferences = (): StoredPreferences => {
   if (typeof window === 'undefined') return { theme: 'neo', scale: 1 };
   try {
@@ -344,26 +389,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     return GOAL_OPTIONS.find(opt => opt.id === goalId) || { label: goalId, icon: '🎯', color: '#666' };
   };
 
-  // Collapsible section helper using <details>/<summary>
-  const CollapsibleSection = ({ id, title, defaultOpen, children }: { id: string; title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
-    // Default closed on small screens, open on desktop unless specified
-    const [open, setOpen] = useState<boolean>(() => {
-      if (typeof window === 'undefined') return !!defaultOpen;
-      const isMobile = window.innerWidth <= 768;
-      return defaultOpen ?? !isMobile;
-    });
-    return (
-      <details className="hub-collapsible" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-        <summary className="hub-collapsible__summary" aria-controls={id} aria-expanded={open}>
-          <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
-          <span className="hub-collapsible__title">{title}</span>
-        </summary>
-        <div id={id} className="hub-collapsible__content">
-          {children}
-        </div>
-      </details>
-    );
-  };
 
   return (
     <div

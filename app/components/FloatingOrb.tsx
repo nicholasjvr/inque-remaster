@@ -27,6 +27,12 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/inventory',
   },
   {
+    id: 'nav-tracks',
+    icon: '🗂️',
+    label: 'Tracks',
+    href: '/inventory',
+  },
+  {
     id: 'nav-studio',
     icon: '🎨',
     label: 'Widget Studio',
@@ -365,16 +371,6 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       updateCenterPreview();
     };
 
-    const toggleControls = () => {
-      showControls = !showControls;
-      // re-mount R3F with new prop
-      mountR3F(webglLayer);
-      try {
-        const msg = showControls ? 'Orb controls shown' : 'Orb controls hidden';
-        (window as any).inqToast?.(msg);
-      } catch {}
-    };
-
     // Center ORB drag-and-click behavior with movement threshold
     orbButton.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
@@ -384,10 +380,6 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       orbLastX = e.clientX;
       try { orbButton.setPointerCapture(e.pointerId); } catch {}
       showRing();
-      if (longPressTimer) window.clearTimeout(longPressTimer);
-      longPressTimer = window.setTimeout(() => {
-        if (!orbMovedSinceDown) toggleControls();
-      }, LONG_PRESS_MS);
     });
 
     orbButton.addEventListener('pointermove', (e) => {
@@ -445,16 +437,6 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     container.addEventListener('pointermove', handlePointerMove);
     container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('pointercancel', handlePointerUp);
-
-    // Global keyboard shortcut: Shift+O toggles controls
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.shiftKey && (e.key === 'O' || e.key === 'o')) {
-        e.preventDefault();
-        toggleControls();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-
     updateCenterPreview();
     animate();
 
@@ -490,37 +472,16 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     };
 
     window.addEventListener('resize', handleResize);
-
-    let disposeThree: (() => void) | null = null;
-
-    // Mount react-three-fiber canvas into the existing host layer
-    const mountR3F = async (host: HTMLDivElement) => {
-      console.log('🔮 Mounting react-three-fiber GlassOrb...');
-      try {
-        const { createRoot } = await import('react-dom/client');
-        const { default: GlassOrbWithControls } = await import('./GlassOrbWithControls');
-        const root = createRoot(host);
-        root.render(<GlassOrbWithControls showControls={showControls} />);
-        disposeThree = () => { root.unmount(); };
-      } catch (error) {
-        console.error('❌ Failed to mount R3F orb:', error);
-      }
-    };
-
-    mountR3F(webglLayer);
-
-    return () => {
+  return () => {
       cancelAnimationFrame(animationFrame);
       if (hideRingTimeout) window.clearTimeout(hideRingTimeout);
       if (tooltipTimeout) window.clearTimeout(tooltipTimeout);
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', handleKey);
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('pointerdown', handlePointerDown);
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('pointercancel', handlePointerUp);
-      disposeThree?.();
       wrapper.remove();
     };
   }, []);
