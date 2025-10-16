@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore';
 import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
 import RepRackManager from './RepRackManager';
+import CustomizationShop from './CustomizationShop';
 
 // Interest and goal option mappings for display
 const INTEREST_OPTIONS = [
@@ -420,7 +421,14 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
         >
           <div className="hub-core">
             <div className="hub-user-section">
-              <div className="hub-avatar" aria-hidden="true">
+              <div
+                className={`hub-avatar ${localProfile?.avatarFrame?.style || ''} ${localProfile?.avatarAnimation?.type || 'none'}`}
+                aria-hidden="true"
+                style={{
+                  '--animation-speed': localProfile?.avatarAnimation?.speed || 1,
+                  borderColor: localProfile?.avatarFrame?.color || undefined
+                } as React.CSSProperties}
+              >
                 {(profileUser?.photoURL || user?.photoURL) ? (
                   <img
                     src={(profileUser?.photoURL || user?.photoURL) as string}
@@ -568,100 +576,26 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           {isExpanded && (
             <div className="hub-expanded-content">
               {!isPublicView && (
-                <CollapsibleSection id="customization" title="🎨 Profile Customization">
-                  <div className="customization-panel">
-                    <div className="customization-group">
-                      <label className="customization-label">Display Name</label>
-                      <input
-                        type="text"
-                        className="customization-input"
-                        value={localProfile?.displayName || user?.displayName || ''}
-                        onChange={(e) => {
-                          setLocalProfile(prev => ({
-                            ...prev,
-                            displayName: e.target.value
-                          }));
-                        }}
-                        placeholder="Your display name"
-                      />
-                    </div>
-                    <div className="customization-group">
-                      <label className="customization-label">Bio</label>
-                      <textarea
-                        className="customization-textarea"
-                        value={localProfile?.bio || ''}
-                        onChange={(e) => {
-                          setLocalProfile(prev => ({
-                            ...prev,
-                            bio: e.target.value
-                          }));
-                        }}
-                        placeholder="Tell people about yourself and your creative work..."
-                        rows={3}
-                        maxLength={200}
-                      />
-                    </div>
-                    <div className="customization-group">
-                      <label className="customization-label">Profile Theme</label>
-                      <div className="theme-selector">
-                        {(['neo', 'minimal', 'cyber'] as HubTheme[]).map((t) => (
-                          <button
-                            key={t}
-                            type="button"
-                            className={`theme-option ${t === theme ? 'active' : ''}`}
-                            onClick={() => setTheme(t)}
-                          >
-                            <div className={`theme-preview theme-${t}`}></div>
-                            <span>{t.charAt(0).toUpperCase() + t.slice(1)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="customization-group">
-                      <label className="customization-label">Accent Color</label>
-                      <div className="color-picker">
-                        {['#00f0ff', '#ff6b6b', '#ffd93d', '#6bcf7f', '#4ecdc4', '#b19cd9'].map((color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            className="color-option"
-                            style={{ backgroundColor: color }}
-                            onClick={() => {/* TODO: Implement color selection */}}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="customization-actions">
-                      <button
-                        type="button"
-                        className="customization-btn primary"
-                        onClick={async () => {
-                          if (!user?.uid) return;
-                          try {
-                            await saveProfile(user.uid, {
-                              displayName: localProfile?.displayName,
-                              bio: localProfile?.bio,
-                              theme: { mode: theme }
-                            });
-                            console.log('Profile saved successfully!');
-                          } catch (error) {
-                            console.error('Error saving profile:', error);
-                          }
-                        }}
-                      >
-                        Save Changes
-                      </button>
-                      <button
-                        type="button"
-                        className="customization-btn"
-                        onClick={() => {
-                          setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
-                        }}
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  </div>
+                <CollapsibleSection id="customization-shop" title="🛍️ Customization Shop">
+                  <CustomizationShop
+                    profile={localProfile}
+                    onSave={async (updates) => {
+                      if (!user?.uid) return;
+                      try {
+                        await saveProfile(user.uid, updates);
+                        // Update local profile state after save
+                        setLocalProfile(prev => ({ ...prev, ...updates }));
+                        console.log('Customization saved successfully!');
+                      } catch (error) {
+                        console.error('Error saving customization:', error);
+                      }
+                    }}
+                    onReset={() => {
+                      setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+                      // Also reset the theme state if it was changed
+                      setTheme(profile?.theme?.mode || 'neo');
+                    }}
+                  />
                 </CollapsibleSection>
               )}
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWidgetBundles } from '@/hooks/useFirestore';
+import { useAllWidgets } from '@/hooks/useFirestore';
 
 interface Project {
   id: string;
@@ -30,7 +30,7 @@ interface ShowcaseProps {
 
 const Showcase = ({ className = '' }: ShowcaseProps) => {
   const { user } = useAuth();
-  const { bundles, loading } = useWidgetBundles({ orderByField: 'likes', limitCount: 50 });
+  const { widgets, loading } = useAllWidgets({ limitCount: 100 });
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [timeframe, setTimeframe] = useState('all');
 
@@ -50,28 +50,31 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
     { id: 'all', label: 'All Time' },
   ];
 
-  // Map bundles -> showcase projects ranked by likes
+  // Map widgets -> showcase projects ranked by likes
   const projects: Project[] = useMemo(() => {
-    return bundles.map((b, idx) => ({
-      id: b.id,
-      title: b.title || `Project ${idx + 1}`,
-      description: 'Live demo bundle',
+    // Sort widgets by likes
+    const sortedWidgets = [...widgets].sort((a, b) => ((b as any).likes || 0) - ((a as any).likes || 0));
+    
+    return sortedWidgets.map((w, idx) => ({
+      id: w.id,
+      title: w.title || `Project ${idx + 1}`,
+      description: w.description || 'Live demo widget',
       imageUrl: '/api/placeholder/400/300',
       author: {
-        name: (b.userId || 'creator').slice(0, 10),
+        name: (w.userId || 'creator').slice(0, 10),
         avatar: '/api/placeholder/60/60',
-        id: b.userId || 'unknown',
+        id: w.userId || 'unknown',
       },
       stats: {
-        likes: (b as any).likes || 0,
-        shares: (b as any).shares || 0,
-        views: (b as any).views || 0,
-        score: (b as any).likes || 0,
+        likes: (w as any).likes || 0,
+        shares: (w as any).shares || 0,
+        views: (w as any).views || 0,
+        score: (w as any).likes || 0,
       },
-      createdAt: (b as any).createdAt ? String((b as any).createdAt) : '',
+      createdAt: (w as any).createdAt ? String((w as any).createdAt) : '',
       category: 'all',
     }));
-  }, [bundles]);
+  }, [widgets]);
 
   const filteredProjects = projects.filter(project => 
     selectedCategory === 'all' || project.category === selectedCategory

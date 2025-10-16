@@ -107,6 +107,24 @@ export type UserProfile = {
   repRack?: RepRackItem[]; // up to 3 items
   sections?: Array<{ id: string; type: string; content?: any; }>; // future
   links?: Array<{ label: string; url: string }>;
+
+  // Profile Customization Fields
+  avatarFrame?: {
+    id: string;
+    style: string;
+    color: string;
+  };
+  avatarAnimation?: {
+    id: string;
+    type: 'pulse' | 'glow' | 'float' | 'bounce' | 'none';
+    speed: number; // 0.5 to 2.0
+  };
+  profileBackground?: {
+    type: 'gif' | 'image';
+    url: string;
+    animationSpeed?: number; // for GIFs, 0.5 to 2.0
+  };
+
   updatedAt?: any;
   publishedAt?: any;
 };
@@ -271,6 +289,46 @@ export function useWidgets(userId?: string) {
     updateWidget,
     deleteWidget,
   };
+}
+
+// Hook for getting ALL widgets (for explore pages)
+export function useAllWidgets({ limitCount = 100 }: { limitCount?: number } = {}) {
+  const [widgets, setWidgets] = useState<Widget[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const widgetsRef = collection(db, 'widgets');
+    const q = query(widgetsRef, limit(limitCount));
+
+    const unsubscribe = onSnapshot(q,
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const widgetsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Widget[];
+        
+        // Sort by createdAt on client side
+        widgetsData.sort((a, b) => {
+          if (!a.createdAt || !b.createdAt) return 0;
+          return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+        });
+        
+        setWidgets(widgetsData);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error fetching all widgets:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [limitCount]);
+
+  return { widgets, loading, error };
 }
 
 // Hook for getting a single widget
@@ -693,19 +751,19 @@ export async function trackEngagement(
 }
 
 // ---------------------
-// Social: Likes / Comments / Follows (for bundles)
+// Social: Likes / Comments / Follows (for bundles and widgets)
 // ---------------------
 
 export type BundleComment = {
   id: string;
-  targetType: 'bundle';
+  targetType: 'bundle' | 'widget';
   targetId: string;
   userId: string;
   text: string;
   createdAt: any;
 };
 
-export function useBundleSocial(bundleId?: string, currentUserId?: string) {
+export function useBundleSocial(bundleId?: string, currentUserId?: string, targetType: 'bundle' | 'widget' = 'bundle') {
   const [likes, setLikes] = useState<number>(0);
   const [comments, setComments] = useState<BundleComment[]>([]);
   const [likedByMe, setLikedByMe] = useState<boolean>(false);
@@ -714,9 +772,10 @@ export function useBundleSocial(bundleId?: string, currentUserId?: string) {
   useEffect(() => {
     if (!bundleId) { setLoading(false); return; }
 
-    // Subscribe bundle doc for counters (likes/commentsCount)
-    const bundleRef = doc(db, 'bundles', bundleId);
-    const unsubA = onSnapshot(bundleRef, (snap) => {
+    // Subscribe to doc for counters (likes/commentsCount) - use appropriate collection
+    const collectionName = targetType === 'widget' ? 'widgets' : 'bundles';
+    const targetRef = doc(db, collectionName, bundleId);
+    const unsubA = onSnapshot(targetRef, (snap) => {
       const d = snap.data() as any;
       setLikes((d?.likes ?? 0) as number);
     });
@@ -725,7 +784,7 @@ export function useBundleSocial(bundleId?: string, currentUserId?: string) {
     const commentsRef = collection(db, 'comments');
     const qC = query(
       commentsRef,
-      where('targetType', '==', 'bundle'),
+      where('targetType', '==', targetType),
       where('targetId', '==', bundleId),
       orderBy('createdAt', 'desc'),
       limit(20)
@@ -738,39 +797,40 @@ export function useBundleSocial(bundleId?: string, currentUserId?: string) {
     // Is liked by me check (presence of like doc)
     let unsubC: Unsubscribe | null = null;
     if (currentUserId) {
-      const likeDocId = `bundle_${bundleId}_user_${currentUserId}`;
+      const likeDocId = `${targetType}_${bundleId}_user_${currentUserId}`;
       const likeRef = doc(db, 'likes', likeDocId);
       unsubC = onSnapshot(likeRef, (snap) => setLikedByMe(snap.exists()));
     }
 
     return () => { unsubA(); unsubB(); if (unsubC) unsubC(); };
-  }, [bundleId, currentUserId]);
+  }, [bundleId, currentUserId, targetType]);
 
-  const toggleLike = async (bundle: { id: string }) => {
-    if (!currentUserId || !bundle?.id) return;
-    const likeDocId = `bundle_${bundle.id}_user_${currentUserId}`;
+  const toggleLike = async (target: { id: string }) => {
+    if (!currentUserId || !target?.id) return;
+    const collectionName = targetType === 'widget' ? 'widgets' : 'bundles';
+    const likeDocId = `${targetType}_${target.id}_user_${currentUserId}`;
     const likeRef = doc(db, 'likes', likeDocId);
-    const bundleRef = doc(db, 'bundles', bundle.id);
+    const targetRef = doc(db, collectionName, target.id);
 
     await runTransaction(db, async (tx) => {
       const likeSnap = await tx.get(likeRef);
-      const bundleSnap = await tx.get(bundleRef);
-      const prevLikes = (bundleSnap.exists() ? ((bundleSnap.data() as any).likes || 0) : 0) as number;
+      const targetSnap = await tx.get(targetRef);
+      const prevLikes = (targetSnap.exists() ? ((targetSnap.data() as any).likes || 0) : 0) as number;
       if (likeSnap.exists()) {
         tx.delete(likeRef);
-        tx.update(bundleRef, { likes: Math.max(0, prevLikes - 1), updatedAt: serverTimestamp() });
+        tx.update(targetRef, { likes: Math.max(0, prevLikes - 1), updatedAt: serverTimestamp() });
       } else {
-        tx.set(likeRef, { targetType: 'bundle', targetId: bundle.id, userId: currentUserId, createdAt: serverTimestamp() });
-        tx.update(bundleRef, { likes: prevLikes + 1, updatedAt: serverTimestamp() });
+        tx.set(likeRef, { targetType, targetId: target.id, userId: currentUserId, createdAt: serverTimestamp() });
+        tx.update(targetRef, { likes: prevLikes + 1, updatedAt: serverTimestamp() });
       }
     });
   };
 
-  const addComment = async (bundle: { id: string }, text: string, userId: string) => {
-    if (!bundle?.id || !userId || !text.trim()) return;
+  const addComment = async (target: { id: string }, text: string, userId: string) => {
+    if (!target?.id || !userId || !text.trim()) return;
     await addDoc(collection(db, 'comments'), {
-      targetType: 'bundle',
-      targetId: bundle.id,
+      targetType,
+      targetId: target.id,
       userId,
       text: text.trim(),
       createdAt: serverTimestamp(),

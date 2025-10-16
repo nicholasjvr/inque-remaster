@@ -373,6 +373,31 @@
     animation: none;
 }
 
+/* Avatar Animation Classes */
+.avatar-animation-none {
+    animation: none;
+}
+
+.avatar-animation-pulse {
+    animation: avatar-pulse 2s infinite ease-in-out;
+    animation-duration: calc(2s / var(--animation-speed, 1));
+}
+
+.avatar-animation-glow {
+    animation: avatar-glow 2s infinite ease-in-out;
+    animation-duration: calc(2s / var(--animation-speed, 1));
+}
+
+.avatar-animation-float {
+    animation: avatar-float 3s infinite ease-in-out;
+    animation-duration: calc(3s / var(--animation-speed, 1));
+}
+
+.avatar-animation-bounce {
+    animation: avatar-bounce 1.5s infinite ease-in-out;
+    animation-duration: calc(1.5s / var(--animation-speed, 1));
+}
+
 @keyframes avatar-shine {
     0% {
         transform: translateX(-100%);
@@ -384,6 +409,64 @@
 
     100% {
         transform: translateX(120%);
+    }
+}
+
+/* Avatar Animation Keyframes */
+@keyframes avatar-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(0, 240, 255, 0);
+    }
+}
+
+@keyframes avatar-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(0, 240, 255, 0.5), 0 0 10px rgba(0, 240, 255, 0.3), 0 0 15px rgba(0, 240, 255, 0.1);
+    }
+
+    50% {
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.8), 0 0 20px rgba(0, 240, 255, 0.6), 0 0 30px rgba(0, 240, 255, 0.3);
+    }
+}
+
+@keyframes avatar-float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes avatar-bounce {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    40% {
+        transform: translateY(-15px);
+    }
+
+    60% {
+        transform: translateY(-7px);
     }
 }
 
@@ -1224,6 +1307,342 @@
     .rep-rack-select-btn {
         padding: 9px 14px;
         font-size: 0.75rem;
+    }
+
+    /* Tablet CustomizationShop Styles */
+    .customization-shop {
+        gap: 16px;
+    }
+
+    .shop-header {
+        padding: 16px 0;
+    }
+
+    .shop-title {
+        font-size: 1.3rem;
+    }
+
+    .shop-subtitle {
+        font-size: 0.85rem;
+    }
+
+    .shop-tabs {
+        gap: 6px;
+        padding: 10px;
+    }
+
+    .shop-tab {
+        padding: 10px 8px;
+        font-size: 0.8rem;
+        min-height: 44px;
+    }
+
+    .shop-content {
+        padding: 16px;
+        gap: 20px;
+    }
+
+    .options-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .frame-option,
+    .animation-option,
+    .background-option {
+        padding: 16px 12px;
+        gap: 12px;
+    }
+
+    .frame-preview,
+    .animation-preview,
+    .background-preview {
+        width: 60px;
+        height: 60px;
+    }
+
+    .preview-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+    }
+
+    .frame-name,
+    .animation-name,
+    .background-name {
+        font-size: 0.8rem;
+    }
+
+    .frame-preview-text,
+    .animation-preview-text,
+    .background-preview-text {
+        font-size: 0.75rem;
+    }
+
+    .animation-speed {
+        gap: 8px;
+        font-size: 0.75rem;
+    }
+
+    .speed-slider {
+        width: 80px;
+        height: 4px;
+    }
+
+    .shop-preview {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .preview-title {
+        font-size: 0.95rem;
+    }
+
+    .preview-container {
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .preview-avatar {
+        width: 80px;
+        height: 80px;
+    }
+
+    .preview-background {
+        width: 80px;
+        height: 60px;
+    }
+
+    .shop-actions {
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .shop-btn {
+        padding: 12px 16px;
+        font-size: 0.85rem;
+        min-height: 44px;
+    }
+
+    /* Tablet BackgroundGallery Styles */
+    .background-gallery {
+        gap: 16px;
+    }
+
+    .gallery-header {
+        padding: 16px 0;
+    }
+
+    .gallery-title {
+        font-size: 1.1rem;
+    }
+
+    .gallery-subtitle {
+        font-size: 0.8rem;
+    }
+
+    .category-filter {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .category-btn {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        gap: 6px;
+        min-height: 36px;
+    }
+
+    .category-icon {
+        font-size: 0.9rem;
+    }
+
+    .current-background-preview {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .preview-label {
+        font-size: 0.8rem;
+    }
+
+    .preview-background {
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .background-thumb {
+        width: 50px;
+        height: 40px;
+    }
+
+    .background-thumb-placeholder {
+        width: 50px;
+        height: 40px;
+        font-size: 0.7rem;
+    }
+
+    .background-name {
+        font-size: 0.8rem;
+    }
+
+    .background-preview-text {
+        font-size: 0.75rem;
+    }
+
+    .backgrounds-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .background-option {
+        padding: 14px 10px;
+        gap: 10px;
+    }
+
+    .background-details {
+        gap: 6px;
+    }
+
+    .background-option-name {
+        font-size: 0.8rem;
+    }
+
+    .background-option-preview {
+        font-size: 0.75rem;
+    }
+
+    .type-badge {
+        padding: 3px 8px;
+        font-size: 0.65rem;
+    }
+
+    .custom-upload-section {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .upload-title {
+        font-size: 0.95rem;
+    }
+
+    .upload-controls {
+        gap: 12px;
+    }
+
+    .custom-url-input {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    .file-upload-btn {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+        min-height: 40px;
+    }
+
+    .custom-background-preview {
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .custom-background-thumb {
+        width: 50px;
+        height: 40px;
+    }
+
+    .remove-custom-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+        min-height: 28px;
+    }
+
+    .upload-limits,
+    .upload-note {
+        font-size: 0.75rem;
+    }
+
+    /* Tablet AvatarFrames Styles */
+    .avatar-frames {
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .frames-header {
+        padding: 12px 0;
+    }
+
+    .frames-title {
+        font-size: 1.1rem;
+    }
+
+    .frames-subtitle {
+        font-size: 0.8rem;
+    }
+
+    .current-frame-preview {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .preview-label {
+        font-size: 0.8rem;
+    }
+
+    .preview-frame {
+        gap: 12px;
+        padding: 12px;
+        align-items: center;
+    }
+
+    .preview-avatar {
+        width: 60px;
+        height: 60px;
+    }
+
+    .frame-info {
+        gap: 6px;
+    }
+
+    .frame-name {
+        font-size: 0.8rem;
+    }
+
+    .frame-preview {
+        font-size: 0.75rem;
+    }
+
+    .frames-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .frame-option {
+        padding: 14px 10px;
+        gap: 10px;
+    }
+
+    .frame-details {
+        gap: 6px;
+        text-align: center;
+    }
+
+    .frame-option-name {
+        font-size: 0.8rem;
+    }
+
+    .frame-option-preview {
+        font-size: 0.75rem;
+    }
+
+    .selected-indicator {
+        right: 10px;
+        top: 10px;
+        width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
     }
 
     /* Tablet Quick Navigation */
@@ -3418,5 +3837,881 @@
         flex-direction: column;
         gap: 12px;
         text-align: center;
+    }
+
+    /* CustomizationShop Styles */
+    .customization-shop {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .shop-header {
+        text-align: center;
+        padding: 16px 0;
+    }
+
+    .shop-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--hub-text-primary);
+        margin: 0 0 8px 0;
+        background: linear-gradient(135deg, var(--hub-primary), var(--hub-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .shop-subtitle {
+        font-size: 0.9rem;
+        color: var(--hub-text-secondary);
+        margin: 0;
+        opacity: 0.8;
+    }
+
+    .section-selector {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        background: rgba(0, 240, 255, 0.08);
+        border-radius: 16px;
+        border: 1px solid rgba(0, 240, 255, 0.2);
+    }
+
+    .section-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 8px;
+        background: transparent;
+        border: none;
+        border-radius: 12px;
+        color: var(--hub-text-secondary);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .section-btn:hover {
+        background: rgba(0, 240, 255, 0.1);
+        color: var(--hub-text-primary);
+    }
+
+    .section-btn.active {
+        background: var(--hub-primary);
+        color: var(--hub-bg-primary);
+        box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+    }
+
+    .section-icon {
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    .section-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .avatar-customization {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .avatar-preview-section {
+        background: rgba(0, 240, 255, 0.05);
+        border: 1px solid rgba(0, 240, 255, 0.15);
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .section-subtitle {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--hub-primary);
+        margin: 0 0 16px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .avatar-preview-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .avatar-preview {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        background: var(--hub-bg-secondary);
+        position: relative;
+        overflow: hidden;
+        border: 3px solid transparent;
+    }
+
+    .preview-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .preview-avatar-text {
+        color: var(--hub-text-primary);
+        font-weight: 600;
+    }
+
+    .preview-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
+
+    .preview-frame,
+    .preview-animation {
+        font-size: 0.8rem;
+        color: var(--hub-text-secondary);
+        opacity: 0.8;
+    }
+
+    .customization-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .group-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--hub-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0;
+    }
+
+    .frames-grid,
+    .animations-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 12px;
+    }
+
+    .frame-btn,
+    .animation-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 8px;
+        background: rgba(0, 240, 255, 0.05);
+        border: 2px solid rgba(0, 240, 255, 0.15);
+        border-radius: 12px;
+        color: var(--hub-text-secondary);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .frame-btn:hover,
+    .animation-btn:hover {
+        background: rgba(0, 240, 255, 0.1);
+        border-color: rgba(0, 240, 255, 0.3);
+        color: var(--hub-text-primary);
+        transform: translateY(-2px);
+    }
+
+    .frame-btn.selected,
+    .animation-btn.selected {
+        background: var(--hub-primary);
+        border-color: var(--hub-primary);
+        color: var(--hub-bg-primary);
+        box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+    }
+
+    .frame-preview,
+    .animation-preview {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .frame-icon,
+    .animation-icon {
+        opacity: 0.8;
+    }
+
+    .frame-name,
+    .animation-name {
+        font-size: 0.7rem;
+        text-align: center;
+        line-height: 1.2;
+    }
+
+    .speed-control {
+        margin-top: 16px;
+        padding: 16px;
+        background: rgba(0, 240, 255, 0.05);
+        border: 1px solid rgba(0, 240, 255, 0.15);
+        border-radius: 12px;
+    }
+
+    .speed-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--hub-text-primary);
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .speed-slider {
+        width: 100%;
+        height: 6px;
+        background: rgba(0, 240, 255, 0.2);
+        border-radius: 3px;
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .speed-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--hub-primary);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 240, 255, 0.3);
+    }
+
+    .speed-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: var(--hub-primary);
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 240, 255, 0.3);
+    }
+
+    .shop-actions {
+        display: flex;
+        gap: 12px;
+        padding: 16px 20px 20px;
+        border-top: 1px solid rgba(0, 240, 255, 0.1);
+        margin-top: auto;
+    }
+
+    .shop-btn {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        min-height: 48px;
+    }
+
+    .reset-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--hub-text-secondary);
+    }
+
+    .reset-btn:hover:not(:disabled) {
+        background: rgba(255, 71, 87, 0.1);
+        border-color: rgba(255, 71, 87, 0.3);
+        color: #ff4757;
+    }
+
+    .save-btn {
+        background: linear-gradient(135deg, var(--hub-primary), var(--hub-secondary));
+        color: var(--hub-bg-primary);
+        box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+    }
+
+    .save-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 240, 255, 0.4);
+    }
+
+    .shop-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Mobile CustomizationShop Styles */
+    .customization-shop {
+        gap: 12px;
+    }
+
+    .shop-header {
+        text-align: center;
+        padding: 12px 0;
+    }
+
+    .shop-title {
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+    }
+
+    .shop-subtitle {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+
+    .shop-tabs {
+        gap: 4px;
+        padding: 8px;
+        background: rgba(0, 240, 255, 0.05);
+        border-radius: 12px;
+    }
+
+    .shop-tab {
+        flex: 1;
+        padding: 8px 6px;
+        font-size: 0.7rem;
+        border-radius: 8px;
+        min-height: 36px;
+    }
+
+    .shop-content {
+        padding: 12px;
+        gap: 16px;
+    }
+
+    .options-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .frame-option,
+    .animation-option,
+    .background-option {
+        padding: 12px 8px;
+        gap: 8px;
+    }
+
+    .frame-preview,
+    .animation-preview,
+    .background-preview {
+        width: 48px;
+        height: 48px;
+    }
+
+    .preview-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    .preview-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .frame-name,
+    .animation-name,
+    .background-name {
+        font-size: 0.7rem;
+        line-height: 1.1;
+    }
+
+    .frame-preview-text,
+    .animation-preview-text,
+    .background-preview-text {
+        font-size: 0.65rem;
+        line-height: 1.2;
+    }
+
+    .animation-speed {
+        gap: 6px;
+        font-size: 0.65rem;
+    }
+
+    .speed-slider {
+        width: 60px;
+        height: 3px;
+    }
+
+    .shop-preview {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .preview-title {
+        font-size: 0.85rem;
+    }
+
+    .preview-container {
+        gap: 12px;
+        padding: 12px;
+        background: rgba(0, 240, 255, 0.05);
+        border-radius: 8px;
+    }
+
+    .preview-avatar-container {
+        align-items: center;
+    }
+
+    .preview-avatar {
+        width: 64px;
+        height: 64px;
+    }
+
+    .preview-background {
+        width: 64px;
+        height: 48px;
+        border-radius: 6px;
+    }
+
+    .preview-bg-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+
+    .shop-actions {
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .shop-btn {
+        padding: 10px 12px;
+        font-size: 0.75rem;
+        min-height: 40px;
+    }
+
+    /* Mobile BackgroundGallery Styles */
+    .background-gallery {
+        gap: 12px;
+    }
+
+    .gallery-header {
+        text-align: center;
+        padding: 12px 0;
+    }
+
+    .gallery-title {
+        font-size: 1rem;
+        margin-bottom: 4px;
+    }
+
+    .gallery-subtitle {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+
+    .category-filter {
+        gap: 6px;
+        padding: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .category-btn {
+        padding: 6px 10px;
+        font-size: 0.65rem;
+        gap: 4px;
+        border-radius: 16px;
+        min-height: 32px;
+    }
+
+    .category-icon {
+        font-size: 0.8rem;
+    }
+
+    .current-background-preview {
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .preview-label {
+        font-size: 0.7rem;
+    }
+
+    .preview-background {
+        gap: 8px;
+        padding: 8px;
+        background: rgba(0, 240, 255, 0.05);
+        border-radius: 8px;
+    }
+
+    .background-thumb {
+        width: 40px;
+        height: 32px;
+        border-radius: 4px;
+    }
+
+    .background-thumb-placeholder {
+        width: 40px;
+        height: 32px;
+        border-radius: 4px;
+        font-size: 0.6rem;
+        padding: 4px;
+    }
+
+    .background-name {
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .background-preview-text {
+        font-size: 0.65rem;
+        opacity: 0.8;
+    }
+
+    .backgrounds-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .background-option {
+        padding: 10px 8px;
+        gap: 8px;
+    }
+
+    .background-details {
+        gap: 4px;
+    }
+
+    .background-option-name {
+        font-size: 0.7rem;
+        line-height: 1.1;
+    }
+
+    .background-option-preview {
+        font-size: 0.65rem;
+        line-height: 1.2;
+    }
+
+    .type-badge {
+        padding: 2px 6px;
+        font-size: 0.55rem;
+        border-radius: 10px;
+    }
+
+    .custom-upload-section {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .upload-title {
+        font-size: 0.85rem;
+    }
+
+    .upload-controls {
+        gap: 8px;
+        flex-direction: column;
+    }
+
+    .custom-url-input {
+        padding: 8px 10px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+    }
+
+    .file-upload-btn {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+        min-height: 36px;
+    }
+
+    .custom-background-preview {
+        gap: 8px;
+        padding: 8px;
+        background: rgba(0, 240, 255, 0.05);
+        border-radius: 8px;
+    }
+
+    .custom-background-thumb {
+        width: 40px;
+        height: 32px;
+        border-radius: 4px;
+    }
+
+    .remove-custom-btn {
+        padding: 4px 8px;
+        font-size: 0.65rem;
+        border-radius: 4px;
+        min-height: 24px;
+    }
+
+    .upload-info {
+        gap: 6px;
+        text-align: center;
+    }
+
+    .upload-limits,
+    .upload-note {
+        font-size: 0.65rem;
+        line-height: 1.3;
+    }
+
+    /* Mobile AvatarFrames Styles */
+    .avatar-frames {
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .frames-header {
+        text-align: center;
+        padding: 8px 0;
+    }
+
+    .frames-title {
+        font-size: 1rem;
+        margin-bottom: 4px;
+    }
+
+    .frames-subtitle {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+
+    .current-frame-preview {
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .preview-label {
+        font-size: 0.7rem;
+    }
+
+    .preview-frame {
+        gap: 8px;
+        padding: 8px;
+        background: rgba(0, 240, 255, 0.05);
+        border-radius: 8px;
+        align-items: center;
+    }
+
+    .preview-avatar {
+        width: 48px;
+        height: 48px;
+    }
+
+    .frame-info {
+        gap: 4px;
+    }
+
+    .frame-name {
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .frame-preview {
+        font-size: 0.65rem;
+        opacity: 0.8;
+    }
+
+    .frames-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .frame-option {
+        padding: 10px 8px;
+        gap: 8px;
+    }
+
+    .frame-button {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .frame-details {
+        gap: 4px;
+        text-align: center;
+    }
+
+    .frame-option-name {
+        font-size: 0.7rem;
+        line-height: 1.1;
+    }
+
+    .frame-option-preview {
+        font-size: 0.65rem;
+        line-height: 1.2;
+    }
+
+    .selected-indicator {
+        right: 8px;
+        top: 8px;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+
+    /* Mobile CustomizationShop Styles - Updated for simplified interface */
+    .customization-shop {
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .shop-header {
+        padding: 12px 0;
+    }
+
+    .shop-title {
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+    }
+
+    .shop-subtitle {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+
+    .section-selector {
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .section-btn {
+        padding: 10px 6px;
+        font-size: 0.7rem;
+        gap: 4px;
+        min-height: 32px;
+    }
+
+    .section-icon {
+        font-size: 1.2rem;
+    }
+
+    .section-label {
+        font-size: 0.65rem;
+    }
+
+    .avatar-customization {
+        gap: 20px;
+    }
+
+    .avatar-preview-section {
+        padding: 16px;
+    }
+
+    .section-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+    }
+
+    .avatar-preview-container {
+        gap: 10px;
+    }
+
+    .avatar-preview {
+        width: 64px;
+        height: 64px;
+        font-size: 1.5rem;
+    }
+
+    .preview-info {
+        gap: 3px;
+    }
+
+    .preview-frame,
+    .preview-animation {
+        font-size: 0.7rem;
+    }
+
+    .customization-group {
+        gap: 10px;
+    }
+
+    .group-label {
+        font-size: 0.8rem;
+    }
+
+    .frames-grid,
+    .animations-grid {
+        grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+        gap: 10px;
+    }
+
+    .frame-btn,
+    .animation-btn {
+        padding: 10px 6px;
+        gap: 6px;
+        font-size: 0.7rem;
+    }
+
+    .frame-preview,
+    .animation-preview {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+    }
+
+    .frame-name,
+    .animation-name {
+        font-size: 0.65rem;
+        line-height: 1.1;
+    }
+
+    .speed-control {
+        padding: 12px;
+        margin-top: 12px;
+    }
+
+    .speed-label {
+        font-size: 0.7rem;
+        margin-bottom: 6px;
+    }
+
+    .speed-slider {
+        height: 4px;
+    }
+
+    .speed-slider::-webkit-slider-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .speed-slider::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .shop-actions {
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .shop-btn {
+        padding: 10px 12px;
+        font-size: 0.75rem;
+        min-height: 40px;
     }
 }

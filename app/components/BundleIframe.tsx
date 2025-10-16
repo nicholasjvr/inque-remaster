@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { WidgetBundle } from '@/hooks/useFirestore';
+import { WidgetBundle, Widget } from '@/hooks/useFirestore';
 import { useStorage } from '@/hooks/useStorage';
 
 type BundleIframeProps = {
-  bundle: WidgetBundle;
+  bundle: WidgetBundle | Widget;
   className?: string;
   title?: string;
   height?: number | string;
@@ -22,8 +22,25 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
 
     const load = async () => {
       try {
-        const basePath = bundle.storagePath || (bundle.uploadId ? `uploads/${bundle.uploadId}` : `uploads/${bundle.id}`);
-        const fileMap = await buildBundleFileMap(basePath);
+        let fileMap: Record<string, string> = {};
+
+        // Check if this is a Widget with files array or a WidgetBundle with storagePath
+        if ('files' in bundle && Array.isArray(bundle.files)) {
+          // Widget type - build file map from files array
+          bundle.files.forEach((f) => {
+            if (f?.fileName && f?.downloadURL) {
+              fileMap[f.fileName] = f.downloadURL;
+              // Also map just the filename without path
+              const basename = f.fileName.split('/').pop();
+              if (basename) fileMap[basename] = f.downloadURL;
+            }
+          });
+        } else {
+          // WidgetBundle type - build file map from storage path
+          const basePath = (bundle as WidgetBundle).storagePath || 
+                          (bundle.uploadId ? `uploads/${bundle.uploadId}` : `uploads/${bundle.id}`);
+          fileMap = await buildBundleFileMap(basePath);
+        }
 
         let entry = findHtmlEntry(fileMap);
 
@@ -77,7 +94,7 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
     };
 
     load();
-  }, [bundle?.id, bundle?.uploadId, bundle?.storagePath]);
+  }, [bundle?.id, bundle?.uploadId, 'storagePath' in bundle ? bundle.storagePath : null, 'files' in bundle ? bundle.files?.length : 0]);
 
   return (
     <iframe

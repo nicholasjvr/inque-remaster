@@ -3,20 +3,20 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProfileHub from '@/app/components/ProfileHub';
-import { WidgetBundle, useWidgetBundles, useBundleSocial, toggleFollow } from '@/hooks/useFirestore';
+import { Widget, useAllWidgets, useBundleSocial, toggleFollow } from '@/hooks/useFirestore';
 import BundleIframe from '@/app/components/BundleIframe';
 
 
 export default function ExplorePage() {
   const { user } = useAuth();
-  const { bundles, loading } = useWidgetBundles({ orderByCreated: true, limitCount: 50 });
+  const { widgets, loading } = useAllWidgets({ limitCount: 100 });
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'name' | 'random'>('recent');
   const [category, setCategory] = useState<string>('all');
   const [query, setQuery] = useState<string>('');
-  const [fullscreenBundle, setFullscreenBundle] = useState<WidgetBundle | null>(null);
+  const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null);
 
   const sorted = useMemo(() => {
-    const arr = [...bundles];
+    const arr = [...widgets];
     switch (sortBy) {
       case 'name':
         return arr.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
@@ -27,23 +27,23 @@ export default function ExplorePage() {
       default:
         return arr; // already recent
     }
-  }, [bundles, sortBy]);
+  }, [widgets, sortBy]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sorted.filter((b) => {
-      const tags = Array.isArray((b as any).tags)
-        ? ((b as any).tags as string[])
-        : `${(b as any).tags || ''}`.split(',').map((t) => t.trim());
+    return sorted.filter((w) => {
+      const tags = Array.isArray(w.tags)
+        ? w.tags
+        : `${w.tags || ''}`.split(',').map((t) => t.trim());
       const categoryOk = category === 'all' || tags.includes(category);
-      const hay = `${b.title || ''} ${(b as any).description || ''} ${tags.join(' ')} ${b.id || ''}`.toLowerCase();
+      const hay = `${w.title || ''} ${w.description || ''} ${tags.join(' ')} ${w.id || ''}`.toLowerCase();
       const queryOk = !q || hay.includes(q);
       return categoryOk && queryOk;
     });
   }, [sorted, category, query]);
 
-  const openFullscreen = (b: WidgetBundle) => setFullscreenBundle(b);
-  const closeFullscreen = () => setFullscreenBundle(null);
+  const openFullscreen = (w: Widget) => setFullscreenWidget(w);
+  const closeFullscreen = () => setFullscreenWidget(null);
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
@@ -141,21 +141,21 @@ export default function ExplorePage() {
                 </button>
               </div>
             )}
-            {!loading && filtered.map((bundle) => (
-              <div key={bundle.id} className="explore-widget-card">
+            {!loading && filtered.map((widget) => (
+              <div key={widget.id} className="explore-widget-card">
                 <div className="explore-widget-header">
-                  <h3 className="explore-widget-title">{bundle.title || 'Untitled Project'}</h3>
-                  <div className="explore-widget-user">by {bundle.id?.slice(0, 6) || 'Unknown'}</div>
+                  <h3 className="explore-widget-title">{widget.title || 'Untitled Project'}</h3>
+                  <div className="explore-widget-user">by {widget.userId?.slice(0, 6) || 'Unknown'}</div>
                 </div>
                 <div className="explore-widget-preview">
-                  <BundleIframe bundle={bundle} height={200} />
+                  <BundleIframe bundle={widget} height={200} />
                   <div className="preview-overlay">
-                    <button className="fullscreen-demo-btn" onClick={() => openFullscreen(bundle)}>
+                    <button className="fullscreen-demo-btn" onClick={() => openFullscreen(widget)}>
                       ▶ Demo Fullscreen
                     </button>
                   </div>
                 </div>
-                <SocialRow bundle={bundle} currentUserId={user?.uid} />
+                <SocialRow widget={widget} currentUserId={user?.uid} />
               </div>
             ))}
           </div>
@@ -182,15 +182,15 @@ export default function ExplorePage() {
 
 
       {/* Fullscreen Modal */}
-      {fullscreenBundle && (
+      {fullscreenWidget && (
         <div className="widget-fullscreen-modal active" role="dialog" aria-modal="true">
           <div className="fullscreen-content">
             <div className="fullscreen-header">
-              <h3 className="fullscreen-title">{fullscreenBundle.title || 'Live Demo'}</h3>
+              <h3 className="fullscreen-title">{fullscreenWidget.title || 'Live Demo'}</h3>
               <button className="fullscreen-close" onClick={closeFullscreen}>×</button>
             </div>
             <div className="fullscreen-body">
-              <BundleIframe bundle={fullscreenBundle} height={'100%'} />
+              <BundleIframe bundle={fullscreenWidget} height={'100%'} />
             </div>
           </div>
         </div>
@@ -205,13 +205,13 @@ export default function ExplorePage() {
   );
 }
 
-function SocialRow({ bundle, currentUserId }: { bundle: WidgetBundle; currentUserId?: string }) {
-  const social = useBundleSocial(bundle?.id, currentUserId);
+function SocialRow({ widget, currentUserId }: { widget: Widget; currentUserId?: string }) {
+  const social = useBundleSocial(widget?.id, currentUserId, 'widget');
   return (
     <div className="explore-widget-actions" style={{ display: 'grid', gridTemplateColumns: 'auto auto auto', gap: 8 }}>
-      <a href={`/?user=${bundle.id}`} className="explore-profile-link">👤 Profile</a>
-      <button className="explore-follow-btn" onClick={() => currentUserId && toggleFollow(currentUserId, bundle.userId || '')}>+ Follow</button>
-      <button className="explore-like-btn" onClick={() => social.toggleLike(bundle)}>
+      <a href={`/?user=${widget.userId}`} className="explore-profile-link">👤 Profile</a>
+      <button className="explore-follow-btn" onClick={() => currentUserId && toggleFollow(currentUserId, widget.userId || '')}>+ Follow</button>
+      <button className="explore-like-btn" onClick={() => social.toggleLike(widget)}>
         ❤️ {social.likedByMe ? 'Unlike' : 'Like'} {social.likes ? `(${social.likes})` : ''}
       </button>
     </div>
