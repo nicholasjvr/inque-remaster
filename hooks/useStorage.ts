@@ -27,6 +27,9 @@ export function useStorage() {
     path: string,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<string> => {
+    if (!storage) {
+      throw new Error('Firebase Storage is not initialized. Check NEXT_PUBLIC_FIREBASE_* env vars and lib/firebase.ts');
+    }
     try {
       setUploading(true);
       setUploadProgress(null);
@@ -49,6 +52,12 @@ export function useStorage() {
       setUploadProgress(null);
       throw error;
     }
+  };
+
+  // Convenience wrapper to upload into the public/ prefix so files are readable by guests
+  const uploadToPublic = async (file: File, relativePath: string, onProgress?: (progress: UploadProgress) => void) => {
+    const base = `public/${relativePath.replace(/^\/+/, '')}`;
+    return uploadFile(file, base, onProgress);
   };
 
   const uploadMultipleFiles = async (
@@ -174,6 +183,7 @@ export function useStorage() {
     uploading,
     uploadProgress,
     uploadFile,
+    uploadToPublic,
     uploadMultipleFiles,
     deleteFile,
     listFiles,

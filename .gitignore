@@ -67,4 +67,7 @@ tmp/
 temp/
 storage.rules
 firebase.rules
-env.local
+
+
+.cursor
+.env.local

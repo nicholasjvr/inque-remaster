@@ -195,3 +195,25 @@ html::-webkit-scrollbar,
   height: 0;
   display: none;
 }
+
+/* Ensure hub component-level scrollbars can opt-in (Customization Shop/Background Gallery) */
+.customization-shop ::-webkit-scrollbar,
+.background-gallery ::-webkit-scrollbar,
+.hub-expanded-content ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  display: block;
+}
+
+.customization-shop ::-webkit-scrollbar-thumb,
+.background-gallery ::-webkit-scrollbar-thumb,
+.hub-expanded-content ::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.35);
+  border-radius: 6px;
+}
+
+.customization-shop ::-webkit-scrollbar-track,
+.background-gallery ::-webkit-scrollbar-track,
+.hub-expanded-content ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+}

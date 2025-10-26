@@ -9,7 +9,7 @@ import BundleIframe from '@/app/components/BundleIframe';
 
 export default function ExplorePage() {
   const { user } = useAuth();
-  const { widgets, loading } = useAllWidgets({ limitCount: 100 });
+  const { widgets, loading, error } = useAllWidgets({ limitCount: 100 });
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'name' | 'random'>('recent');
   const [category, setCategory] = useState<string>('all');
   const [query, setQuery] = useState<string>('');
@@ -131,7 +131,17 @@ export default function ExplorePage() {
                 <div className="loading-subtitle">Fetching live bundles from Firestore</div>
               </div>
             )}
-            {!loading && filtered.length === 0 && (
+            {error && (
+              <div className="error-state" style={{ padding: 20, background: 'rgba(255,0,0,0.06)', borderRadius: 8 }}>
+                <h3 style={{ color: '#ffdddd' }}>Unable to load projects</h3>
+                <p style={{ color: '#ffdede' }}>{String(error)}</p>
+                <p style={{ color: '#e6e6e6' }}>Tip: check Firebase config (NEXT_PUBLIC_FIREBASE_*) and Firestore/Storage rules in the Firebase Console.</p>
+                <button className="empty-action-btn" onClick={() => window.location.reload()}>
+                  Retry
+                </button>
+              </div>
+            )}
+            {!loading && !error && filtered.length === 0 && (
               <div id="emptyState" className="empty-state">
                 <div className="empty-icon">🔍</div>
                 <h3>No projects found</h3>

@@ -418,6 +418,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           data-theme={themeClass}
           data-customizing={isExpanded ? 'true' : 'false'}
           data-closing={isClosing ? 'true' : 'false'}
+          style={{
+            maxHeight: isExpanded ? (mode === 'edit' ? 'calc(100vh - 2rem)' : '80vh') : undefined,
+            overflow: isExpanded && mode !== 'edit' ? 'hidden' : undefined,
+            display: 'flex',
+            flexDirection: 'column',
+            height: mode === 'edit' && isExpanded ? '100%' : undefined,
+            // expose a dynamic accent for widgets/banners that follow avatar frame color
+            ['--accent-color' as any]: (localProfile?.avatarFrame?.color || '#00f0ff')
+          } as React.CSSProperties}
         >
           <div className="hub-core">
             <div className="hub-user-section">
@@ -574,241 +583,278 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 </div>
           </div>
           {isExpanded && (
-            <div className="hub-expanded-content">
-              {!isPublicView && (
-                <CollapsibleSection id="customization-shop" title="🛍️ Customization Shop">
-                  <CustomizationShop
-                    profile={localProfile}
-                    onSave={async (updates) => {
-                      if (!user?.uid) return;
-                      try {
-                        await saveProfile(user.uid, updates);
-                        // Update local profile state after save
-                        setLocalProfile(prev => ({ ...prev, ...updates }));
-                        console.log('Customization saved successfully!');
-                      } catch (error) {
-                        console.error('Error saving customization:', error);
-                      }
-                    }}
-                    onReset={() => {
-                      setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
-                      // Also reset the theme state if it was changed
-                      setTheme(profile?.theme?.mode || 'neo');
-                    }}
-                  />
-                </CollapsibleSection>
-              )}
+            <div className="hub-expanded-layout">
+              <div
+                className="hub-expanded-content"
+                style={{
+                  overflowY: 'auto',
+                  flex: 1,
+                  maxHeight: mode === 'edit' ? 'calc(100vh - 200px)' : undefined
+                }}
+              >
+                {!isPublicView && (
+                  <CollapsibleSection id="customization-shop" title="🛍️ Customization Shop" defaultOpen={true}>
+                    <CustomizationShop
+                      profile={localProfile}
+                      onSave={async (updates) => {
+                        if (!user?.uid) return;
+                        try {
+                          await saveProfile(user.uid, updates);
+                          // Update local profile state after save
+                          setLocalProfile(prev => ({ ...prev, ...updates }));
+                          console.log('Customization saved successfully!');
+                        } catch (error) {
+                          console.error('Error saving customization:', error);
+                        }
+                      }}
+                      onReset={() => {
+                        setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+                        // Also reset the theme state if it was changed
+                        setTheme(profile?.theme?.mode || 'neo');
+                      }}
+                    />
+                  </CollapsibleSection>
+                )}
 
-              {/* Featured Projects Section - Enhanced for public view */}
-              <CollapsibleSection id="featured" title="🏆 Featured Projects" defaultOpen={false}>
-                <div className="featured-projects-grid">
-                  {Array.from({ length: 6 }, (_, index) => {
-                    const item = localProfile?.repRack?.[index % 3];
-                    return (
-                      <div key={index} className="featured-project-card">
-                        <div className="project-image-container">
-                          {item?.imageUrl ? (
-                            <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
-                          ) : (
-                            <div className="project-image-placeholder">
-                              {item?.title?.charAt(0) || '🎨'}
+                {/* Featured Projects Section - Enhanced for public view */}
+                <CollapsibleSection id="featured" title="🏆 Featured Projects" defaultOpen={mode === 'edit'}>
+                  <div className="featured-projects-grid">
+                    {Array.from({ length: 6 }, (_, index) => {
+                      const item = localProfile?.repRack?.[index % 3];
+                      return (
+                        <div key={index} className="featured-project-card">
+                          <div className="project-image-container">
+                            {item?.imageUrl ? (
+                              <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
+                            ) : (
+                              <div className="project-image-placeholder">
+                                {item?.title?.charAt(0) || '🎨'}
+                              </div>
+                            )}
+                            <div className="project-overlay">
+                              <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
+                              <div className="project-stats">
+                                <span className="project-stat">❤️ 0</span>
+                                <span className="project-stat">👁️ 0</span>
+                                <span className="project-stat">⭐ 0</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CollapsibleSection>
+
+                {/* Activity Timeline - Enhanced */}
+                <CollapsibleSection id="activity" title="📅 Recent Activity" defaultOpen={false}>
+                  <div className="activity-timeline">
+                    <div className="activity-item">
+                      <div className="activity-icon">🎨</div>
+                      <div className="activity-content">
+                        <div className="activity-text">Created a new interactive widget</div>
+                        <div className="activity-time">2 hours ago</div>
+                      </div>
+                    </div>
+                    <div className="activity-item">
+                      <div className="activity-icon">❤️</div>
+                      <div className="activity-content">
+                        <div className="activity-text">Received 5 likes on "Portfolio Showcase"</div>
+                        <div className="activity-time">5 hours ago</div>
+                      </div>
+                    </div>
+                    <div className="activity-item">
+                      <div className="activity-icon">👥</div>
+                      <div className="activity-content">
+                        <div className="activity-text">New follower: @designguru</div>
+                        <div className="activity-time">1 day ago</div>
+                      </div>
+                    </div>
+                    <div className="activity-item">
+                      <div className="activity-icon">🏆</div>
+                      <div className="activity-content">
+                        <div className="activity-text">Earned "Popular Creator" badge</div>
+                        <div className="activity-time">3 days ago</div>
+                      </div>
+                    </div>
+                    <div className="activity-item">
+                      <div className="activity-icon">💬</div>
+                      <div className="activity-content">
+                        <div className="activity-text">Commented on "Data Visualization Tool"</div>
+                        <div className="activity-time">1 week ago</div>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleSection>
+
+                {/* Social Connections - Only in public view */}
+                {isPublicView && (
+                  <CollapsibleSection id="social" title="🌐 Social Connections" defaultOpen={false}>
+                    <div className="social-connections">
+                      <div className="social-stats">
+                        <div className="social-stat">
+                          <span className="social-number">{profileUser?.stats?.followersCount || 0}</span>
+                          <span className="social-label">Followers</span>
+                        </div>
+                        <div className="social-stat">
+                          <span className="social-number">{profileUser?.stats?.followingCount || 0}</span>
+                          <span className="social-label">Following</span>
+                        </div>
+                      </div>
+                      <div className="social-actions">
+                        <button className="social-btn follow-btn" onClick={handleFollow}>
+                          {profileUser?.stats?.followersCount && profileUser.stats.followersCount > 0 ? 'Following' : 'Follow'}
+                        </button>
+                        <button className="social-btn message-btn" onClick={handleMessage}>
+                          Message
+                        </button>
+                        <div className="share-dropdown">
+                          <button
+                            className="social-btn share-btn"
+                            onClick={() => setShowShareMenu(!showShareMenu)}
+                          >
+                            Share Profile
+                          </button>
+                          {showShareMenu && (
+                            <div className="share-menu">
+                              <button className="share-option" onClick={handleShare}>
+                                <span>📱</span>
+                                Share
+                              </button>
+                              <button className="share-option" onClick={handleShareToTwitter}>
+                                <span>🐦</span>
+                                Twitter
+                              </button>
+                              <button className="share-option" onClick={handleShareToLinkedIn}>
+                                <span>💼</span>
+                                LinkedIn
+                              </button>
+                              <button className="share-option" onClick={() => fallbackShare(`${window.location.origin}/u/${profileUser?.id}`, `Check out ${profileUser?.displayName || 'this creator'}'s profile on inQ!`)}>
+                                <span>📋</span>
+                                Copy Link
+                              </button>
                             </div>
                           )}
-                          <div className="project-overlay">
-                            <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
-                            <div className="project-stats">
-                              <span className="project-stat">❤️ 0</span>
-                              <span className="project-stat">👁️ 0</span>
-                              <span className="project-stat">⭐ 0</span>
-                            </div>
-                          </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </CollapsibleSection>
+                    </div>
+                  </CollapsibleSection>
+                )}
 
-              {/* Activity Timeline - Enhanced */}
-              <CollapsibleSection id="activity" title="📅 Recent Activity" defaultOpen={false}>
-                <div className="activity-timeline">
-                  <div className="activity-item">
-                    <div className="activity-icon">🎨</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Created a new interactive widget</div>
-                      <div className="activity-time">2 hours ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">❤️</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Received 5 likes on "Portfolio Showcase"</div>
-                      <div className="activity-time">5 hours ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">👥</div>
-                    <div className="activity-content">
-                      <div className="activity-text">New follower: @designguru</div>
-                      <div className="activity-time">1 day ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">🏆</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Earned "Popular Creator" badge</div>
-                      <div className="activity-time">3 days ago</div>
-                    </div>
-                  </div>
-                  <div className="activity-item">
-                    <div className="activity-icon">💬</div>
-                    <div className="activity-content">
-                      <div className="activity-text">Commented on "Data Visualization Tool"</div>
-                      <div className="activity-time">1 week ago</div>
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleSection>
-
-              {/* Social Connections - Only in public view */}
-              {isPublicView && (
-                <CollapsibleSection id="social" title="🌐 Social Connections" defaultOpen={false}>
-                  <div className="social-connections">
-                    <div className="social-stats">
-                      <div className="social-stat">
-                        <span className="social-number">{profileUser?.stats?.followersCount || 0}</span>
-                        <span className="social-label">Followers</span>
-                      </div>
-                      <div className="social-stat">
-                        <span className="social-number">{profileUser?.stats?.followingCount || 0}</span>
-                        <span className="social-label">Following</span>
-                      </div>
-                    </div>
-                    <div className="social-actions">
-                      <button className="social-btn follow-btn" onClick={handleFollow}>
-                        {profileUser?.stats?.followersCount && profileUser.stats.followersCount > 0 ? 'Following' : 'Follow'}
-                      </button>
-                      <button className="social-btn message-btn" onClick={handleMessage}>
-                        Message
-                      </button>
-                      <div className="share-dropdown">
-                        <button
-                          className="social-btn share-btn"
-                          onClick={() => setShowShareMenu(!showShareMenu)}
-                        >
-                          Share Profile
-                        </button>
-                        {showShareMenu && (
-                          <div className="share-menu">
-                            <button className="share-option" onClick={handleShare}>
-                              <span>📱</span>
-                              Share
-                            </button>
-                            <button className="share-option" onClick={handleShareToTwitter}>
-                              <span>🐦</span>
-                              Twitter
-                            </button>
-                            <button className="share-option" onClick={handleShareToLinkedIn}>
-                              <span>💼</span>
-                              LinkedIn
-                            </button>
-                            <button className="share-option" onClick={() => fallbackShare(`${window.location.origin}/u/${profileUser?.id}`, `Check out ${profileUser?.displayName || 'this creator'}'s profile on inQ!`)}>
-                              <span>📋</span>
-                              Copy Link
-                            </button>
+                {/* Recent Followers Section - Only in public view */}
+                {isPublicView && (
+                  <CollapsibleSection id="followers" title="👥 Recent Followers" defaultOpen={false}>
+                    <div className="followers-grid">
+                      {Array.from({ length: 6 }, (_, index) => (
+                        <div key={index} className="follower-item">
+                          <div className="follower-avatar">
+                            <span role="img" aria-label="Follower avatar">
+                              {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
+                            </span>
                           </div>
-                        )}
-                      </div>
+                          <div className="follower-info">
+                            <span className="follower-name">Creator {index + 1}</span>
+                            <span className="follower-handle">@creator{index + 1}</span>
+                          </div>
+                          <button className="follower-action">Follow</button>
+                        </div>
+                      ))}
                     </div>
+                  </CollapsibleSection>
+                )}
+
+                {/* Following Section - Only in edit mode */}
+                {!isPublicView && (
+                  <CollapsibleSection id="following" title="👥 Following" defaultOpen={false}>
+                    <div className="following-grid">
+                      {Array.from({ length: 6 }, (_, index) => (
+                        <div key={index} className="following-item">
+                          <div className="following-avatar">
+                            <span role="img" aria-label="Following avatar">
+                              {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
+                            </span>
+                          </div>
+                          <div className="following-info">
+                            <span className="following-name">Creator {index + 1}</span>
+                            <span className="following-handle">@creator{index + 1}</span>
+                            <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
+                          </div>
+                          <button className="following-action">Unfollow</button>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                )}
+                <CollapsibleSection id="quicknav" title="Quick Navigation" defaultOpen={false}>
+                  <div className="expanded-nav-buttons">
+                    <a
+                      href="/explore"
+                      className="expanded-nav-btn"
+                      title="Explore Projects"
+                    >
+                      <span className="nav-icon">🔍</span>
+                      <span className="nav-label">Explore</span>
+                      <span className="nav-desc">Discover projects</span>
+                    </a>
+                    <a
+                      href="/explore-reels"
+                      className="expanded-nav-btn"
+                      title="Explore Reels"
+                    >
+                      <span className="nav-icon">🎞️</span>
+                      <span className="nav-label">Reels</span>
+                      <span className="nav-desc">Swipe demo videos</span>
+                    </a>
+                    <a
+                      href="/users"
+                      className="expanded-nav-btn"
+                      title="Browse Creators"
+                    >
+                      <span className="nav-icon">👥</span>
+                      <span className="nav-label">Creators</span>
+                      <span className="nav-desc">Find creators</span>
+                    </a>
+                    <a
+                      href="/showcase"
+                      className="expanded-nav-btn"
+                      title="View Showcase"
+                    >
+                      <span className="nav-icon">🏆</span>
+                      <span className="nav-label">Showcase</span>
+                      <span className="nav-desc">Top projects</span>
+                    </a>
                   </div>
                 </CollapsibleSection>
-              )}
 
-              {/* Recent Followers Section - Only in public view */}
-              {isPublicView && (
-                <CollapsibleSection id="followers" title="👥 Recent Followers" defaultOpen={false}>
-                  <div className="followers-grid">
-                    {Array.from({ length: 6 }, (_, index) => (
-                      <div key={index} className="follower-item">
-                        <div className="follower-avatar">
-                          <span role="img" aria-label="Follower avatar">
-                            {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
-                          </span>
-                        </div>
-                        <div className="follower-info">
-                          <span className="follower-name">Creator {index + 1}</span>
-                          <span className="follower-handle">@creator{index + 1}</span>
-                        </div>
-                        <button className="follower-action">Follow</button>
-                      </div>
+              </div>
+
+              <aside className="hub-modules" aria-label="Profile shortcuts">
+                <section className="hub-module" aria-labelledby="hub-nav-title-floating">
+                  <h3 id="hub-nav-title-floating">Navigate</h3>
+                  <div className="hub-nav-grid">
+                    {NAV_ITEMS.map((item) => (
+                      <a key={item.id} className="hub-nav-item" href={item.href} rel="noreferrer">
+                        <span className="hub-nav-icon" aria-hidden="true">
+                          {item.icon}
+                        </span>
+                        <span>{item.label}</span>
+                      </a>
                     ))}
                   </div>
-                </CollapsibleSection>
-              )}
+                </section>
 
-              {/* Following Section - Only in edit mode */}
-              {!isPublicView && (
-                <CollapsibleSection id="following" title="👥 Following" defaultOpen={false}>
-                  <div className="following-grid">
-                    {Array.from({ length: 6 }, (_, index) => (
-                      <div key={index} className="following-item">
-                        <div className="following-avatar">
-                          <span role="img" aria-label="Following avatar">
-                            {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
-                          </span>
-                        </div>
-                        <div className="following-info">
-                          <span className="following-name">Creator {index + 1}</span>
-                          <span className="following-handle">@creator{index + 1}</span>
-                          <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
-                        </div>
-                        <button className="following-action">Unfollow</button>
-                      </div>
+                <section className="hub-module" aria-labelledby="hub-actions-title-floating">
+                  <h3 id="hub-actions-title-floating">Quick Actions</h3>
+                  <div className="hub-actions">
+                    {QUICK_ACTIONS.map((action) => (
+                      <a key={action.id} className="hub-action-button" href={action.href} rel="noreferrer">
+                        <span aria-hidden="true">{action.icon}</span>
+                        <span>{action.label}</span>
+                      </a>
                     ))}
                   </div>
-                </CollapsibleSection>
-              )}
-              <CollapsibleSection id="quicknav" title="Quick Navigation" defaultOpen={false}>
-                <div className="expanded-nav-buttons">
-                  <a
-                    href="/explore"
-                    className="expanded-nav-btn"
-                    title="Explore Projects"
-                  >
-                    <span className="nav-icon">🔍</span>
-                    <span className="nav-label">Explore</span>
-                    <span className="nav-desc">Discover projects</span>
-                  </a>
-                  <a
-                    href="/explore-reels"
-                    className="expanded-nav-btn"
-                    title="Explore Reels"
-                  >
-                    <span className="nav-icon">🎞️</span>
-                    <span className="nav-label">Reels</span>
-                    <span className="nav-desc">Swipe demo videos</span>
-                  </a>
-                  <a
-                    href="/users"
-                    className="expanded-nav-btn"
-                    title="Browse Creators"
-                  >
-                    <span className="nav-icon">👥</span>
-                    <span className="nav-label">Creators</span>
-                    <span className="nav-desc">Find creators</span>
-                  </a>
-                  <a
-                    href="/showcase"
-                    className="expanded-nav-btn"
-                    title="View Showcase"
-                  >
-                    <span className="nav-icon">🏆</span>
-                    <span className="nav-label">Showcase</span>
-                    <span className="nav-desc">Top projects</span>
-                  </a>
-                </div>
-              </CollapsibleSection>
-
+                </section>
+              </aside>
             </div>
           )}
           {!isPublicView && isChatbot && (
@@ -869,40 +915,23 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
             </div>
           )}
         </div>
-
-        {isExpanded && (
-          <aside className="hub-modules" aria-label="Profile shortcuts">
-            <section className="hub-module" aria-labelledby="hub-nav-title-floating">
-              <h3 id="hub-nav-title-floating">Navigate</h3>
-              <div className="hub-nav-grid">
-                {NAV_ITEMS.map((item) => (
-                  <a key={item.id} className="hub-nav-item" href={item.href} rel="noreferrer">
-                    <span className="hub-nav-icon" aria-hidden="true">
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </a>
-                ))}
-              </div>
-            </section>
-
-            <section className="hub-module" aria-labelledby="hub-actions-title-floating">
-              <h3 id="hub-actions-title-floating">Quick Actions</h3>
-              <div className="hub-actions">
-                {QUICK_ACTIONS.map((action) => (
-                  <a key={action.id} className="hub-action-button" href={action.href} rel="noreferrer">
-                    <span aria-hidden="true">{action.icon}</span>
-                    <span>{action.label}</span>
-                  </a>
-                ))}
-              </div>
-            </section>
-          </aside>
-        )}
       </div>
-      {/* Only show overlay when expanded/chatbot AND not billboard */}
-      {variant !== 'billboard' ? (
-        <div className="profile-hub-overlay" onClick={handleCloseModal} />
+      {/* Only show overlay when expanded/chatbot AND not billboard AND not edit mode */}
+      {variant !== 'billboard' && isModalOpen && mode !== 'edit' ? (
+        <div
+          className="profile-hub-overlay"
+          onClick={handleCloseModal}
+          style={{
+            pointerEvents: isExpanded ? 'none' : 'auto',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999
+          } as React.CSSProperties}
+        />
       ) : null}
       {!isPublicView && showRepRackManager && (
         <RepRackManager onProjectSelect={(p) => handleRepRackSelect({ id: p.id, title: p.title, imageUrl: p.imageUrl })} onClose={() => setShowRepRackManager(false)} />

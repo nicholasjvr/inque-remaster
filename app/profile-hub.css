@@ -133,7 +133,7 @@
 /* Enhanced billboard styling for integrated layout */
 .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .profile-hub {
     background: rgba(6, 10, 18, 0.4);
-    backdrop-filter: blur(12px);
+    /* backdrop-filter: blur(12px); */
     border-radius: clamp(18px, 4vw, 28px);
     border: 1px solid rgba(0, 240, 255, 0.15);
 }
@@ -186,9 +186,7 @@
     align-items: stretch;
 }
 
-.profile-hub-shell--expanded .hub-modules {
-    display: none;
-}
+/* Hub modules are now integrated into the expanded layout */
 
 .profile-hub {
     font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -673,13 +671,37 @@
     animation: none;
 }
 
-.hub-modules {
-    display: grid;
+.hub-expanded-layout .hub-modules {
+    display: flex;
+    flex-direction: column;
     gap: 18px;
-    width: min(var(--hub-module-width), calc(100vw - (2 * var(--hub-gap))));
-    min-width: clamp(300px, 26vw, 380px);
+    width: clamp(300px, 26vw, 380px);
+    min-width: 280px;
+    flex-shrink: 0;
     pointer-events: auto;
     animation: none;
+}
+
+/* Edit mode modules styling */
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules {
+    width: clamp(280px, 24vw, 340px);
+    min-width: 260px;
+    max-height: calc(100vh - 240px);
+    overflow-y: auto;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules::-webkit-scrollbar {
+    width: 6px;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules::-webkit-scrollbar-track {
+    background: rgba(0, 240, 255, 0.08);
+    border-radius: 3px;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.3);
+    border-radius: 3px;
 }
 
 @keyframes hub-fade-in {
@@ -1124,7 +1146,7 @@
     width: 100vw;
     height: 100vh;
     background: radial-gradient(circle at center, rgba(4, 8, 14, 0.95), rgba(2, 4, 8, 0.98));
-    backdrop-filter: blur(8px);
+    /* backdrop-filter: blur(8px); */
     z-index: 900;
     opacity: 0;
     pointer-events: none;
@@ -1146,6 +1168,17 @@
 
 .hub-collapsible+.hub-collapsible {
     margin-top: 12px;
+}
+
+/* Edit mode collapsible sections */
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-collapsible {
+    background: rgba(0, 240, 255, 0.08);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    margin-bottom: 16px;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-collapsible:last-child {
+    margin-bottom: 0;
 }
 
 .hub-collapsible__summary {
@@ -1862,9 +1895,16 @@
         height: 100vh;
     }
 
-    .hub-modules {
+    .hub-expanded-layout .hub-modules {
         width: 100%;
-        min-width: 280px;
+        min-width: auto;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .hub-expanded-layout .hub-module {
+        min-width: auto;
+        min-height: auto;
     }
 
     /* Mobile Header Floating Island Styling */
@@ -2700,14 +2740,93 @@
 }
 
 /* Modal Content Layout */
-.profile-hub-shell--expanded .hub-expanded-content {
+.profile-hub-shell--expanded .hub-expanded-layout {
     flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: clamp(10px, 1.6vw, 18px);
     padding: clamp(10px, 1.8vw, 20px);
-    overflow: visible;
     min-height: 0;
+    overflow: hidden;
+}
+
+.profile-hub-shell--expanded .hub-expanded-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    min-height: 0;
+}
+
+/* Edit mode specific styling */
+.profile-hub[data-state="expanded"][data-customizing="true"] {
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 12px !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(0, 240, 255, 0.2) !important;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout {
+    height: 100%;
+    max-height: 100%;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content {
+    max-height: calc(100vh - 220px) !important;
+    padding-bottom: 20px;
+    scrollbar-gutter: stable;
+}
+
+/* Ensure proper scrolling in edit mode */
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content::-webkit-scrollbar-track {
+    background: rgba(0, 240, 255, 0.1);
+    border-radius: 4px;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.4);
+    border-radius: 4px;
+}
+
+.profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.6);
+}
+
+/* Edit page container styling */
+body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
+    overflow: hidden;
+}
+
+/* Prevent page scroll when hub is in edit mode */
+.profile-hub[data-state="expanded"][data-customizing="true"] {
+    position: relative;
+    z-index: 1000;
+}
+
+.profile-hub-shell--expanded .hub-expanded-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.profile-hub-shell--expanded .hub-expanded-content::-webkit-scrollbar-track {
+    background: rgba(0, 240, 255, 0.1);
+    border-radius: 3px;
+}
+
+.profile-hub-shell--expanded .hub-expanded-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.3);
+    border-radius: 3px;
+}
+
+.profile-hub-shell--expanded .hub-expanded-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.5);
 }
 
 /* Ensure no inner scrollbars are rendered inside the modal */
@@ -2763,11 +2882,19 @@
         max-height: 94vh;
     }
 
-    .profile-hub-shell--expanded .hub-expanded-content {
-        grid-template-columns: 1fr 1fr;
+    .profile-hub-shell--expanded .hub-expanded-layout {
         gap: clamp(12px, 2vw, 20px);
         padding: clamp(12px, 2vw, 20px);
-        overflow: visible;
+    }
+
+    .profile-hub-shell--expanded .hub-expanded-content {
+        gap: 16px;
+        padding-right: 2px;
+    }
+
+    .hub-expanded-layout .hub-modules {
+        width: clamp(260px, 24vw, 340px);
+        min-width: 240px;
     }
 }
 
@@ -2780,11 +2907,55 @@
         border-radius: 16px;
     }
 
-    .profile-hub-shell--expanded .hub-expanded-content {
-        grid-template-columns: 1fr;
+    .profile-hub-shell--expanded .hub-expanded-layout {
+        flex-direction: column;
         gap: clamp(10px, 2.4vw, 16px);
         padding: clamp(12px, 2.4vw, 16px);
-        overflow: visible;
+    }
+
+    .profile-hub-shell--expanded .hub-expanded-content {
+        gap: 16px;
+        padding-right: 0;
+        flex: 1;
+    }
+
+    .hub-expanded-layout .hub-modules {
+        width: 100%;
+        min-width: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .hub-expanded-layout .hub-module {
+        flex: 1;
+        min-width: 280px;
+        min-height: auto;
+    }
+
+    /* Edit mode responsive adjustments */
+    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout {
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content {
+        max-height: calc(100vh - 180px) !important;
+        gap: 16px;
+    }
+
+    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules {
+        width: 100%;
+        min-width: auto;
+        flex-direction: column;
+        gap: 16px;
+        max-height: none;
+    }
+
+    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-module {
+        min-width: auto;
+        min-height: auto;
     }
 
     .profile-hub-shell--expanded .hub-section {
@@ -2807,11 +2978,51 @@
         border: none;
     }
 
-    .profile-hub-shell--expanded .hub-expanded-content {
-        grid-template-columns: 1fr;
+    .profile-hub-shell--expanded .hub-expanded-layout {
         gap: 12px;
         padding: 12px;
-        overflow: visible;
+    }
+
+    .profile-hub-shell--expanded .hub-expanded-content {
+        gap: 12px;
+        flex: 1;
+    }
+
+    .hub-expanded-layout .hub-modules {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .hub-expanded-layout .hub-module {
+        min-width: auto;
+        min-height: auto;
+    }
+
+    /* Edit mode mobile adjustments */
+    .profile-hub[data-state="expanded"][data-customizing="true"] {
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+
+    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout {
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content {
+        max-height: calc(100vh - 160px) !important;
+        gap: 12px;
+    }
+
+    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules {
+        width: 100%;
+        min-width: auto;
+        flex-direction: column;
+        gap: 12px;
+        max-height: none;
     }
 
     .profile-hub-shell--expanded .hub-section {
@@ -3845,6 +4056,119 @@
         flex-direction: column;
         gap: 20px;
         padding: 20px;
+    }
+
+    /* === Customization Shop Base === */
+    .customization-shop {
+        background: rgba(0, 240, 255, 0.04);
+        border: 1px solid rgba(0, 240, 255, 0.15);
+        border-radius: 12px;
+    }
+
+    .shop-header {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .shop-title {
+        margin: 0;
+        color: var(--hub-text-primary);
+    }
+
+    .shop-subtitle {
+        margin: 0;
+        color: var(--hub-text-secondary);
+    }
+
+    .section-selector {
+        display: flex;
+        gap: 8px;
+    }
+
+    .section-btn {
+        border: 1px solid rgba(0, 240, 255, 0.18);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--hub-text-secondary);
+    }
+
+    .section-btn.active {
+        border-color: var(--hub-primary);
+        background: rgba(0, 240, 255, 0.15);
+        color: var(--hub-text-primary);
+    }
+
+    .shop-content {
+        display: grid;
+        gap: 18px;
+    }
+
+    .avatar-customization .section-subtitle,
+    .gallery-title {
+        color: var(--hub-primary);
+    }
+
+    /* Frame/Animation preview helpers */
+    .frame-btn.selected,
+    .animation-btn.selected {
+        outline: 2px solid var(--hub-primary);
+    }
+
+    .frame-preview,
+    .animation-preview {
+        border: 1px dashed rgba(0, 240, 255, 0.25);
+    }
+
+    /* === Background Gallery Base === */
+    .background-gallery {
+        background: rgba(0, 240, 255, 0.03);
+        border: 1px solid rgba(0, 240, 255, 0.12);
+        border-radius: 12px;
+        padding: 14px;
+    }
+
+    .category-btn {
+        border: 1px solid rgba(0, 240, 255, 0.18);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--hub-text-secondary);
+    }
+
+    .category-btn.active {
+        border-color: var(--hub-primary);
+        background: rgba(0, 240, 255, 0.15);
+        color: var(--hub-text-primary);
+    }
+
+    .backgrounds-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .background-option.selected {
+        outline: 2px solid var(--hub-primary);
+    }
+
+    .custom-url-input,
+    .file-upload-btn,
+    .remove-custom-btn {
+        border: 1px solid rgba(0, 240, 255, 0.25);
+    }
+
+    /* === Accent propagation to cards/banners === */
+    .featured-project-card,
+    .public-profile-banner,
+    .profile-link,
+    .hub-action-button,
+    .hub-nav-item {
+        border-color: color-mix(in srgb, var(--accent-color) 40%, rgba(0, 240, 255, 0.2));
+    }
+
+    .featured-project-card:hover,
+    .profile-link:hover,
+    .hub-action-button:hover,
+    .hub-nav-item:hover {
+        border-color: var(--accent-color);
+        box-shadow: 0 10px 26px color-mix(in srgb, var(--accent-color) 25%, transparent);
     }
 
     .shop-header {

@@ -140,21 +140,35 @@ export function useUserProfile(userId?: string) {
       setLoading(false);
       return;
     }
+    // Guard: don't attach realtime listener if db is not initialized
+    if (!db) {
+      console.error('Firestore not initialized - useUserProfile will not attach listeners');
+      setError('Firestore not initialized');
+      setLoading(false);
+      return;
+    }
+
     const ref = doc(db, 'users', userId);
-    const unsubscribe = onSnapshot(
-      ref,
-      (snap) => {
-        const data = snap.data() as any;
-        setProfile((data?.profile ?? null) as UserProfile | null);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching profile:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-    return () => unsubscribe();
+    try {
+      const unsubscribe = onSnapshot(
+        ref,
+        (snap) => {
+          const data = snap.data() as any;
+          setProfile((data?.profile ?? null) as UserProfile | null);
+          setLoading(false);
+        },
+        (err) => {
+          console.error('Error fetching profile:', err);
+          setError(err.message || String(err));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach user profile listener:', err);
+      setError(err?.message || String(err));
+      setLoading(false);
+    }
   }, [userId]);
 
   const saveProfile = async (userIdParam: string, updates: Partial<UserProfile>) => {
@@ -211,38 +225,35 @@ export function useWidgets(userId?: string) {
       return;
     }
 
-    const widgetsRef = collection(db, 'widgets');
-    // Temporarily remove orderBy to avoid index requirement
-    const q = query(
-      widgetsRef, 
-      where('userId', '==', userId)
-    );
+    if (!db) {
+      console.error('Firestore not initialized - useWidgets will not attach listeners');
+      setError('Firestore not initialized');
+      setWidgets([]);
+      setLoading(false);
+      return;
+    }
 
-    const unsubscribe = onSnapshot(q, 
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const widgetsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Widget[];
-        
-        // Sort by createdAt on client side to avoid index requirement
+    // Read-mostly -- use a one-time fetch to avoid persistent failing realtime channels
+    (async () => {
+      try {
+        const widgetsRef = collection(db, 'widgets');
+        const q = query(widgetsRef, where('userId', '==', userId));
+        const snap = await getDocs(q);
+        const widgetsData = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })) as Widget[];
         widgetsData.sort((a, b) => {
           if (!a.createdAt || !b.createdAt) return 0;
           return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
         });
-        
         setWidgets(widgetsData);
         setLoading(false);
         setError(null);
-      },
-      (err) => {
-        console.error('Error fetching widgets:', err);
-        setError(err.message);
+      } catch (err: any) {
+        console.error('Error fetching widgets (getDocs):', err);
+        setError(err?.message || String(err));
+        setWidgets([]);
         setLoading(false);
       }
-    );
-
-    return () => unsubscribe();
+    })();
   }, [userId]);
 
   const addWidget = async (widgetData: Omit<Widget, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -298,34 +309,35 @@ export function useAllWidgets({ limitCount = 100 }: { limitCount?: number } = {}
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const widgetsRef = collection(db, 'widgets');
-    const q = query(widgetsRef, limit(limitCount));
+    if (!db) {
+      console.error('Firestore not initialized - useAllWidgets will not attach listeners');
+      setError('Firestore not initialized');
+      setWidgets([]);
+      setLoading(false);
+      return;
+    }
 
-    const unsubscribe = onSnapshot(q,
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const widgetsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Widget[];
-        
-        // Sort by createdAt on client side
+    // Read-only explore listing: fetch once rather than realtime
+    (async () => {
+      try {
+        const widgetsRef = collection(db, 'widgets');
+        const q = query(widgetsRef, limit(limitCount));
+        const snap = await getDocs(q);
+        const widgetsData = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })) as Widget[];
         widgetsData.sort((a, b) => {
           if (!a.createdAt || !b.createdAt) return 0;
           return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
         });
-        
         setWidgets(widgetsData);
         setLoading(false);
         setError(null);
-      },
-      (err) => {
-        console.error('Error fetching all widgets:', err);
-        setError(err.message);
+      } catch (err: any) {
+        console.error('Error fetching all widgets (getDocs):', err);
+        setError(err?.message || String(err));
+        setWidgets([]);
         setLoading(false);
       }
-    );
-
-    return () => unsubscribe();
+    })();
   }, [limitCount]);
 
   return { widgets, loading, error };
@@ -344,26 +356,38 @@ export function useWidget(widgetId: string) {
       return;
     }
 
-    const widgetRef = doc(db, 'widgets', widgetId);
-    
-    const unsubscribe = onSnapshot(widgetRef, 
-      (doc) => {
-        if (doc.exists()) {
-          setWidget({ id: doc.id, ...doc.data() } as Widget);
-        } else {
-          setWidget(null);
-        }
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error('Error fetching widget:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
+    if (!db) {
+      console.error('Firestore not initialized - useWidget will not attach listeners');
+      setError('Firestore not initialized');
+      setWidget(null);
+      setLoading(false);
+      return;
+    }
 
-    return () => unsubscribe();
+    const widgetRef = doc(db, 'widgets', widgetId);
+    try {
+      const unsubscribe = onSnapshot(widgetRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            setWidget({ id: docSnap.id, ...(docSnap.data() as any) } as Widget);
+          } else {
+            setWidget(null);
+          }
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          console.error('Error fetching widget:', err);
+          setError(err?.message || String(err));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach widget listener:', err);
+      setError(err?.message || String(err));
+      setLoading(false);
+    }
   }, [widgetId]);
 
   return { widget, loading, error };
@@ -378,26 +402,30 @@ export function usePublicUsers({ limitCount = 100 }: { limitCount?: number } = {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const usersRef = collection(db, 'users');
-    // Read-mostly: order by displayName; client can re-sort
-    const q = query(usersRef, limit(limitCount));
+    if (!db) {
+      console.error('Firestore not initialized - usePublicUsers will not attach listeners');
+      setError('Firestore not initialized');
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const list: PublicUser[] = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    (async () => {
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, limit(limitCount));
+        const snap = await getDocs(q);
+        const list: PublicUser[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         setUsers(list);
         setLoading(false);
         setError(null);
-      },
-      (err) => {
-        console.error('Error fetching users:', err);
-        setError(err.message);
+      } catch (err: any) {
+        console.error('Error fetching public users (getDocs):', err);
+        setError(err?.message || String(err));
+        setUsers([]);
         setLoading(false);
       }
-    );
-
-    return () => unsubscribe();
+    })();
   }, [limitCount]);
 
   return { users, loading, error };
@@ -417,21 +445,35 @@ export function usePublicUserById(userId?: string) {
       setLoading(false);
       return;
     }
+    if (!db) {
+      console.error('Firestore not initialized - usePublicUserById will not attach listeners');
+      setError('Firestore not initialized');
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     const ref = doc(db, 'users', userId);
-    const unsubscribe = onSnapshot(
-      ref,
-      (snap) => {
-        setUser(snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as PublicUser) : null);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error('Error fetching user:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-    return () => unsubscribe();
+    try {
+      const unsubscribe = onSnapshot(
+        ref,
+        (snap) => {
+          setUser(snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as PublicUser) : null);
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          console.error('Error fetching user:', err);
+          setError(err?.message || String(err));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach public user listener:', err);
+      setError(err?.message || String(err));
+      setLoading(false);
+    }
   }, [userId]);
 
   return { user, loading, error };
@@ -444,8 +486,15 @@ export function useWidgetBundles({ orderByCreated = true, limitCount = 100, orde
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const bundlesRef = collection(db, 'bundles');
+    if (!db) {
+      console.error('Firestore not initialized - useWidgetBundles will not attach listeners');
+      setError('Firestore not initialized');
+      setBundles([]);
+      setLoading(false);
+      return;
+    }
 
+    const bundlesRef = collection(db, 'bundles');
     let q = query(bundlesRef);
     if (orderByField === 'likes') {
       q = query(bundlesRef, orderBy('likes', 'desc'));
@@ -456,24 +505,26 @@ export function useWidgetBundles({ orderByCreated = true, limitCount = 100, orde
       q = query(q, limit(limitCount));
     }
 
-    const unsubscribe = onSnapshot(q,
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const bundlesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as WidgetBundle[];
-        setBundles(bundlesData);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error('Error fetching bundles:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+    try {
+      const unsubscribe = onSnapshot(q,
+        (snapshot: QuerySnapshot<DocumentData>) => {
+          const bundlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as WidgetBundle[];
+          setBundles(bundlesData);
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          console.error('Error fetching bundles:', err);
+          setError(err?.message || String(err));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach bundles listener:', err);
+      setError(err?.message || String(err));
+      setLoading(false);
+    }
   }, [orderByCreated, limitCount, orderByField]);
 
   return { bundles, loading, error };
@@ -485,25 +536,33 @@ export function usePageVisits() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!db) {
+      console.error('Firestore not initialized - usePageVisits will not attach listeners');
+      setVisits([]);
+      setLoading(false);
+      return;
+    }
+
     const visitsRef = collection(db, 'page_visits');
     const q = query(visitsRef, orderBy('timestamp', 'desc'), limit(10));
 
-    const unsubscribe = onSnapshot(q, 
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const visitsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setVisits(visitsData);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching page visits:', err);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+    try {
+      const unsubscribe = onSnapshot(q,
+        (snapshot: QuerySnapshot<DocumentData>) => {
+          const visitsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setVisits(visitsData);
+          setLoading(false);
+        },
+        (err) => {
+          console.error('Error fetching page visits:', err);
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach page visits listener:', err);
+      setLoading(false);
+    }
   }, []);
 
   const logPageVisit = async (url: string) => {
@@ -772,37 +831,50 @@ export function useBundleSocial(bundleId?: string, currentUserId?: string, targe
   useEffect(() => {
     if (!bundleId) { setLoading(false); return; }
 
+    if (!db) {
+      console.error('Firestore not initialized - useBundleSocial will not attach listeners');
+      setLoading(false);
+      return;
+    }
+
     // Subscribe to doc for counters (likes/commentsCount) - use appropriate collection
     const collectionName = targetType === 'widget' ? 'widgets' : 'bundles';
     const targetRef = doc(db, collectionName, bundleId);
-    const unsubA = onSnapshot(targetRef, (snap) => {
-      const d = snap.data() as any;
-      setLikes((d?.likes ?? 0) as number);
-    });
-
-    // Subscribe to last 20 comments for quick display
-    const commentsRef = collection(db, 'comments');
-    const qC = query(
-      commentsRef,
-      where('targetType', '==', targetType),
-      where('targetId', '==', bundleId),
-      orderBy('createdAt', 'desc'),
-      limit(20)
-    );
-    const unsubB = onSnapshot(qC, (snap) => {
-      setComments(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as BundleComment[]);
-      setLoading(false);
-    });
-
-    // Is liked by me check (presence of like doc)
+    let unsubA: Unsubscribe | null = null;
+    let unsubB: Unsubscribe | null = null;
     let unsubC: Unsubscribe | null = null;
-    if (currentUserId) {
-      const likeDocId = `${targetType}_${bundleId}_user_${currentUserId}`;
-      const likeRef = doc(db, 'likes', likeDocId);
-      unsubC = onSnapshot(likeRef, (snap) => setLikedByMe(snap.exists()));
+    try {
+      unsubA = onSnapshot(targetRef, (snap) => {
+        const d = snap.data() as any;
+        setLikes((d?.likes ?? 0) as number);
+      });
+
+      // Subscribe to last 20 comments for quick display
+      const commentsRef = collection(db, 'comments');
+      const qC = query(
+        commentsRef,
+        where('targetType', '==', targetType),
+        where('targetId', '==', bundleId),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+      );
+      unsubB = onSnapshot(qC, (snap) => {
+        setComments(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as BundleComment[]);
+        setLoading(false);
+      });
+
+      // Is liked by me check (presence of like doc)
+      if (currentUserId) {
+        const likeDocId = `${targetType}_${bundleId}_user_${currentUserId}`;
+        const likeRef = doc(db, 'likes', likeDocId);
+        unsubC = onSnapshot(likeRef, (snap) => setLikedByMe(snap.exists()));
+      }
+    } catch (err: any) {
+      console.error('Failed to attach bundle social listeners:', err);
+      setLoading(false);
     }
 
-    return () => { unsubA(); unsubB(); if (unsubC) unsubC(); };
+    return () => { if (unsubA) unsubA(); if (unsubB) unsubB(); if (unsubC) unsubC(); };
   }, [bundleId, currentUserId, targetType]);
 
   const toggleLike = async (target: { id: string }) => {
@@ -867,18 +939,29 @@ export function useUserStats(userId?: string) {
       setLoading(false);
       return;
     }
+    if (!db) {
+      console.error('Firestore not initialized - useUserStats will not attach listeners');
+      setStats(null);
+      setLoading(false);
+      return;
+    }
 
     const userRef = doc(db, 'users', userId);
-    const unsubscribe = onSnapshot(userRef, (snap) => {
-      if (snap.exists()) {
-        setStats(snap.data().stats || null);
-      } else {
-        setStats(null);
-      }
-      setLoading(false);
-    });
+    try {
+      const unsubscribe = onSnapshot(userRef, (snap) => {
+        if (snap.exists()) {
+          setStats(snap.data().stats || null);
+        } else {
+          setStats(null);
+        }
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach user stats listener:', err);
+      setLoading(false);
+    }
   }, [userId]);
 
   return { stats, loading };

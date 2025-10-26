@@ -20,7 +20,7 @@ A Next.js 15 app with Firebase for building, showcasing, and exploring interacti
 - Node 18+ (recommended 20+)
 - A Firebase project (Auth, Firestore, Storage enabled)
 
-### 2) Environment Variables
+### 2) Environment
 Create `.env.local` in the project root:
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=YOUR_KEY
@@ -111,21 +111,135 @@ Rules live in `firestore.rules` and `firebase-storage.rules`.
 
 ---
 
+## Documentation (merged)
+
+This repository includes a focused docs folder and this top-level README. The following consolidated docs index and quick snippets are included here for convenience — see docs/*.md for deeper details.
+
+### Docs Index
+1. Data Infrastructure — users, projects, widgets, bundles, engagement, security (docs/DATA_INFRASTRUCTURE.md)
+2. Usage Examples — ready-made React + hook snippets (docs/USAGE_EXAMPLES.md)
+3. Orb Element Summary — Floating Orb behavior and UX (docs/ORB_ELEMENT_SUMMARY.md)
+4. Profile Banner Summary — Profile Hub overview (docs/PROFILE_BANNER_SUMMARY.md)
+5. Studio Summary — Widget Studio flow and UX (docs/STUDIO_SUMMARY.md)
+
+---
+
+## Quick Start (Docs snippets)
+
+### Environment (copy-ready)
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
+```
+
+### Auth Provider (wrap once)
+```tsx
+// app/layout.tsx (wrap once)
+import { AuthProvider } from "@/contexts/AuthContext";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### Load a Public User + Stats
+```tsx
+"use client";
+import { usePublicUserById, useUserStats } from "@/hooks/useFirestore";
+
+export default function PublicProfile({ userId }: { userId: string }) {
+  const { user } = usePublicUserById(userId);
+  const { stats } = useUserStats(userId);
+  if (!user) return null;
+  return (
+    <div>
+      <h2>{user.displayName}</h2>
+      <p>Projects: {stats?.projectsCount ?? 0}</p>
+    </div>
+  );
+}
+```
+
+### Create a Project
+```tsx
+"use client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProjects } from "@/hooks/useFirestore";
+
+export default function CreateProject() {
+  const { user } = useAuth();
+  const { addProject } = useProjects(user?.uid);
+  return (
+    <button
+      onClick={() =>
+        user &&
+        addProject({
+          userId: user.uid,
+          title: "My Project",
+          description: "Built with inQue",
+          featured: false,
+        })
+      }
+    >
+      Add Project
+    </button>
+  );
+}
+```
+
+### Track Engagement
+```ts
+import { trackEngagement } from "@/hooks/useFirestore";
+// Like a project
+await trackEngagement("project", projectId, "like", userId);
+// View a profile
+await trackEngagement("user", profileId, "view");
+```
+
+---
+
+## UI Modules (summary)
+
+- Floating Orb: Drag/wheel/keyboard ring; click or Enter activates; R3F glass orb mounted into `#orb-container`.
+- Profile Hub: Public banner + edit controls, theme presets, quick nav/actions, share helpers. Variants: inline billboard on hero or modal shell.
+- Widget Studio: Slots, drag/drop uploads, ZIP extraction, Storage uploads, Firestore docs. `ProtectedRoute`-gated.
+
+---
+
+## Collections (at a glance)
+
+- `users`: public profile + `stats`
+- `projects`: user projects with `likes`, `views`, `shares`
+- `widgets`: uploaded widget records mapped to Storage files
+- `bundles`: explore feed items (with `likes` and `commentsCount`)
+- `engagement`: like/view/share events
+
+See docs/DATA_INFRASTRUCTURE.md for full details.
+
+---
+
 ## Scripts
 ```json
 "dev": "next dev --turbopack",
 "build": "next build --turbopack",
 "start": "next start"
 ```
-
----
-
-## Documentation
-See `docs/README.md` for:
-- Data infrastructure
-- Usage examples and hooks
-- Orb and Profile Hub summaries
-- Studio overview
 
 ---
 
@@ -138,3 +252,7 @@ See `docs/README.md` for:
 
 ## License
 MIT — see `LICENSE`.
+
+---
+
+Last updated: October 8, 2025
