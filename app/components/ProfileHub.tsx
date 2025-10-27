@@ -175,10 +175,43 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
   const [showRepRackManager, setShowRepRackManager] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [fullscreenCustomization, setFullscreenCustomization] = useState(false);
 
   useEffect(() => {
     setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
   }, [profile]);
+
+  // Lock/unlock body scroll when modal or fullscreen opens
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const shouldLock = (isModalOpen && window.innerWidth <= 480) || fullscreenCustomization;
+    const bodyElement = document.body;
+    
+    if (shouldLock) {
+      const scrollPosition = window.scrollY;
+      bodyElement.style.position = 'fixed';
+      bodyElement.style.width = '100%';
+      bodyElement.style.overflow = 'hidden';
+      bodyElement.style.top = `-${scrollPosition}px`;
+    } else {
+      const scrollPosition = Math.abs(parseInt(bodyElement.style.top || '0', 10));
+      bodyElement.style.position = '';
+      bodyElement.style.width = '';
+      bodyElement.style.overflow = '';
+      bodyElement.style.top = '';
+      if (scrollPosition) {
+        window.scrollTo(0, scrollPosition);
+      }
+    }
+    
+    return () => {
+      bodyElement.style.position = '';
+      bodyElement.style.width = '';
+      bodyElement.style.overflow = '';
+      bodyElement.style.top = '';
+    };
+  }, [isModalOpen, fullscreenCustomization]);
 
   const handleLogout = async () => {
     try {
@@ -594,25 +627,34 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
               >
                 {!isPublicView && (
                   <CollapsibleSection id="customization-shop" title="🛍️ Customization Shop" defaultOpen={true}>
-                    <CustomizationShop
-                      profile={localProfile}
-                      onSave={async (updates) => {
-                        if (!user?.uid) return;
-                        try {
-                          await saveProfile(user.uid, updates);
-                          // Update local profile state after save
-                          setLocalProfile(prev => ({ ...prev, ...updates }));
-                          console.log('Customization saved successfully!');
-                        } catch (error) {
-                          console.error('Error saving customization:', error);
-                        }
-                      }}
-                      onReset={() => {
-                        setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
-                        // Also reset the theme state if it was changed
-                        setTheme(profile?.theme?.mode || 'neo');
-                      }}
-                    />
+                    <div className="customization-shop-wrapper">
+                      <button 
+                        className="fullscreen-toggle-btn"
+                        onClick={() => setFullscreenCustomization(!fullscreenCustomization)}
+                        title={fullscreenCustomization ? 'Exit Fullscreen' : 'Open in Fullscreen'}
+                      >
+                        {fullscreenCustomization ? '⛶' : '⛶'}
+                      </button>
+                      <CustomizationShop
+                        profile={localProfile}
+                        isFullscreen={fullscreenCustomization}
+                        onSave={async (updates) => {
+                          if (!user?.uid) return;
+                          try {
+                            await saveProfile(user.uid, updates);
+                            setLocalProfile(prev => ({ ...prev, ...updates }));
+                            console.log('Customization saved successfully!');
+                          } catch (error) {
+                            console.error('Error saving customization:', error);
+                          }
+                        }}
+                        onReset={() => {
+                          setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+                          setTheme(profile?.theme?.mode || 'neo');
+                        }}
+                        onClose={() => setFullscreenCustomization(false)}
+                      />
+                    </div>
                   </CollapsibleSection>
                 )}
 
