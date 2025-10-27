@@ -56,11 +56,9 @@ type CustomizationShopProps = {
   profile: UserProfile | null;
   onSave: (updates: Partial<UserProfile>) => Promise<void>;
   onReset: () => void;
-  isFullscreen?: boolean;
-  onClose?: () => void;
 };
 
-export default function CustomizationShop({ profile, onSave, onReset, isFullscreen, onClose }: CustomizationShopProps) {
+export default function CustomizationShop({ profile, onSave, onReset }: CustomizationShopProps) {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<CustomizationSection>('avatar');
   const [selectedFrame, setSelectedFrame] = useState<string>(profile?.avatarFrame?.id || 'none');
@@ -152,17 +150,10 @@ export default function CustomizationShop({ profile, onSave, onReset, isFullscre
     onReset();
   };
 
-  const shopContent = (
-    <div className={`customization-shop ${isFullscreen ? 'fullscreen' : ''}`}>
+  return (
+    <div className="customization-shop">
       <div className="shop-header">
-        <div className="shop-title-row">
-          <h3 className="shop-title">🎨 Customize Your Profile</h3>
-          {isFullscreen && (
-            <button className="fullscreen-close-btn" onClick={onClose} title="Close Fullscreen">
-              ×
-            </button>
-          )}
-        </div>
+        <h3 className="shop-title">🎨 Customize Your Profile</h3>
         <p className="shop-subtitle">Make your profile uniquely yours</p>
       </div>
 
@@ -314,16 +305,4 @@ export default function CustomizationShop({ profile, onSave, onReset, isFullscre
       </div>
     </div>
   );
-
-  if (isFullscreen) {
-    return (
-      <div className="fullscreen-modal-overlay">
-        <div className="fullscreen-modal-container">
-          {shopContent}
-        </div>
-      </div>
-    );
-  }
-
-  return shopContent;
 }

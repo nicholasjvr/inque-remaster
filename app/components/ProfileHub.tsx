@@ -6,6 +6,7 @@ import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore'
 import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
 import RepRackManager from './RepRackManager';
 import CustomizationShop from './CustomizationShop';
+import FullscreenWrapper from './FullscreenWrapper';
 
 // Interest and goal option mappings for display
 const INTEREST_OPTIONS = [
@@ -175,18 +176,28 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
   const [showRepRackManager, setShowRepRackManager] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [fullscreenCustomization, setFullscreenCustomization] = useState(false);
+  const [fullscreenSection, setFullscreenSection] = useState<string | null>(null);
+  
+  // Helper functions for fullscreen management
+  const openFullscreen = (sectionId: string) => setFullscreenSection(sectionId);
+  const closeFullscreen = () => setFullscreenSection(null);
+  const toggleFullscreen = (sectionId: string) => {
+    setFullscreenSection(prev => prev === sectionId ? null : sectionId);
+  };
+  const isFullscreenActive = (sectionId: string) => fullscreenSection === sectionId;
 
   useEffect(() => {
     setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
   }, [profile]);
 
-  // Lock/unlock body scroll when modal or fullscreen opens
+  // Enhanced scroll lock for modal and fullscreen sections
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const shouldLock = (isModalOpen && window.innerWidth <= 480) || fullscreenCustomization;
+    const isMobile = window.innerWidth <= 768; // Expanded mobile breakpoint for better UX
+    const shouldLock = (isModalOpen && isMobile) || fullscreenSection !== null;
     const bodyElement = document.body;
+    const htmlElement = document.documentElement;
     
     if (shouldLock) {
       const scrollPosition = window.scrollY;
@@ -194,24 +205,43 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       bodyElement.style.width = '100%';
       bodyElement.style.overflow = 'hidden';
       bodyElement.style.top = `-${scrollPosition}px`;
+      htmlElement.style.overflow = 'hidden'; // Also lock html element
+      
+      // Add touch-action for better mobile scroll prevention
+      bodyElement.style.touchAction = 'none';
     } else {
       const scrollPosition = Math.abs(parseInt(bodyElement.style.top || '0', 10));
       bodyElement.style.position = '';
       bodyElement.style.width = '';
       bodyElement.style.overflow = '';
       bodyElement.style.top = '';
-      if (scrollPosition) {
-        window.scrollTo(0, scrollPosition);
+      bodyElement.style.touchAction = '';
+      htmlElement.style.overflow = '';
+      
+      // Restore scroll position smoothly
+      if (scrollPosition > 0) {
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollPosition, behavior: 'instant' });
+        });
       }
     }
     
     return () => {
+      // Cleanup all scroll lock styles
       bodyElement.style.position = '';
       bodyElement.style.width = '';
       bodyElement.style.overflow = '';
       bodyElement.style.top = '';
+      bodyElement.style.touchAction = '';
+      htmlElement.style.overflow = '';
     };
-  }, [isModalOpen, fullscreenCustomization]);
+  }, [isModalOpen, fullscreenSection]);
+  
+  // Handle fullscreen close -> collapse entire hub
+  const handleFullscreenClose = () => {
+    setFullscreenSection(null);
+    setState('minimized');
+  };
 
   const handleLogout = async () => {
     try {
@@ -627,17 +657,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
               >
                 {!isPublicView && (
                   <CollapsibleSection id="customization-shop" title="🛍️ Customization Shop" defaultOpen={true}>
-                    <div className="customization-shop-wrapper">
-                      <button 
-                        className="fullscreen-toggle-btn"
-                        onClick={() => setFullscreenCustomization(!fullscreenCustomization)}
-                        title={fullscreenCustomization ? 'Exit Fullscreen' : 'Open in Fullscreen'}
-                      >
-                        {fullscreenCustomization ? '⛶' : '⛶'}
-                      </button>
+                    <FullscreenWrapper
+                      isFullscreen={isFullscreenActive('customization')}
+                      onToggle={() => toggleFullscreen('customization')}
+                      onClose={handleFullscreenClose}
+                      title="🎨 Customize Your Profile"
+                      sectionId="customization"
+                    >
                       <CustomizationShop
                         profile={localProfile}
-                        isFullscreen={fullscreenCustomization}
                         onSave={async (updates) => {
                           if (!user?.uid) return;
                           try {
@@ -652,220 +680,367 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
                           setTheme(profile?.theme?.mode || 'neo');
                         }}
-                        onClose={() => setFullscreenCustomization(false)}
                       />
-                    </div>
+                    </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
 
                 {/* Featured Projects Section - Enhanced for public view */}
                 <CollapsibleSection id="featured" title="🏆 Featured Projects" defaultOpen={mode === 'edit'}>
-                  <div className="featured-projects-grid">
-                    {Array.from({ length: 6 }, (_, index) => {
-                      const item = localProfile?.repRack?.[index % 3];
-                      return (
-                        <div key={index} className="featured-project-card">
-                          <div className="project-image-container">
-                            {item?.imageUrl ? (
-                              <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
-                            ) : (
-                              <div className="project-image-placeholder">
-                                {item?.title?.charAt(0) || '🎨'}
-                              </div>
-                            )}
-                            <div className="project-overlay">
-                              <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
-                              <div className="project-stats">
-                                <span className="project-stat">❤️ 0</span>
-                                <span className="project-stat">👁️ 0</span>
-                                <span className="project-stat">⭐ 0</span>
+                  <FullscreenWrapper
+                    isFullscreen={isFullscreenActive('featured')}
+                    onToggle={() => toggleFullscreen('featured')}
+                    onClose={handleFullscreenClose}
+                    title="🏆 Featured Projects"
+                    sectionId="featured"
+                  >
+                    <div className="featured-projects-enhanced">
+                      <div className="featured-projects-grid">
+                        {Array.from({ length: 12 }, (_, index) => {
+                          const item = localProfile?.repRack?.[index % 3];
+                          return (
+                            <div key={index} className="featured-project-card">
+                              <div className="project-image-container">
+                                {item?.imageUrl ? (
+                                  <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
+                                ) : (
+                                  <div className="project-image-placeholder">
+                                    {item?.title?.charAt(0) || '🎨'}
+                                  </div>
+                                )}
+                                <div className="project-overlay">
+                                  <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
+                                  <div className="project-stats">
+                                    <span className="project-stat">❤️ {Math.floor(Math.random() * 50)}</span>
+                                    <span className="project-stat">👁️ {Math.floor(Math.random() * 200)}</span>
+                                    <span className="project-stat">⭐ {Math.floor(Math.random() * 20)}</span>
+                                  </div>
+                                  <div className="project-actions">
+                                    <button className="project-action-btn view-btn">View</button>
+                                    <button className="project-action-btn edit-btn">Edit</button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          );
+                        })}
+                      </div>
+                      {isFullscreenActive('featured') && (
+                        <div className="projects-toolbar">
+                          <button className="projects-btn create-btn">+ New Project</button>
+                          <button className="projects-btn manage-btn">Manage Projects</button>
                         </div>
-                      );
-                    })}
-                  </div>
+                      )}
+                    </div>
+                  </FullscreenWrapper>
                 </CollapsibleSection>
 
                 {/* Activity Timeline - Enhanced */}
                 <CollapsibleSection id="activity" title="📅 Recent Activity" defaultOpen={false}>
-                  <div className="activity-timeline">
-                    <div className="activity-item">
-                      <div className="activity-icon">🎨</div>
-                      <div className="activity-content">
-                        <div className="activity-text">Created a new interactive widget</div>
-                        <div className="activity-time">2 hours ago</div>
+                  <FullscreenWrapper
+                    isFullscreen={isFullscreenActive('activity')}
+                    onToggle={() => toggleFullscreen('activity')}
+                    onClose={handleFullscreenClose}
+                    title="📅 Recent Activity"
+                    sectionId="activity"
+                  >
+                    <div className="activity-enhanced">
+                      {isFullscreenActive('activity') && (
+                        <div className="activity-filters">
+                          <input 
+                            type="text" 
+                            placeholder="Search activity..."
+                            className="activity-search"
+                          />
+                          <div className="activity-filter-buttons">
+                            <button className="filter-btn active">All</button>
+                            <button className="filter-btn">Projects</button>
+                            <button className="filter-btn">Social</button>
+                            <button className="filter-btn">Achievements</button>
+                          </div>
+                        </div>
+                      )}
+                      <div className="activity-timeline">
+                        {Array.from({ length: isFullscreenActive('activity') ? 20 : 5 }, (_, index) => {
+                          const activities = [
+                            { icon: '🎨', text: 'Created a new interactive widget', time: '2 hours ago' },
+                            { icon: '❤️', text: 'Received 5 likes on "Portfolio Showcase"', time: '5 hours ago' },
+                            { icon: '👥', text: 'New follower: @designguru', time: '1 day ago' },
+                            { icon: '🏆', text: 'Earned "Popular Creator" badge', time: '3 days ago' },
+                            { icon: '💬', text: 'Commented on "Data Visualization Tool"', time: '1 week ago' },
+                            { icon: '🚀', text: 'Published "React Dashboard"', time: '2 weeks ago' },
+                            { icon: '🎆', text: 'Featured on community showcase', time: '3 weeks ago' },
+                            { icon: '📊', text: 'Project reached 1000 views', time: '1 month ago' }
+                          ];
+                          const activity = activities[index % activities.length];
+                          return (
+                            <div key={index} className="activity-item">
+                              <div className="activity-icon">{activity.icon}</div>
+                              <div className="activity-content">
+                                <div className="activity-text">{activity.text}</div>
+                                <div className="activity-time">{activity.time}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="activity-item">
-                      <div className="activity-icon">❤️</div>
-                      <div className="activity-content">
-                        <div className="activity-text">Received 5 likes on "Portfolio Showcase"</div>
-                        <div className="activity-time">5 hours ago</div>
-                      </div>
-                    </div>
-                    <div className="activity-item">
-                      <div className="activity-icon">👥</div>
-                      <div className="activity-content">
-                        <div className="activity-text">New follower: @designguru</div>
-                        <div className="activity-time">1 day ago</div>
-                      </div>
-                    </div>
-                    <div className="activity-item">
-                      <div className="activity-icon">🏆</div>
-                      <div className="activity-content">
-                        <div className="activity-text">Earned "Popular Creator" badge</div>
-                        <div className="activity-time">3 days ago</div>
-                      </div>
-                    </div>
-                    <div className="activity-item">
-                      <div className="activity-icon">💬</div>
-                      <div className="activity-content">
-                        <div className="activity-text">Commented on "Data Visualization Tool"</div>
-                        <div className="activity-time">1 week ago</div>
-                      </div>
-                    </div>
-                  </div>
+                  </FullscreenWrapper>
                 </CollapsibleSection>
 
                 {/* Social Connections - Only in public view */}
                 {isPublicView && (
                   <CollapsibleSection id="social" title="🌐 Social Connections" defaultOpen={false}>
-                    <div className="social-connections">
-                      <div className="social-stats">
-                        <div className="social-stat">
-                          <span className="social-number">{profileUser?.stats?.followersCount || 0}</span>
-                          <span className="social-label">Followers</span>
+                    <FullscreenWrapper
+                      isFullscreen={isFullscreenActive('social')}
+                      onToggle={() => toggleFullscreen('social')}
+                      onClose={handleFullscreenClose}
+                      title="🌐 Social Connections"
+                      sectionId="social"
+                    >
+                      <div className="social-connections-enhanced">
+                        <div className="social-stats-enhanced">
+                          <div className="social-stat">
+                            <span className="social-number">{profileUser?.stats?.followersCount || 0}</span>
+                            <span className="social-label">Followers</span>
+                          </div>
+                          <div className="social-stat">
+                            <span className="social-number">{profileUser?.stats?.followingCount || 0}</span>
+                            <span className="social-label">Following</span>
+                          </div>
+                          <div className="social-stat">
+                            <span className="social-number">{profileUser?.stats?.totalViews || 0}</span>
+                            <span className="social-label">Profile Views</span>
+                          </div>
+                          <div className="social-stat">
+                            <span className="social-number">{Math.floor((profileUser?.stats?.totalViews || 0) / 10)}</span>
+                            <span className="social-label">Engagement</span>
+                          </div>
                         </div>
-                        <div className="social-stat">
-                          <span className="social-number">{profileUser?.stats?.followingCount || 0}</span>
-                          <span className="social-label">Following</span>
-                        </div>
-                      </div>
-                      <div className="social-actions">
-                        <button className="social-btn follow-btn" onClick={handleFollow}>
-                          {profileUser?.stats?.followersCount && profileUser.stats.followersCount > 0 ? 'Following' : 'Follow'}
-                        </button>
-                        <button className="social-btn message-btn" onClick={handleMessage}>
-                          Message
-                        </button>
-                        <div className="share-dropdown">
-                          <button
-                            className="social-btn share-btn"
-                            onClick={() => setShowShareMenu(!showShareMenu)}
-                          >
-                            Share Profile
+                        <div className="social-actions">
+                          <button className="social-btn follow-btn" onClick={handleFollow}>
+                            {profileUser?.stats?.followersCount && profileUser.stats.followersCount > 0 ? 'Following' : 'Follow'}
                           </button>
-                          {showShareMenu && (
-                            <div className="share-menu">
-                              <button className="share-option" onClick={handleShare}>
-                                <span>📱</span>
-                                Share
-                              </button>
-                              <button className="share-option" onClick={handleShareToTwitter}>
-                                <span>🐦</span>
-                                Twitter
-                              </button>
-                              <button className="share-option" onClick={handleShareToLinkedIn}>
-                                <span>💼</span>
-                                LinkedIn
-                              </button>
-                              <button className="share-option" onClick={() => fallbackShare(`${window.location.origin}/u/${profileUser?.id}`, `Check out ${profileUser?.displayName || 'this creator'}'s profile on inQ!`)}>
-                                <span>📋</span>
-                                Copy Link
-                              </button>
-                            </div>
-                          )}
+                          <button className="social-btn message-btn" onClick={handleMessage}>
+                            Message
+                          </button>
+                          <div className="share-dropdown">
+                            <button
+                              className="social-btn share-btn"
+                              onClick={() => setShowShareMenu(!showShareMenu)}
+                            >
+                              Share Profile
+                            </button>
+                            {showShareMenu && (
+                              <div className="share-menu">
+                                <button className="share-option" onClick={handleShare}>
+                                  <span>📱</span>
+                                  Share
+                                </button>
+                                <button className="share-option" onClick={handleShareToTwitter}>
+                                  <span>🐦</span>
+                                  Twitter
+                                </button>
+                                <button className="share-option" onClick={handleShareToLinkedIn}>
+                                  <span>💼</span>
+                                  LinkedIn
+                                </button>
+                                <button className="share-option" onClick={() => fallbackShare(`${window.location.origin}/u/${profileUser?.id}`, `Check out ${profileUser?.displayName || 'this creator'}'s profile on inQ!`)}>
+                                  <span>📋</span>
+                                  Copy Link
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
 
                 {/* Recent Followers Section - Only in public view */}
                 {isPublicView && (
                   <CollapsibleSection id="followers" title="👥 Recent Followers" defaultOpen={false}>
-                    <div className="followers-grid">
-                      {Array.from({ length: 6 }, (_, index) => (
-                        <div key={index} className="follower-item">
-                          <div className="follower-avatar">
-                            <span role="img" aria-label="Follower avatar">
-                              {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
-                            </span>
+                    <FullscreenWrapper
+                      isFullscreen={isFullscreenActive('followers')}
+                      onToggle={() => toggleFullscreen('followers')}
+                      onClose={handleFullscreenClose}
+                      title="👥 Followers"
+                      sectionId="followers"
+                    >
+                      <div className="followers-enhanced">
+                        {isFullscreenActive('followers') && (
+                          <div className="followers-search">
+                            <input 
+                              type="text" 
+                              placeholder="Search followers..."
+                              className="search-input"
+                            />
                           </div>
-                          <div className="follower-info">
-                            <span className="follower-name">Creator {index + 1}</span>
-                            <span className="follower-handle">@creator{index + 1}</span>
-                          </div>
-                          <button className="follower-action">Follow</button>
+                        )}
+                        <div className="followers-grid">
+                          {Array.from({ length: isFullscreenActive('followers') ? 24 : 6 }, (_, index) => (
+                            <div key={index} className="follower-item">
+                              <div className="follower-avatar">
+                                <span role="img" aria-label="Follower avatar">
+                                  {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
+                                </span>
+                              </div>
+                              <div className="follower-info">
+                                <span className="follower-name">Creator {index + 1}</span>
+                                <span className="follower-handle">@creator{index + 1}</span>
+                                {isFullscreenActive('followers') && (
+                                  <span className="follower-stats">{Math.floor(Math.random() * 50)} projects</span>
+                                )}
+                              </div>
+                              <button className="follower-action">Follow</button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
 
                 {/* Following Section - Only in edit mode */}
                 {!isPublicView && (
                   <CollapsibleSection id="following" title="👥 Following" defaultOpen={false}>
-                    <div className="following-grid">
-                      {Array.from({ length: 6 }, (_, index) => (
-                        <div key={index} className="following-item">
-                          <div className="following-avatar">
-                            <span role="img" aria-label="Following avatar">
-                              {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index] || '👤'}
-                            </span>
+                    <FullscreenWrapper
+                      isFullscreen={isFullscreenActive('following')}
+                      onToggle={() => toggleFullscreen('following')}
+                      onClose={handleFullscreenClose}
+                      title="👥 Following"
+                      sectionId="following"
+                    >
+                      <div className="following-enhanced">
+                        {isFullscreenActive('following') && (
+                          <div className="following-controls">
+                            <input 
+                              type="text" 
+                              placeholder="Search following..."
+                              className="search-input"
+                            />
+                            <div className="following-filter-buttons">
+                              <button className="filter-btn active">All</button>
+                              <button className="filter-btn">Active</button>
+                              <button className="filter-btn">Recent</button>
+                            </div>
                           </div>
-                          <div className="following-info">
-                            <span className="following-name">Creator {index + 1}</span>
-                            <span className="following-handle">@creator{index + 1}</span>
-                            <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
-                          </div>
-                          <button className="following-action">Unfollow</button>
+                        )}
+                        <div className="following-grid">
+                          {Array.from({ length: isFullscreenActive('following') ? 18 : 6 }, (_, index) => (
+                            <div key={index} className="following-item">
+                              <div className="following-avatar">
+                                <span role="img" aria-label="Following avatar">
+                                  {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
+                                </span>
+                              </div>
+                              <div className="following-info">
+                                <span className="following-name">Creator {index + 1}</span>
+                                <span className="following-handle">@creator{index + 1}</span>
+                                <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
+                                {isFullscreenActive('following') && (
+                                  <span className="following-last-active">Active {Math.floor(Math.random() * 7) + 1} days ago</span>
+                                )}
+                              </div>
+                              <div className="following-actions">
+                                <button className="following-action">Unfollow</button>
+                                {isFullscreenActive('following') && (
+                                  <button className="following-action message-action">Message</button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
-                <CollapsibleSection id="quicknav" title="Quick Navigation" defaultOpen={false}>
-                  <div className="expanded-nav-buttons">
-                    <a
-                      href="/explore"
-                      className="expanded-nav-btn"
-                      title="Explore Projects"
-                    >
-                      <span className="nav-icon">🔍</span>
-                      <span className="nav-label">Explore</span>
-                      <span className="nav-desc">Discover projects</span>
-                    </a>
-                    <a
-                      href="/explore-reels"
-                      className="expanded-nav-btn"
-                      title="Explore Reels"
-                    >
-                      <span className="nav-icon">🎞️</span>
-                      <span className="nav-label">Reels</span>
-                      <span className="nav-desc">Swipe demo videos</span>
-                    </a>
-                    <a
-                      href="/users"
-                      className="expanded-nav-btn"
-                      title="Browse Creators"
-                    >
-                      <span className="nav-icon">👥</span>
-                      <span className="nav-label">Creators</span>
-                      <span className="nav-desc">Find creators</span>
-                    </a>
-                    <a
-                      href="/showcase"
-                      className="expanded-nav-btn"
-                      title="View Showcase"
-                    >
-                      <span className="nav-icon">🏆</span>
-                      <span className="nav-label">Showcase</span>
-                      <span className="nav-desc">Top projects</span>
-                    </a>
-                  </div>
+                <CollapsibleSection id="quicknav" title="🧰 Quick Navigation" defaultOpen={false}>
+                  <FullscreenWrapper
+                    isFullscreen={isFullscreenActive('navigation')}
+                    onToggle={() => toggleFullscreen('navigation')}
+                    onClose={handleFullscreenClose}
+                    title="🧰 Quick Navigation"
+                    sectionId="navigation"
+                  >
+                    <div className="navigation-enhanced">
+                      <div className="expanded-nav-buttons">
+                        <a
+                          href="/explore"
+                          className="expanded-nav-btn"
+                          title="Explore Projects"
+                        >
+                          <span className="nav-icon">🔍</span>
+                          <span className="nav-label">Explore</span>
+                          <span className="nav-desc">Discover amazing projects from the community</span>
+                          {isFullscreenActive('navigation') && (
+                            <span className="nav-extra">Find inspiration and trending ideas</span>
+                          )}
+                        </a>
+                        <a
+                          href="/explore-reels"
+                          className="expanded-nav-btn"
+                          title="Explore Reels"
+                        >
+                          <span className="nav-icon">🎞️</span>
+                          <span className="nav-label">Reels</span>
+                          <span className="nav-desc">Swipe through demo videos</span>
+                          {isFullscreenActive('navigation') && (
+                            <span className="nav-extra">Watch quick project demonstrations</span>
+                          )}
+                        </a>
+                        <a
+                          href="/users"
+                          className="expanded-nav-btn"
+                          title="Browse Creators"
+                        >
+                          <span className="nav-icon">👥</span>
+                          <span className="nav-label">Creators</span>
+                          <span className="nav-desc">Find and follow creators</span>
+                          {isFullscreenActive('navigation') && (
+                            <span className="nav-extra">Connect with like-minded developers</span>
+                          )}
+                        </a>
+                        <a
+                          href="/showcase"
+                          className="expanded-nav-btn"
+                          title="View Showcase"
+                        >
+                          <span className="nav-icon">🏆</span>
+                          <span className="nav-label">Showcase</span>
+                          <span className="nav-desc">Top projects and features</span>
+                          {isFullscreenActive('navigation') && (
+                            <span className="nav-extra">Curated selection of exceptional work</span>
+                          )}
+                        </a>
+                        <a
+                          href="/studio"
+                          className="expanded-nav-btn"
+                          title="Widget Studio"
+                        >
+                          <span className="nav-icon">🎨</span>
+                          <span className="nav-label">Studio</span>
+                          <span className="nav-desc">Create new widgets</span>
+                          {isFullscreenActive('navigation') && (
+                            <span className="nav-extra">Build interactive components and tools</span>
+                          )}
+                        </a>
+                        {isFullscreenActive('navigation') && (
+                          <a
+                            href="/settings"
+                            className="expanded-nav-btn"
+                            title="Settings"
+                          >
+                            <span className="nav-icon">⚙️</span>
+                            <span className="nav-label">Settings</span>
+                            <span className="nav-desc">Manage your account</span>
+                            <span className="nav-extra">Privacy, notifications, and preferences</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </FullscreenWrapper>
                 </CollapsibleSection>
 
               </div>

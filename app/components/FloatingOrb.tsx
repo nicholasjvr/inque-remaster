@@ -322,7 +322,10 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     };
 
     const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
+      // Only prevent default if not on mobile to avoid scroll conflicts
+      if (window.innerWidth > 768) {
+        event.preventDefault();
+      }
       scrollState.targetRotation += event.deltaY * 0.35;
       showRing();
       recordInteraction();
@@ -432,7 +435,9 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       }
     });
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
+    // Use conditional passive for wheel based on screen size to fix mobile scroll conflicts
+    const isMobile = window.innerWidth <= 768;
+    container.addEventListener('wheel', handleWheel, { passive: isMobile });
     container.addEventListener('pointerdown', handlePointerDown);
     container.addEventListener('pointermove', handlePointerMove);
     container.addEventListener('pointerup', handlePointerUp);
@@ -465,7 +470,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
 
     // Hide swipe hint after first interaction
     container.addEventListener('pointerdown', hideSwipe, { once: true });
-    container.addEventListener('wheel', hideSwipe, { once: true });
+    container.addEventListener('wheel', hideSwipe, { once: true, passive: true });
 
     const handleResize = () => {
       updateOrbitPositions();
