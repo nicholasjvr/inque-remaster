@@ -1000,140 +1000,7 @@
     transform: translateY(-1px);
 }
 
-.hub-customization-panel {
-    border-top: 1px solid var(--hub-border-color);
-    padding: 18px 20px 24px;
-    display: grid;
-    gap: 16px;
-}
-
-.profile-hub[data-customizing="false"] .hub-customization-panel {
-    display: none;
-}
-
-.customization-grid {
-    display: grid;
-    gap: 16px;
-    flex: 1 1 auto;
-}
-
-.range-field {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--hub-text-secondary);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-}
-
-.theme-options {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.theme-button {
-    border-radius: 12px;
-    padding: 10px 0;
-    border: 1px solid rgba(0, 240, 255, 0.12);
-    background: rgba(255, 255, 255, 0.02);
-    color: var(--hub-text-primary);
-    font-size: 0.78rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-transform: capitalize;
-}
-
-.theme-button:hover {
-    border-color: rgba(0, 240, 255, 0.3);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.theme-button.active {
-    border-color: var(--hub-primary);
-    background: rgba(0, 240, 255, 0.1);
-    color: var(--hub-primary);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 240, 255, 0.2);
-}
-
-.social-links {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.social-pill {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: rgba(0, 240, 255, 0.12);
-    border: 1px solid rgba(0, 240, 255, 0.18);
-    display: grid;
-    place-items: center;
-    color: var(--hub-text-primary);
-    text-decoration: none;
-    font-size: 0.88rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.customization-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.customization-actions button {
-    flex: 1 1 auto;
-    border-radius: 10px;
-    padding: 10px 0;
-    border: 1px solid rgba(0, 240, 255, 0.12);
-    background: rgba(255, 255, 255, 0.03);
-    color: var(--hub-text-primary);
-    font-size: 0.82rem;
-    cursor: pointer;
-    transition: background 0.18s ease;
-}
-
-.customization-actions button.primary {
-    background: var(--hub-primary);
-    color: #041017;
-}
-
-.customization-btn {
-    flex: 1 1 auto;
-    border-radius: 10px;
-    padding: 10px 16px;
-    border: 1px solid rgba(0, 240, 255, 0.12);
-    background: rgba(255, 255, 255, 0.03);
-    color: var(--hub-text-primary);
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.customization-btn:hover {
-    background: rgba(0, 240, 255, 0.1);
-    border-color: rgba(0, 240, 255, 0.3);
-    transform: translateY(-1px);
-}
-
-.customization-btn.primary {
-    background: var(--hub-primary);
-    color: #041017;
-    border-color: var(--hub-primary);
-}
-
-.customization-btn.primary:hover {
-    background: rgba(0, 240, 255, 0.8);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
-}
+/* Removed duplicate/legacy customization styles - now handled by CustomizationShop component */
 
 .profile-hub-overlay {
     position: fixed;
@@ -1177,6 +1044,15 @@
     margin-bottom: 0;
 }
 
+/* Enhanced Collapsible Header for Mobile */
+.hub-collapsible__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    gap: 12px;
+}
+
 .hub-collapsible__summary {
     display: flex;
     align-items: center;
@@ -1186,6 +1062,53 @@
     user-select: none;
     color: var(--hub-text-primary);
     transition: background-color 0.2s ease;
+    flex: 1;
+}
+
+/* Mobile Fullscreen Button in Header */
+.mobile-fullscreen-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 8px;
+    color: var(--hub-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+    margin-right: 8px;
+}
+
+.mobile-fullscreen-btn:hover {
+    background: rgba(0, 240, 255, 0.2);
+    border-color: var(--hub-primary);
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+    .mobile-fullscreen-btn {
+        opacity: 1;
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        margin-right: 12px;
+        border-radius: 12px;
+        background: rgba(0, 240, 255, 0.15);
+        border: 2px solid rgba(0, 240, 255, 0.4);
+    }
+
+    .hub-collapsible__header {
+        padding: 4px;
+        background: rgba(0, 240, 255, 0.05);
+        border-radius: 8px;
+        margin-bottom: 2px;
+    }
 }
 
 .hub-collapsible__summary:hover {
@@ -2638,7 +2561,7 @@
 
 /* All modular styles removed to prevent conflicts with centered modal */
 
-/* Centered Modal Layout - Optimized for performance */
+/* Enhanced Centered Modal Layout */
 .profile-hub-shell--expanded .profile-hub-wrapper {
     position: fixed;
     top: 0;
@@ -2651,17 +2574,20 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.3);
     /* Performance optimizations */
     will-change: transform;
     backface-visibility: hidden;
     perspective: 1000px;
+    /* Focus management */
+    outline: none;
 }
 
 .profile-hub-shell--expanded .profile-hub {
-    width: min(96vw, 1320px);
-    min-height: 78vh;
-    /* allow the whole modal to scroll on short viewports */
-    max-height: 92vh;
+    width: min(96vw, 1400px);
+    min-height: 80vh;
+    max-height: 95vh;
     margin: 0;
     position: relative;
     z-index: 1001;
@@ -2671,27 +2597,26 @@
             rgba(6, 10, 18, 0.98) 0%,
             rgba(13, 20, 32, 0.95) 50%,
             rgba(6, 10, 18, 0.98) 100%);
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    border-radius: 20px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    border-radius: 24px;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
     box-shadow:
-        0 20px 60px rgba(0, 240, 255, 0.2),
-        0 0 0 1px rgba(0, 240, 255, 0.1),
+        0 25px 80px rgba(0, 240, 255, 0.25),
+        0 0 0 1px rgba(0, 240, 255, 0.15),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    /* visible by default since animations are disabled */
     opacity: 1;
     transform: none;
-    animation: none;
-    /* Performance optimizations */
+    animation: modalAppear 0.4s ease-out;
     will-change: transform, opacity;
     transform-origin: center center;
     backface-visibility: hidden;
-    /* enable vertical scroll when content exceeds available height */
     overflow-y: auto;
     scrollbar-width: none;
-    /* Prevent scroll propagation to page */
     overscroll-behavior: contain;
+    /* Enhanced focus management */
+    outline: none;
+    scroll-behavior: smooth;
 }
 
 .profile-hub-shell--expanded .profile-hub::-webkit-scrollbar {
@@ -4024,20 +3949,7 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
         text-align: center;
     }
 
-    /* CustomizationShop Styles */
-    .customization-shop {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        padding: 20px;
-    }
-
-    /* === Customization Shop Base === */
-    .customization-shop {
-        background: rgba(0, 240, 255, 0.04);
-        border: 1px solid rgba(0, 240, 255, 0.15);
-        border-radius: 12px;
-    }
+    /* Duplicate CustomizationShop styles removed - handled by base styles */
 
     .shop-header {
         display: flex;
@@ -5377,6 +5289,51 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
 
     .customization-shop.fullscreen .shop-content {
         padding: 16px;
+    }
+}
+
+/* Enhanced Mobile Scroll Context & Load Order */
+.hub-expanded-content {
+    scroll-behavior: smooth;
+    scroll-snap-type: y proximity;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+}
+
+.hub-expanded-content:focus-visible {
+    outline: 2px solid var(--hub-primary);
+    outline-offset: 4px;
+}
+
+/* Enhanced section focus and spacing */
+.hub-collapsible {
+    scroll-snap-align: start;
+    scroll-margin-top: 16px;
+    contain: layout style;
+}
+
+.hub-collapsible[data-open="true"] .hub-collapsible__content {
+    animation: slideUp 0.3s ease-out;
+    transform-origin: top;
+}
+
+/* Mobile load order optimization */
+@media (max-width: 768px) {
+    .profile-hub-shell--expanded .hub-expanded-content {
+        scroll-padding-top: 20px;
+        scroll-snap-type: y mandatory;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+    }
+
+    .hub-collapsible {
+        scroll-snap-align: start;
+        scroll-margin-top: 24px;
+    }
+
+    .hub-collapsible[data-open="true"] {
+        scroll-snap-align: start;
     }
 }
 

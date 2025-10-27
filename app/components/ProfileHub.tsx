@@ -80,21 +80,37 @@ type StoredPreferences = {
   scale: number;
 };
 
-// Collapsible section component - moved outside ProfileHub to prevent re-creation
-const CollapsibleSection = ({ id, title, defaultOpen, children }: { id: string; title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
-  // Initialize with a stable state - no client-side updates that cause glitching
+// Enhanced Collapsible section with mobile fullscreen integration
+type CollapsibleSectionProps = {
+  id: string;
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  sectionId?: string;
+  onFullscreenToggle?: () => void;
+  isFullscreen?: boolean;
+  showFullscreenBtn?: boolean;
+};
+
+const CollapsibleSection = ({ 
+  id, 
+  title, 
+  defaultOpen, 
+  children, 
+  sectionId, 
+  onFullscreenToggle, 
+  isFullscreen, 
+  showFullscreenBtn 
+}: CollapsibleSectionProps) => {
   const [open, setOpen] = useState<boolean>(() => {
-    // Always use the provided defaultOpen value, or default to false
     return defaultOpen ?? false;
   });
 
-  // Handle click with proper event handling
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setOpen(prev => !prev);
   };
 
-  // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -102,19 +118,37 @@ const CollapsibleSection = ({ id, title, defaultOpen, children }: { id: string; 
     }
   };
 
+  const handleFullscreenClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onFullscreenToggle?.();
+  };
+
   return (
-    <div className="hub-collapsible" data-open={open}>
-      <div 
-        className="hub-collapsible__summary" 
-        aria-controls={id} 
-        aria-expanded={open}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
-      >
-        <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
-        <span className="hub-collapsible__title">{title}</span>
+    <div className="hub-collapsible" data-open={open} data-section={sectionId}>
+      <div className="hub-collapsible__header">
+        <div 
+          className="hub-collapsible__summary" 
+          aria-controls={id} 
+          aria-expanded={open}
+          onClick={handleClick}
+          onKeyDown={handleKeyDown}
+          role="button"
+          tabIndex={0}
+        >
+          <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
+          <span className="hub-collapsible__title">{title}</span>
+        </div>
+        {showFullscreenBtn && (
+          <button
+            className="mobile-fullscreen-btn"
+            onClick={handleFullscreenClick}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Open in Fullscreen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Open in Fullscreen'}
+          >
+            ⛶
+          </button>
+        )}
       </div>
       {open && (
         <div id={id} className="hub-collapsible__content">
@@ -179,16 +213,122 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const [fullscreenSection, setFullscreenSection] = useState<string | null>(null);
   
   // Helper functions for fullscreen management
-  const openFullscreen = (sectionId: string) => setFullscreenSection(sectionId);
-  const closeFullscreen = () => setFullscreenSection(null);
   const toggleFullscreen = (sectionId: string) => {
     setFullscreenSection(prev => prev === sectionId ? null : sectionId);
   };
   const isFullscreenActive = (sectionId: string) => fullscreenSection === sectionId;
+  const handleFullscreenClose = () => {
+    setFullscreenSection(null);
+    setState('minimized');
+  };
 
   useEffect(() => {
     setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
   }, [profile]);
+  
+  // Enhanced scroll focus when expanding
+  useEffect(() => {
+    if (!isModalOpen) return;
+    if (typeof window === 'undefined') return;
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile && isExpanded) {
+      // Scroll to and focus on hub content area
+      requestAnimationFrame(() => {
+        const hubContent = document.querySelector('.hub-expanded-content');
+        const hubElement = document.querySelector('.profile-hub-shell--expanded');
+        
+        if (hubElement && hubContent) {
+          (hubElement as HTMLElement).scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          });
+          
+          // Focus the content area for keyboard navigation
+          setTimeout(() => {
+            (hubContent as HTMLElement).focus({ preventScroll: true });
+          }, 300);
+        }
+      });
+    }
+  }, [isModalOpen, isExpanded]);
+  
+  // Enhanced scroll focus when expanding
+  useEffect(() => {
+    if (!isModalOpen) return;
+    if (typeof window === 'undefined') return;
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile && isExpanded) {
+      // Scroll to and focus on hub content area
+      requestAnimationFrame(() => {
+        const hubContent = document.querySelector('.hub-expanded-content');
+        const hubElement = document.querySelector('.profile-hub-shell--expanded');
+        
+        if (hubElement && hubContent) {
+          (hubElement as HTMLElement).scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          });
+          
+          // Focus the content area for keyboard navigation
+          setTimeout(() => {
+            (hubContent as HTMLElement).focus({ preventScroll: true });
+          }, 300);
+        }
+      });
+    }
+  }, [isModalOpen, isExpanded]);
+  
+  // Enhanced scroll lock for modal and fullscreen sections
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const isMobile = window.innerWidth <= 768;
+    const shouldLock = (isModalOpen && isMobile) || fullscreenSection !== null;
+    const bodyElement = document.body;
+    const htmlElement = document.documentElement;
+    
+    if (shouldLock) {
+      const scrollPosition = window.scrollY;
+      bodyElement.style.position = 'fixed';
+      bodyElement.style.width = '100%';
+      bodyElement.style.overflow = 'hidden';
+      bodyElement.style.top = `-${scrollPosition}px`;
+      htmlElement.style.overflow = 'hidden';
+      bodyElement.style.touchAction = 'none';
+      bodyElement.dataset.scrollPosition = scrollPosition.toString();
+    } else {
+      const scrollPosition = parseInt(bodyElement.dataset.scrollPosition || '0', 10);
+      bodyElement.style.position = '';
+      bodyElement.style.width = '';
+      bodyElement.style.overflow = '';
+      bodyElement.style.top = '';
+      bodyElement.style.touchAction = '';
+      htmlElement.style.overflow = '';
+      delete bodyElement.dataset.scrollPosition;
+      
+      if (scrollPosition > 0) {
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollPosition, behavior: 'instant' });
+        });
+      }
+    }
+    
+    return () => {
+      bodyElement.style.position = '';
+      bodyElement.style.width = '';
+      bodyElement.style.overflow = '';
+      bodyElement.style.top = '';
+      bodyElement.style.touchAction = '';
+      htmlElement.style.overflow = '';
+      delete bodyElement.dataset.scrollPosition;
+    };
+  }, [isModalOpen, fullscreenSection]);
 
   // Enhanced scroll lock for modal and fullscreen sections
   useEffect(() => {
@@ -237,11 +377,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     };
   }, [isModalOpen, fullscreenSection]);
   
-  // Handle fullscreen close -> collapse entire hub
-  const handleFullscreenClose = () => {
-    setFullscreenSection(null);
-    setState('minimized');
-  };
 
   const handleLogout = async () => {
     try {
@@ -338,18 +473,41 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     }
   }, [state]);
 
+  // Enhanced keyboard navigation and focus management
   useEffect(() => {
-    let handler: ((e: KeyboardEvent) => void) | null = null;
-    handler = (event) => {
-      if (event.key === 'Escape' && isExpanded) {
-        handleCloseModal();
+    const handler = (event: KeyboardEvent) => {
+      // ESC key handling
+      if (event.key === 'Escape') {
+        if (fullscreenSection) {
+          handleFullscreenClose();
+        } else if (isExpanded) {
+          handleCloseModal();
+        }
+        return;
+      }
+      
+      // Tab navigation between sections when hub is expanded
+      if (isExpanded && !fullscreenSection) {
+        const sections = document.querySelectorAll('.hub-collapsible[data-open="true"]');
+        const currentIndex = Array.from(sections).findIndex(section => 
+          section.contains(document.activeElement)
+        );
+        
+        if (event.key === 'ArrowDown' && currentIndex < sections.length - 1) {
+          event.preventDefault();
+          const nextSection = sections[currentIndex + 1];
+          (nextSection.querySelector('.hub-collapsible__summary') as HTMLElement)?.focus();
+        } else if (event.key === 'ArrowUp' && currentIndex > 0) {
+          event.preventDefault();
+          const prevSection = sections[currentIndex - 1];
+          (prevSection.querySelector('.hub-collapsible__summary') as HTMLElement)?.focus();
+        }
       }
     };
+    
     window.addEventListener('keydown', handler);
-    return () => {
-      if (handler) window.removeEventListener('keydown', handler);
-    };
-  }, [isExpanded]);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isExpanded, fullscreenSection]);
 
   const handleSendMessage = () => {
     const trimmed = messageDraft.trim();
@@ -656,7 +814,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 }}
               >
                 {!isPublicView && (
-                  <CollapsibleSection id="customization-shop" title="🛍️ Customization Shop" defaultOpen={true}>
+                  <CollapsibleSection 
+                    id="customization-shop" 
+                    title="🛍️ Customization Shop" 
+                    defaultOpen={true}
+                    sectionId="customization"
+                    onFullscreenToggle={() => toggleFullscreen('customization')}
+                    isFullscreen={isFullscreenActive('customization')}
+                    showFullscreenBtn={true}
+                  >
                     <FullscreenWrapper
                       isFullscreen={isFullscreenActive('customization')}
                       onToggle={() => toggleFullscreen('customization')}
@@ -686,7 +852,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 )}
 
                 {/* Featured Projects Section - Enhanced for public view */}
-                <CollapsibleSection id="featured" title="🏆 Featured Projects" defaultOpen={mode === 'edit'}>
+                <CollapsibleSection 
+                  id="featured" 
+                  title="🏆 Featured Projects" 
+                  defaultOpen={mode === 'edit'}
+                  sectionId="featured"
+                  onFullscreenToggle={() => toggleFullscreen('featured')}
+                  isFullscreen={isFullscreenActive('featured')}
+                  showFullscreenBtn={true}
+                >
                   <FullscreenWrapper
                     isFullscreen={isFullscreenActive('featured')}
                     onToggle={() => toggleFullscreen('featured')}
@@ -736,7 +910,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 </CollapsibleSection>
 
                 {/* Activity Timeline - Enhanced */}
-                <CollapsibleSection id="activity" title="📅 Recent Activity" defaultOpen={false}>
+                <CollapsibleSection 
+                  id="activity" 
+                  title="📅 Recent Activity" 
+                  defaultOpen={false}
+                  sectionId="activity"
+                  onFullscreenToggle={() => toggleFullscreen('activity')}
+                  isFullscreen={isFullscreenActive('activity')}
+                  showFullscreenBtn={true}
+                >
                   <FullscreenWrapper
                     isFullscreen={isFullscreenActive('activity')}
                     onToggle={() => toggleFullscreen('activity')}
@@ -790,7 +972,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 
                 {/* Social Connections - Only in public view */}
                 {isPublicView && (
-                  <CollapsibleSection id="social" title="🌐 Social Connections" defaultOpen={false}>
+                  <CollapsibleSection 
+                    id="social" 
+                    title="🌐 Social Connections" 
+                    defaultOpen={false}
+                    sectionId="social"
+                    onFullscreenToggle={() => toggleFullscreen('social')}
+                    isFullscreen={isFullscreenActive('social')}
+                    showFullscreenBtn={true}
+                  >
                     <FullscreenWrapper
                       isFullscreen={isFullscreenActive('social')}
                       onToggle={() => toggleFullscreen('social')}
@@ -860,7 +1050,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 
                 {/* Recent Followers Section - Only in public view */}
                 {isPublicView && (
-                  <CollapsibleSection id="followers" title="👥 Recent Followers" defaultOpen={false}>
+                  <CollapsibleSection 
+                    id="followers" 
+                    title="👥 Recent Followers" 
+                    defaultOpen={false}
+                    sectionId="followers"
+                    onFullscreenToggle={() => toggleFullscreen('followers')}
+                    isFullscreen={isFullscreenActive('followers')}
+                    showFullscreenBtn={true}
+                  >
                     <FullscreenWrapper
                       isFullscreen={isFullscreenActive('followers')}
                       onToggle={() => toggleFullscreen('followers')}
@@ -904,7 +1102,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 
                 {/* Following Section - Only in edit mode */}
                 {!isPublicView && (
-                  <CollapsibleSection id="following" title="👥 Following" defaultOpen={false}>
+                  <CollapsibleSection 
+                    id="following" 
+                    title="👥 Following" 
+                    defaultOpen={false}
+                    sectionId="following"
+                    onFullscreenToggle={() => toggleFullscreen('following')}
+                    isFullscreen={isFullscreenActive('following')}
+                    showFullscreenBtn={true}
+                  >
                     <FullscreenWrapper
                       isFullscreen={isFullscreenActive('following')}
                       onToggle={() => toggleFullscreen('following')}
@@ -956,7 +1162,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
-                <CollapsibleSection id="quicknav" title="🧰 Quick Navigation" defaultOpen={false}>
+                <CollapsibleSection 
+                  id="quicknav" 
+                  title="🧰 Quick Navigation" 
+                  defaultOpen={false}
+                  sectionId="navigation"
+                  onFullscreenToggle={() => toggleFullscreen('navigation')}
+                  isFullscreen={isFullscreenActive('navigation')}
+                  showFullscreenBtn={true}
+                >
                   <FullscreenWrapper
                     isFullscreen={isFullscreenActive('navigation')}
                     onToggle={() => toggleFullscreen('navigation')}

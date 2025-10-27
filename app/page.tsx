@@ -85,20 +85,24 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
-      <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-16 px-6 py-24 sm:px-10">
+      <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-12 px-6 py-20 sm:px-10 md:py-16">
         <header className="flex flex-col items-center gap-8 text-center">
           <span className="text-sm uppercase tracking-[0.8em] text-[#4ff1ff]">Inque social</span>
           <h1 className="font-orbitron text-4xl text-[#66faff] sm:text-5xl md:text-6xl">
             creatives platform
           </h1>
-          <p className="max-w-xl text-balance text-base text-[#bdefff]/80 sm:text-lg">
-            {displayedText}
-            <span
-              className={`ml-1 inline-block h-5 w-0.5 bg-[#4ff1ff] ${
-                isTyping && currentCharIndex === SLOGANS[currentSloganIndex].length ? 'animate-pulse' : ''
-              }`}
-            />
-          </p>
+          <div className="text-animation-container max-w-xl">
+            <p className="text-balance text-base text-[#bdefff]/80 sm:text-lg min-h-[3.5rem] sm:min-h-[4rem] flex items-center justify-center">
+              <span className="text-content">
+                {displayedText}
+                <span
+                  className={`ml-1 inline-block h-5 w-0.5 bg-[#4ff1ff] ${
+                    isTyping && currentCharIndex === SLOGANS[currentSloganIndex].length ? 'animate-pulse' : ''
+                  }`}
+                />
+              </span>
+            </p>
+          </div>
         <FloatingOrb onActiveChange={setActiveNavItem} />
         <AuthButton />
         </header>
