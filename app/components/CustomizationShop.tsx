@@ -151,7 +151,7 @@ export default function CustomizationShop({ profile, onSave, onReset }: Customiz
   };
 
   return (
-    <div className="customization-shop">
+    <div className="customization-shop" style={{ width: '100%', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
       <div className="shop-header">
         <h3 className="shop-title">🎨 Customize Your Profile</h3>
         <p className="shop-subtitle">Make your profile uniquely yours</p>
@@ -170,19 +170,19 @@ export default function CustomizationShop({ profile, onSave, onReset }: Customiz
           className={`section-btn ${activeSection === 'background' ? 'active' : ''}`}
           onClick={() => setActiveSection('background')}
         >
-          <span className="section-icon">🌈</span>
+          <span className="section-icon">🖼️</span>
           <span className="section-label">Background</span>
         </button>
       </div>
 
       {/* Content Sections */}
-      <div className="shop-content">
+      <div className="shop-content" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
         {activeSection === 'avatar' && (
-          <div className="avatar-customization">
+          <div className="avatar-customization" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
             {/* Avatar Preview */}
-            <div className="avatar-preview-section">
+            <div className="avatar-preview-section" style={{ width: '100%', maxWidth: '100%' }}>
               <h4 className="section-subtitle">Preview</h4>
-              <div className="avatar-preview-container">
+              <div className="avatar-preview-container" style={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
                 <div
                   className={`avatar-preview ${currentFrame.style} ${currentAnimation.type}`}
                   style={{
@@ -206,9 +206,9 @@ export default function CustomizationShop({ profile, onSave, onReset }: Customiz
             </div>
 
             {/* Frame Selection */}
-            <div className="customization-group">
+            <div className="customization-group" style={{ width: '100%' }}>
               <label className="group-label">Choose Frame</label>
-              <div className="frames-grid">
+              <div className="frames-grid" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
                 {AVATAR_FRAMES.map((frame) => (
                   <button
                     key={frame.id}
@@ -226,9 +226,9 @@ export default function CustomizationShop({ profile, onSave, onReset }: Customiz
             </div>
 
             {/* Animation Selection */}
-            <div className="customization-group">
+            <div className="customization-group" style={{ width: '100%' }}>
               <label className="group-label">Animation Effect</label>
-              <div className="animations-grid">
+              <div className="animations-grid" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
                 {AVATAR_ANIMATIONS.map((animation) => (
                   <button
                     key={animation.id}
@@ -266,7 +266,7 @@ export default function CustomizationShop({ profile, onSave, onReset }: Customiz
         )}
 
         {activeSection === 'background' && (
-          <div className="background-customization">
+          <div className="background-customization" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
             <BackgroundGallery
               selectedBackground={selectedBackground}
               customBackgroundUrl={customBackgroundUrl}

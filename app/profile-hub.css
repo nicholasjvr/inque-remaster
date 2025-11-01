@@ -1145,6 +1145,35 @@
     background-color: rgba(0, 0, 0, 0.1);
 }
 
+/* Ensure section content and optional quickbar fit without overflow */
+.hub-collapsible__content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    align-items: start;
+    gap: 16px;
+    max-height: calc(100vh - 280px);
+    overflow: hidden;
+    overscroll-behavior: contain;
+}
+
+.hub-collapsible__main {
+    min-width: 0;
+    /* prevent grid overflow from intrinsic width */
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+@media (max-width: 1024px) {
+    .hub-collapsible__content {
+        grid-template-columns: 1fr;
+        max-height: calc(100vh - 240px);
+    }
+
+    .hub-collapsible__quickbar {
+        width: 100%;
+    }
+}
+
 
 @media (max-width: 768px) {
     .profile-hub-wrapper {
@@ -5819,7 +5848,7 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
 
 .backgrounds-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     padding: 12px;
 }

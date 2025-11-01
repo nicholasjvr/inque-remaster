@@ -87,7 +87,7 @@ export default function Home() {
     <div className="min-h-screen w-full bg-[#04060d] text-white">
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-12 px-6 py-20 sm:px-10 md:py-16">
         <header className="flex flex-col items-center gap-8 text-center">
-          <span className="text-sm uppercase tracking-[0.8em] text-[#4ff1ff]">Inque social</span>
+          <span className="text-sm uppercase tracking-[0.8em] text-[#4ff1ff]">inqu studio</span>
           <h1 className="font-orbitron text-4xl text-[#66faff] sm:text-5xl md:text-6xl">
             creatives platform
           </h1>

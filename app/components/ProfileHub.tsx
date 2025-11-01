@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore';
-import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
+import { useUserProfile } from '@/hooks/useFirestore';
 import RepRackManager from './RepRackManager';
 import CustomizationShop from './CustomizationShop';
-import FullscreenWrapper from './FullscreenWrapper';
 
 // Interest and goal option mappings for display
 const INTEREST_OPTIONS = [
@@ -80,16 +79,15 @@ type StoredPreferences = {
   scale: number;
 };
 
-// Enhanced Collapsible section with mobile fullscreen integration
 type CollapsibleSectionProps = {
   id: string;
   title: string;
-  defaultOpen?: boolean;
+  defaultOpen?: boolean; // used only when uncontrolled
   children: React.ReactNode;
   sectionId?: string;
-  onFullscreenToggle?: () => void;
-  isFullscreen?: boolean;
-  showFullscreenBtn?: boolean;
+  open?: boolean; // controlled open state (preferred)
+  onToggle?: () => void; // controlled toggle
+  quickbar?: React.ReactNode; // optional sidebar rendered when open
 };
 
 const CollapsibleSection = ({ 
@@ -97,40 +95,42 @@ const CollapsibleSection = ({
   title, 
   defaultOpen, 
   children, 
-  sectionId, 
-  onFullscreenToggle, 
-  isFullscreen, 
-  showFullscreenBtn 
+  sectionId,
+  open,
+  onToggle,
+  quickbar
 }: CollapsibleSectionProps) => {
-  const [open, setOpen] = useState<boolean>(() => {
-    return defaultOpen ?? false;
-  });
+  // Uncontrolled fallback for cases where parent doesn't manage open state
+  const [uncontrolledOpen, setUncontrolledOpen] = useState<boolean>(() => defaultOpen ?? false);
+  const isOpen = open ?? uncontrolledOpen;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    setOpen(prev => !prev);
+    if (onToggle) {
+      onToggle();
+    } else {
+      setUncontrolledOpen(prev => !prev);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      setOpen(prev => !prev);
+      if (onToggle) {
+        onToggle();
+      } else {
+        setUncontrolledOpen(prev => !prev);
+      }
     }
   };
 
-  const handleFullscreenClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onFullscreenToggle?.();
-  };
-
   return (
-    <div className="hub-collapsible" data-open={open} data-section={sectionId}>
+    <div className="hub-collapsible" data-open={isOpen} data-section={sectionId}>
       <div className="hub-collapsible__header">
         <div 
           className="hub-collapsible__summary" 
           aria-controls={id} 
-          aria-expanded={open}
+          aria-expanded={isOpen}
           onClick={handleClick}
           onKeyDown={handleKeyDown}
           role="button"
@@ -139,20 +139,26 @@ const CollapsibleSection = ({
           <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
           <span className="hub-collapsible__title">{title}</span>
         </div>
-        {showFullscreenBtn && (
-          <button
-            className="mobile-fullscreen-btn"
-            onClick={handleFullscreenClick}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Open in Fullscreen'}
-            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Open in Fullscreen'}
-          >
-            ⛶
-          </button>
-        )}
       </div>
-      {open && (
-        <div id={id} className="hub-collapsible__content">
-          {children}
+      {isOpen && (
+        <div
+          id={id}
+          className="hub-collapsible__content"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: quickbar ? 'minmax(0, 1fr) 220px' : '1fr',
+            alignItems: 'start',
+            gap: 16
+          }}
+        >
+          <div className="hub-collapsible__main" style={{ minWidth: 0 }}>
+            {children}
+          </div>
+          {quickbar ? (
+            <aside className="hub-collapsible__quickbar" style={{ width: 220 }}>
+              {quickbar}
+            </aside>
+          ) : null}
         </div>
       )}
     </div>
@@ -187,7 +193,7 @@ type ProfileHubProps = {
   mode?: 'public' | 'edit';
   profileUser?: PublicUser | null;
   initialState?: 'minimized' | 'expanded' | 'chatbot' | 'dm';
-  variant?: string; // compatibility with existing usage
+  variant?: string;
   onStateChange?: (state: HubState) => void;
 };
 
@@ -203,6 +209,11 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const isDM = state === 'dm';
   const isModalOpen = isExpanded || isChatbot || isDM;
   const isPublicView = mode === 'public';
+  
+  // Accordion: one open section at a time
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const isSectionActive = (id: string) => activeSection === id;
+  const handleSectionToggle = (id: string) => setActiveSection(prev => (prev === id ? null : id));
 
   // Load profile for target user (owner or public user)
   const targetUserId = profileUser?.id || user?.uid || null;
@@ -210,50 +221,11 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
   const [showRepRackManager, setShowRepRackManager] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [fullscreenSection, setFullscreenSection] = useState<string | null>(null);
-  
-  // Helper functions for fullscreen management
-  const toggleFullscreen = (sectionId: string) => {
-    setFullscreenSection(prev => prev === sectionId ? null : sectionId);
-  };
-  const isFullscreenActive = (sectionId: string) => fullscreenSection === sectionId;
-  const handleFullscreenClose = () => {
-    setFullscreenSection(null);
-    setState('minimized');
-  };
 
   useEffect(() => {
     setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
   }, [profile]);
   
-  // Enhanced scroll focus when expanding
-  useEffect(() => {
-    if (!isModalOpen) return;
-    if (typeof window === 'undefined') return;
-    
-    const isMobile = window.innerWidth <= 768;
-    
-    if (isMobile && isExpanded) {
-      // Scroll to and focus on hub content area
-      requestAnimationFrame(() => {
-        const hubContent = document.querySelector('.hub-expanded-content');
-        const hubElement = document.querySelector('.profile-hub-shell--expanded');
-        
-        if (hubElement && hubContent) {
-          (hubElement as HTMLElement).scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'center'
-          });
-          
-          // Focus the content area for keyboard navigation
-          setTimeout(() => {
-            (hubContent as HTMLElement).focus({ preventScroll: true });
-          }, 300);
-        }
-      });
-    }
-  }, [isModalOpen, isExpanded]);
   
   // Enhanced scroll focus when expanding
   useEffect(() => {
@@ -289,7 +261,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     if (typeof window === 'undefined') return;
     
     const isMobile = window.innerWidth <= 768;
-    const shouldLock = (isModalOpen && isMobile) || fullscreenSection !== null;
+    const shouldLock = (isModalOpen && isMobile);
     const bodyElement = document.body;
     const htmlElement = document.documentElement;
     
@@ -328,14 +300,14 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       htmlElement.style.overflow = '';
       delete bodyElement.dataset.scrollPosition;
     };
-  }, [isModalOpen, fullscreenSection]);
+  }, [isModalOpen]);
 
   // Enhanced scroll lock for modal and fullscreen sections
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     const isMobile = window.innerWidth <= 768; // Expanded mobile breakpoint for better UX
-    const shouldLock = (isModalOpen && isMobile) || fullscreenSection !== null;
+    const shouldLock = (isModalOpen && isMobile);
     const bodyElement = document.body;
     const htmlElement = document.documentElement;
     
@@ -375,7 +347,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       bodyElement.style.touchAction = '';
       htmlElement.style.overflow = '';
     };
-  }, [isModalOpen, fullscreenSection]);
+  }, [isModalOpen]);
   
 
   const handleLogout = async () => {
@@ -478,16 +450,16 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     const handler = (event: KeyboardEvent) => {
       // ESC key handling
       if (event.key === 'Escape') {
-        if (fullscreenSection) {
-          handleFullscreenClose();
-        } else if (isExpanded) {
+        if (isExpanded) {
           handleCloseModal();
+        } else {
+          setState('minimized');
         }
         return;
       }
       
       // Tab navigation between sections when hub is expanded
-      if (isExpanded && !fullscreenSection) {
+      if (isExpanded) {
         const sections = document.querySelectorAll('.hub-collapsible[data-open="true"]');
         const currentIndex = Array.from(sections).findIndex(section => 
           section.contains(document.activeElement)
@@ -507,7 +479,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isExpanded, fullscreenSection]);
+  }, [isExpanded]);
 
   const handleSendMessage = () => {
     const trimmed = messageDraft.trim();
@@ -817,19 +789,11 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   <CollapsibleSection 
                     id="customization-shop" 
                     title="🛍️ Customization Shop" 
-                    defaultOpen={true}
+                    defaultOpen={false}
                     sectionId="customization"
-                    onFullscreenToggle={() => toggleFullscreen('customization')}
-                    isFullscreen={isFullscreenActive('customization')}
-                    showFullscreenBtn={true}
-                  >
-                    <FullscreenWrapper
-                      isFullscreen={isFullscreenActive('customization')}
-                      onToggle={() => toggleFullscreen('customization')}
-                      onClose={handleFullscreenClose}
-                      title="🎨 Customize Your Profile"
-                      sectionId="customization"
-                    >
+                    open={isSectionActive('customization')}
+                    onToggle={() => handleSectionToggle('customization')}
+                  >             
                       <CustomizationShop
                         profile={localProfile}
                         onSave={async (updates) => {
@@ -847,7 +811,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           setTheme(profile?.theme?.mode || 'neo');
                         }}
                       />
-                    </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
 
@@ -855,19 +818,17 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 <CollapsibleSection 
                   id="featured" 
                   title="🏆 Featured Projects" 
-                  defaultOpen={mode === 'edit'}
+                  defaultOpen={false}
                   sectionId="featured"
-                  onFullscreenToggle={() => toggleFullscreen('featured')}
-                  isFullscreen={isFullscreenActive('featured')}
-                  showFullscreenBtn={true}
+                  open={isSectionActive('featured')}
+                  onToggle={() => handleSectionToggle('featured')}
+                  quickbar={(
+                    <div className="projects-toolbar">
+                      <button className="projects-btn create-btn">+ New Project</button>
+                      <button className="projects-btn manage-btn">Manage Projects</button>
+                    </div>
+                  )}
                 >
-                  <FullscreenWrapper
-                    isFullscreen={isFullscreenActive('featured')}
-                    onToggle={() => toggleFullscreen('featured')}
-                    onClose={handleFullscreenClose}
-                    title="🏆 Featured Projects"
-                    sectionId="featured"
-                  >
                     <div className="featured-projects-enhanced">
                       <div className="featured-projects-grid">
                         {Array.from({ length: 12 }, (_, index) => {
@@ -899,14 +860,8 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           );
                         })}
                       </div>
-                      {isFullscreenActive('featured') && (
-                        <div className="projects-toolbar">
-                          <button className="projects-btn create-btn">+ New Project</button>
-                          <button className="projects-btn manage-btn">Manage Projects</button>
-                        </div>
-                      )}
+                      
                     </div>
-                  </FullscreenWrapper>
                 </CollapsibleSection>
 
                 {/* Activity Timeline - Enhanced */}
@@ -915,35 +870,27 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   title="📅 Recent Activity" 
                   defaultOpen={false}
                   sectionId="activity"
-                  onFullscreenToggle={() => toggleFullscreen('activity')}
-                  isFullscreen={isFullscreenActive('activity')}
-                  showFullscreenBtn={true}
+                  open={isSectionActive('activity')}
+                  onToggle={() => handleSectionToggle('activity')}
+                  quickbar={(
+                    <div className="activity-filters">
+                      <input 
+                        type="text" 
+                        placeholder="Search activity..."
+                        className="activity-search"
+                      />
+                      <div className="activity-filter-buttons">
+                        <button className="filter-btn active">All</button>
+                        <button className="filter-btn">Projects</button>
+                        <button className="filter-btn">Social</button>
+                        <button className="filter-btn">Achievements</button>
+                      </div>
+                    </div>
+                  )}
                 >
-                  <FullscreenWrapper
-                    isFullscreen={isFullscreenActive('activity')}
-                    onToggle={() => toggleFullscreen('activity')}
-                    onClose={handleFullscreenClose}
-                    title="📅 Recent Activity"
-                    sectionId="activity"
-                  >
                     <div className="activity-enhanced">
-                      {isFullscreenActive('activity') && (
-                        <div className="activity-filters">
-                          <input 
-                            type="text" 
-                            placeholder="Search activity..."
-                            className="activity-search"
-                          />
-                          <div className="activity-filter-buttons">
-                            <button className="filter-btn active">All</button>
-                            <button className="filter-btn">Projects</button>
-                            <button className="filter-btn">Social</button>
-                            <button className="filter-btn">Achievements</button>
-                          </div>
-                        </div>
-                      )}
                       <div className="activity-timeline">
-                        {Array.from({ length: isFullscreenActive('activity') ? 20 : 5 }, (_, index) => {
+                        {Array.from({ length: 5 }, (_, index) => {
                           const activities = [
                             { icon: '🎨', text: 'Created a new interactive widget', time: '2 hours ago' },
                             { icon: '❤️', text: 'Received 5 likes on "Portfolio Showcase"', time: '5 hours ago' },
@@ -967,7 +914,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                         })}
                       </div>
                     </div>
-                  </FullscreenWrapper>
                 </CollapsibleSection>
 
                 {/* Social Connections - Only in public view */}
@@ -977,17 +923,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     title="🌐 Social Connections" 
                     defaultOpen={false}
                     sectionId="social"
-                    onFullscreenToggle={() => toggleFullscreen('social')}
-                    isFullscreen={isFullscreenActive('social')}
-                    showFullscreenBtn={true}
+                    open={isSectionActive('social')}
+                    onToggle={() => handleSectionToggle('social')}
                   >
-                    <FullscreenWrapper
-                      isFullscreen={isFullscreenActive('social')}
-                      onToggle={() => toggleFullscreen('social')}
-                      onClose={handleFullscreenClose}
-                      title="🌐 Social Connections"
-                      sectionId="social"
-                    >
                       <div className="social-connections-enhanced">
                         <div className="social-stats-enhanced">
                           <div className="social-stat">
@@ -1044,7 +982,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           </div>
                         </div>
                       </div>
-                    </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
 
@@ -1055,29 +992,21 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     title="👥 Recent Followers" 
                     defaultOpen={false}
                     sectionId="followers"
-                    onFullscreenToggle={() => toggleFullscreen('followers')}
-                    isFullscreen={isFullscreenActive('followers')}
-                    showFullscreenBtn={true}
+                    open={isSectionActive('followers')}
+                    onToggle={() => handleSectionToggle('followers')}
+                    quickbar={(
+                      <div className="followers-search">
+                        <input 
+                          type="text" 
+                          placeholder="Search followers..."
+                          className="search-input"
+                        />
+                      </div>
+                    )}
                   >
-                    <FullscreenWrapper
-                      isFullscreen={isFullscreenActive('followers')}
-                      onToggle={() => toggleFullscreen('followers')}
-                      onClose={handleFullscreenClose}
-                      title="👥 Followers"
-                      sectionId="followers"
-                    >
                       <div className="followers-enhanced">
-                        {isFullscreenActive('followers') && (
-                          <div className="followers-search">
-                            <input 
-                              type="text" 
-                              placeholder="Search followers..."
-                              className="search-input"
-                            />
-                          </div>
-                        )}
                         <div className="followers-grid">
-                          {Array.from({ length: isFullscreenActive('followers') ? 24 : 6 }, (_, index) => (
+                          {Array.from({ length: 6 }, (_, index) => (
                             <div key={index} className="follower-item">
                               <div className="follower-avatar">
                                 <span role="img" aria-label="Follower avatar">
@@ -1087,16 +1016,12 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                               <div className="follower-info">
                                 <span className="follower-name">Creator {index + 1}</span>
                                 <span className="follower-handle">@creator{index + 1}</span>
-                                {isFullscreenActive('followers') && (
-                                  <span className="follower-stats">{Math.floor(Math.random() * 50)} projects</span>
-                                )}
                               </div>
                               <button className="follower-action">Follow</button>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    </FullscreenWrapper>
+                      </div>                
                   </CollapsibleSection>
                 )}
 
@@ -1107,34 +1032,26 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     title="👥 Following" 
                     defaultOpen={false}
                     sectionId="following"
-                    onFullscreenToggle={() => toggleFullscreen('following')}
-                    isFullscreen={isFullscreenActive('following')}
-                    showFullscreenBtn={true}
+                    open={isSectionActive('following')}
+                    onToggle={() => handleSectionToggle('following')}
+                    quickbar={(
+                      <div className="following-controls">
+                        <input 
+                          type="text" 
+                          placeholder="Search following..."
+                          className="search-input"
+                        />
+                        <div className="following-filter-buttons">
+                          <button className="filter-btn active">All</button>
+                          <button className="filter-btn">Active</button>
+                          <button className="filter-btn">Recent</button>
+                        </div>
+                      </div>
+                    )}
                   >
-                    <FullscreenWrapper
-                      isFullscreen={isFullscreenActive('following')}
-                      onToggle={() => toggleFullscreen('following')}
-                      onClose={handleFullscreenClose}
-                      title="👥 Following"
-                      sectionId="following"
-                    >
                       <div className="following-enhanced">
-                        {isFullscreenActive('following') && (
-                          <div className="following-controls">
-                            <input 
-                              type="text" 
-                              placeholder="Search following..."
-                              className="search-input"
-                            />
-                            <div className="following-filter-buttons">
-                              <button className="filter-btn active">All</button>
-                              <button className="filter-btn">Active</button>
-                              <button className="filter-btn">Recent</button>
-                            </div>
-                          </div>
-                        )}
                         <div className="following-grid">
-                          {Array.from({ length: isFullscreenActive('following') ? 18 : 6 }, (_, index) => (
+                          {Array.from({ length: 6 }, (_, index) => (
                             <div key={index} className="following-item">
                               <div className="following-avatar">
                                 <span role="img" aria-label="Following avatar">
@@ -1145,21 +1062,14 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                                 <span className="following-name">Creator {index + 1}</span>
                                 <span className="following-handle">@creator{index + 1}</span>
                                 <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
-                                {isFullscreenActive('following') && (
-                                  <span className="following-last-active">Active {Math.floor(Math.random() * 7) + 1} days ago</span>
-                                )}
                               </div>
                               <div className="following-actions">
                                 <button className="following-action">Unfollow</button>
-                                {isFullscreenActive('following') && (
-                                  <button className="following-action message-action">Message</button>
-                                )}
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                    </FullscreenWrapper>
                   </CollapsibleSection>
                 )}
                 <CollapsibleSection 
@@ -1167,17 +1077,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   title="🧰 Quick Navigation" 
                   defaultOpen={false}
                   sectionId="navigation"
-                  onFullscreenToggle={() => toggleFullscreen('navigation')}
-                  isFullscreen={isFullscreenActive('navigation')}
-                  showFullscreenBtn={true}
+                  open={isSectionActive('navigation')}
+                  onToggle={() => handleSectionToggle('navigation')}
                 >
-                  <FullscreenWrapper
-                    isFullscreen={isFullscreenActive('navigation')}
-                    onToggle={() => toggleFullscreen('navigation')}
-                    onClose={handleFullscreenClose}
-                    title="🧰 Quick Navigation"
-                    sectionId="navigation"
-                  >
                     <div className="navigation-enhanced">
                       <div className="expanded-nav-buttons">
                         <a
@@ -1188,9 +1090,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           <span className="nav-icon">🔍</span>
                           <span className="nav-label">Explore</span>
                           <span className="nav-desc">Discover amazing projects from the community</span>
-                          {isFullscreenActive('navigation') && (
-                            <span className="nav-extra">Find inspiration and trending ideas</span>
-                          )}
                         </a>
                         <a
                           href="/explore-reels"
@@ -1200,9 +1099,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           <span className="nav-icon">🎞️</span>
                           <span className="nav-label">Reels</span>
                           <span className="nav-desc">Swipe through demo videos</span>
-                          {isFullscreenActive('navigation') && (
-                            <span className="nav-extra">Watch quick project demonstrations</span>
-                          )}
                         </a>
                         <a
                           href="/users"
@@ -1212,9 +1108,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           <span className="nav-icon">👥</span>
                           <span className="nav-label">Creators</span>
                           <span className="nav-desc">Find and follow creators</span>
-                          {isFullscreenActive('navigation') && (
-                            <span className="nav-extra">Connect with like-minded developers</span>
-                          )}
                         </a>
                         <a
                           href="/showcase"
@@ -1224,9 +1117,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           <span className="nav-icon">🏆</span>
                           <span className="nav-label">Showcase</span>
                           <span className="nav-desc">Top projects and features</span>
-                          {isFullscreenActive('navigation') && (
-                            <span className="nav-extra">Curated selection of exceptional work</span>
-                          )}
                         </a>
                         <a
                           href="/studio"
@@ -1236,25 +1126,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           <span className="nav-icon">🎨</span>
                           <span className="nav-label">Studio</span>
                           <span className="nav-desc">Create new widgets</span>
-                          {isFullscreenActive('navigation') && (
-                            <span className="nav-extra">Build interactive components and tools</span>
-                          )}
                         </a>
-                        {isFullscreenActive('navigation') && (
-                          <a
-                            href="/settings"
-                            className="expanded-nav-btn"
-                            title="Settings"
-                          >
-                            <span className="nav-icon">⚙️</span>
-                            <span className="nav-label">Settings</span>
-                            <span className="nav-desc">Manage your account</span>
-                            <span className="nav-extra">Privacy, notifications, and preferences</span>
-                          </a>
-                        )}
                       </div>
                     </div>
-                  </FullscreenWrapper>
                 </CollapsibleSection>
 
               </div>
