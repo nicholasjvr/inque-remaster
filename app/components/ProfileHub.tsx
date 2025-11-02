@@ -30,6 +30,7 @@ const GOAL_OPTIONS = [
 ];
 
 import '../profile-hub.css';
+import './FeaturedProjects.css';
 
 type HubState = 'minimized' | 'expanded' | 'chatbot' | 'dm';
 type HubTheme = 'neo' | 'minimal' | 'cyber';
@@ -228,41 +229,52 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   }, [profile]);
   
   
-  // Enhanced scroll focus when expanding
+  // Enhanced scroll focus when expanding - only on initial expansion
   useEffect(() => {
     if (!isModalOpen) return;
     if (typeof window === 'undefined') return;
     
     const isMobile = window.innerWidth <= 768;
     
+    // Only scroll on initial expansion, not on every state change
     if (isMobile && isExpanded) {
-      // Scroll to and focus on hub content area
       requestAnimationFrame(() => {
         const hubContent = document.querySelector('.hub-expanded-content');
         const hubElement = document.querySelector('.profile-hub-shell--expanded');
         
-        if (hubElement && hubContent) {
-          (hubElement as HTMLElement).scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'center'
-          });
+        // Only scroll if element is not already in viewport
+        if (hubElement) {
+          const rect = hubElement.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          const isVisible = rect.top >= 0 && rect.top < viewportHeight && 
+                           rect.bottom > 0 && rect.bottom <= viewportHeight;
           
-          // Focus the content area for keyboard navigation
-          setTimeout(() => {
-            (hubContent as HTMLElement).focus({ preventScroll: true });
-          }, 300);
+          if (!isVisible && hubContent) {
+            (hubElement as HTMLElement).scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'nearest', // Use 'nearest' to avoid aggressive scrolling
+              inline: 'nearest'
+            });
+            
+            // Focus the content area for keyboard navigation (without scrolling)
+            setTimeout(() => {
+              (hubContent as HTMLElement).focus({ preventScroll: true });
+            }, 300);
+          }
         }
       });
     }
   }, [isModalOpen, isExpanded]);
   
   // Enhanced scroll lock for modal and fullscreen sections
+  // Only locks body scroll for non-billboard variants (modal overlays)
+  // Billboard variant should allow normal page scrolling since it's embedded in page flow
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     const isMobile = window.innerWidth <= 768;
-    const shouldLock = (isModalOpen && isMobile);
+    // Don't lock body scroll for billboard variant - it's part of page flow
+    const shouldLock = (isModalOpen && isMobile && variant !== 'billboard');
     const bodyElement = document.body;
     const htmlElement = document.documentElement;
     
@@ -273,17 +285,31 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       bodyElement.style.overflow = 'hidden';
       bodyElement.style.top = `-${scrollPosition}px`;
       htmlElement.style.overflow = 'hidden';
-      bodyElement.style.touchAction = 'none';
+      // Don't set touchAction to 'none' - let CSS handle it per element
+      // This allows scrolling within the hub content area
       bodyElement.dataset.scrollPosition = scrollPosition.toString();
+      
+      // Ensure hub content can scroll independently
+      const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
+      if (hubContent) {
+        hubContent.style.touchAction = 'pan-y';
+        hubContent.style.overflowY = 'auto';
+      }
     } else {
       const scrollPosition = parseInt(bodyElement.dataset.scrollPosition || '0', 10);
       bodyElement.style.position = '';
       bodyElement.style.width = '';
       bodyElement.style.overflow = '';
       bodyElement.style.top = '';
-      bodyElement.style.touchAction = '';
       htmlElement.style.overflow = '';
       delete bodyElement.dataset.scrollPosition;
+      
+      // Reset hub content styles
+      const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
+      if (hubContent) {
+        hubContent.style.touchAction = '';
+        hubContent.style.overflowY = '';
+      }
       
       if (scrollPosition > 0) {
         window.requestAnimationFrame(() => {
@@ -297,58 +323,17 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       bodyElement.style.width = '';
       bodyElement.style.overflow = '';
       bodyElement.style.top = '';
-      bodyElement.style.touchAction = '';
       htmlElement.style.overflow = '';
       delete bodyElement.dataset.scrollPosition;
-    };
-  }, [isModalOpen]);
-
-  // Enhanced scroll lock for modal and fullscreen sections
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const isMobile = window.innerWidth <= 768; // Expanded mobile breakpoint for better UX
-    const shouldLock = (isModalOpen && isMobile);
-    const bodyElement = document.body;
-    const htmlElement = document.documentElement;
-    
-    if (shouldLock) {
-      const scrollPosition = window.scrollY;
-      bodyElement.style.position = 'fixed';
-      bodyElement.style.width = '100%';
-      bodyElement.style.overflow = 'hidden';
-      bodyElement.style.top = `-${scrollPosition}px`;
-      htmlElement.style.overflow = 'hidden'; // Also lock html element
       
-      // Add touch-action for better mobile scroll prevention
-      bodyElement.style.touchAction = 'none';
-    } else {
-      const scrollPosition = Math.abs(parseInt(bodyElement.style.top || '0', 10));
-      bodyElement.style.position = '';
-      bodyElement.style.width = '';
-      bodyElement.style.overflow = '';
-      bodyElement.style.top = '';
-      bodyElement.style.touchAction = '';
-      htmlElement.style.overflow = '';
-      
-      // Restore scroll position smoothly
-      if (scrollPosition > 0) {
-        window.requestAnimationFrame(() => {
-          window.scrollTo({ top: scrollPosition, behavior: 'instant' });
-        });
+      // Cleanup hub content styles
+      const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
+      if (hubContent) {
+        hubContent.style.touchAction = '';
+        hubContent.style.overflowY = '';
       }
-    }
-    
-    return () => {
-      // Cleanup all scroll lock styles
-      bodyElement.style.position = '';
-      bodyElement.style.width = '';
-      bodyElement.style.overflow = '';
-      bodyElement.style.top = '';
-      bodyElement.style.touchAction = '';
-      htmlElement.style.overflow = '';
     };
-  }, [isModalOpen]);
+  }, [isModalOpen, variant]);
   
 
   const handleLogout = async () => {

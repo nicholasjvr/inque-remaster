@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthModalProps {
@@ -14,6 +15,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
   const [mode, setMode] = useState(initialMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -21,7 +23,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     displayName: ''
   });
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +74,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     }));
   };
 
-  return (
+  const modalContent = (
     <div className="auth-modal-overlay" onClick={onClose}>
       <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
         <div className="auth-modal-header">
@@ -221,4 +228,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

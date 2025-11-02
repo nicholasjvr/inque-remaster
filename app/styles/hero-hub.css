@@ -40,6 +40,39 @@
     z-index: -1;
 }
 
+/* Hero Profile Extended - Expanded hub section */
+.hero-profile-extended {
+    display: flex;
+    justify-content: center;
+    margin: clamp(16px, 4vw, 32px) 0;
+    width: 100%;
+    max-width: 100%;
+    position: relative;
+    isolation: isolate;
+    /* Allow scrolling - don't use overflow hidden */
+    overflow: visible;
+    /* Ensure it's in page flow */
+    position: relative;
+    /* Ensure section is scrollable */
+    scroll-margin-top: 20px;
+    /* Ensure child hub can receive clicks */
+    pointer-events: auto;
+}
+
+.hero-profile-extended * {
+    pointer-events: auto !important;
+}
+
+/* Ensure the section can be scrolled to */
+#hub-extended-section {
+    scroll-margin-top: 80px;
+    scroll-margin-bottom: 40px;
+    /* Ensure it's in document flow */
+    position: relative;
+    /* Prevent any overflow issues */
+    overflow: visible;
+}
+
 @media (max-width: 768px) {
     .hero-profile-integration {
         max-width: clamp(320px, 42vw, 480px);
@@ -49,6 +82,17 @@
     .hero-profile-integration::before {
         inset: clamp(6px, 1.5vw, 14px);
         border-radius: clamp(16px, 3vw, 24px);
+    }
+
+    .hero-profile-extended {
+        margin: clamp(12px, 3vw, 24px) 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #hub-extended-section {
+        scroll-margin-top: 60px;
+        scroll-margin-bottom: 20px;
     }
 }
 

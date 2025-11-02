@@ -3,6 +3,9 @@
 import FloatingOrb, { type NavItem, NAV_ITEMS } from './components/FloatingOrb';
 import ProfileHub from './components/ProfileHub';
 import AuthButton from './components/AuthButton';
+import TutorialModal from './components/TutorialModal';
+import PersonalInfoModal from './components/PersonalInfoModal';
+import SiteStatsSection from './components/SiteStatsSection';
 import './styles/hero-hub.css';
 import { useEffect, useState } from 'react';
 
@@ -28,6 +31,10 @@ export default function Home() {
   const [isTyping, setIsTyping] = useState(true);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
 
+  // Modal states
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isPersonalInfoOpen, setIsPersonalInfoOpen] = useState(false);
+
   // Legacy redirect: support /?user=ID -> /u/ID
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -38,29 +45,65 @@ export default function Home() {
       window.location.replace(target);
     }
   }, []);
-  
+
   // Smooth scroll to extended hub section when it opens
   useEffect(() => {
     const modalOpen = hubState === 'expanded' || hubState === 'chatbot' || hubState === 'dm';
     if (modalOpen) {
       const section = document.getElementById('hub-extended-section');
-      if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (section) {
+        // Use multiple requestAnimationFrame and a small delay to ensure DOM is ready
+        // This is especially important on mobile where body scroll lock might have been prevented
+        const scrollTimeout = setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const isMobile = window.innerWidth <= 768;
+
+              // Get section position relative to viewport
+              const rect = section.getBoundingClientRect();
+              const viewportHeight = window.innerHeight;
+              const viewportTop = 0;
+
+              // Check if section is fully visible in viewport
+              // On mobile, check if at least top is visible
+              const isFullyVisible = isMobile
+                ? (rect.top >= viewportTop && rect.top < viewportHeight)
+                : (rect.top >= viewportTop && rect.bottom <= viewportHeight);
+
+              // If not fully visible, scroll to it
+              if (!isFullyVisible) {
+                // On mobile, use 'start' to ensure section appears at top
+                // Add offset to account for fixed headers
+                const scrollOptions: ScrollIntoViewOptions = {
+                  behavior: 'smooth',
+                  block: isMobile ? 'start' : 'nearest',
+                  inline: 'nearest'
+                };
+
+                section.scrollIntoView(scrollOptions);
+              }
+            });
+          });
+        }, 100); // Small delay to ensure state updates are complete
+
+        return () => clearTimeout(scrollTimeout);
+      }
     }
   }, [hubState]);
 
   // Typing effect animation
   useEffect(() => {
     const currentSlogan = SLOGANS[currentSloganIndex];
-    const typingSpeed = 80; 
-    const deletingSpeed = 80; 
-    const pauseTime = 3000; 
+    const typingSpeed = 80;
+    const deletingSpeed = 80;
+    const pauseTime = 3000;
 
     const timer = setTimeout(() => {
       if (isTyping) {
         if (currentCharIndex < currentSlogan.length) {
           setDisplayedText(currentSlogan.slice(0, currentCharIndex + 1));
           setCurrentCharIndex(currentCharIndex + 1);
-        } else {     
+        } else {
           setTimeout(() => {
             setIsTyping(false);
           }, pauseTime);
@@ -81,7 +124,31 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
-      <main className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-12 px-6 py-20 sm:px-10 md:py-16">
+      {/* Top Buttons */}
+      <div className="homepage-top-buttons">
+        <button
+          className="homepage-top-btn"
+          onClick={() => setIsTutorialOpen(true)}
+          aria-label="Open tutorial"
+          title="Don't know where to start?"
+        >
+          ?
+        </button>
+        <button
+          className="homepage-top-btn"
+          onClick={() => setIsPersonalInfoOpen(true)}
+          aria-label="Personal information"
+          title="Personal information"
+        >
+          ℹ
+        </button>
+      </div>
+
+      {/* Modals */}
+      <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+      <PersonalInfoModal isOpen={isPersonalInfoOpen} onClose={() => setIsPersonalInfoOpen(false)} />
+
+      <main className="mx-auto flex w-full max-w-6xl flex-col items-center gap-12 px-6 py-20 sm:px-10 md:py-16">
         <header className="flex flex-col items-center gap-8 text-center">
           <span className="text-sm uppercase tracking-[0.8em] text-[#4ff1ff]">inqu studio</span>
           <h1 className="font-orbitron text-4xl text-[#66faff] sm:text-5xl md:text-6xl">
@@ -92,15 +159,14 @@ export default function Home() {
               <span className="text-content">
                 {displayedText}
                 <span
-                  className={`ml-1 inline-block h-5 w-0.5 bg-[#4ff1ff] ${
-                    isTyping && currentCharIndex === SLOGANS[currentSloganIndex].length ? 'animate-pulse' : ''
-                  }`}
+                  className={`ml-1 inline-block h-5 w-0.5 bg-[#4ff1ff] ${isTyping && currentCharIndex === SLOGANS[currentSloganIndex].length ? 'animate-pulse' : ''
+                    }`}
                 />
               </span>
             </p>
           </div>
-        <FloatingOrb onActiveChange={setActiveNavItem} />
-        <AuthButton />
+          <FloatingOrb onActiveChange={setActiveNavItem} />
+          <AuthButton />
         </header>
         {!showExtended && (
           <section>
@@ -116,6 +182,7 @@ export default function Home() {
             </div>
           </section>
         )}
+        <SiteStatsSection />
       </main>
     </div>
   );

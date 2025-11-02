@@ -1,0 +1,307 @@
+/* FeaturedProjects Component Styles
+ * Extracted from profile-hub.css for tree-shaking
+ * Using BEM naming convention: featured-projects__element--modifier
+ */
+
+/* === MAIN CONTAINER === */
+.featured-projects-enhanced {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    padding: 16px;
+}
+
+/* === PROJECTS GRID === */
+.featured-projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+/* === PROJECT CARD === */
+.featured-project-card {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.featured-project-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 240, 255, 0.15);
+    border-color: var(--hub-primary);
+}
+
+/* === PROJECT IMAGE CONTAINER === */
+.project-image-container {
+    position: relative;
+    aspect-ratio: 16/10;
+    overflow: hidden;
+    width: 100%;
+}
+
+.project-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.featured-project-card:hover .project-image {
+    transform: scale(1.05);
+}
+
+.project-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(255, 0, 255, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--hub-text-secondary);
+}
+
+/* === PROJECT OVERLAY === */
+.project-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    padding: 12px;
+    color: white;
+}
+
+.project-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    line-height: 1.2;
+    color: white;
+}
+
+.project-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 0.7rem;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.project-stat {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    color: white;
+}
+
+/* === PROJECT ACTIONS === */
+.project-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.project-action-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex: 1;
+}
+
+.view-btn {
+    background: rgba(0, 240, 255, 0.2);
+    color: var(--hub-primary);
+}
+
+.edit-btn {
+    background: rgba(255, 211, 102, 0.2);
+    color: #ffd166;
+}
+
+.project-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.view-btn:hover {
+    background: rgba(0, 240, 255, 0.3);
+}
+
+.edit-btn:hover {
+    background: rgba(255, 211, 102, 0.3);
+}
+
+/* === PROJECTS TOOLBAR === */
+.projects-toolbar {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 16px 0;
+    border-top: 1px solid rgba(0, 240, 255, 0.1);
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.projects-btn {
+    padding: 12px 24px;
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(0, 240, 255, 0.1);
+    color: var(--hub-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-height: 48px;
+}
+
+.projects-btn:hover {
+    background: rgba(0, 240, 255, 0.2);
+    border-color: var(--hub-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+}
+
+.create-btn {
+    background: linear-gradient(135deg, var(--hub-primary), var(--hub-secondary));
+    color: var(--hub-bg-primary);
+    border-color: var(--hub-primary);
+}
+
+.create-btn:hover {
+    background: linear-gradient(135deg, var(--hub-secondary), var(--hub-primary));
+    box-shadow: 0 6px 16px rgba(0, 240, 255, 0.4);
+}
+
+.manage-btn {
+    /* Default styling already applied via .projects-btn */
+}
+
+/* === RESPONSIVE STYLES === */
+@media (max-width: 1024px) {
+    .featured-projects-grid {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+    }
+
+    .featured-projects-enhanced {
+        padding: 14px;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .featured-projects-enhanced {
+        padding: 12px;
+        gap: 16px;
+    }
+
+    .featured-projects-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+
+    .project-image-container {
+        aspect-ratio: 16/10;
+    }
+
+    .project-overlay {
+        padding: 10px;
+    }
+
+    .project-title {
+        font-size: 0.75rem;
+    }
+
+    .project-stats {
+        font-size: 0.65rem;
+        gap: 8px;
+    }
+
+    .project-action-btn {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+    }
+
+    .projects-toolbar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px 0;
+    }
+
+    .projects-btn {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .featured-projects-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .featured-projects-enhanced {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .project-image-container {
+        aspect-ratio: 16/10;
+    }
+
+    .project-overlay {
+        padding: 8px;
+    }
+
+    .project-title {
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+    }
+
+    .project-stats {
+        font-size: 0.6rem;
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+
+    .project-actions {
+        gap: 6px;
+        margin-top: 6px;
+    }
+
+    .project-action-btn {
+        padding: 5px 8px;
+        font-size: 0.65rem;
+        min-height: 32px;
+    }
+
+    .projects-toolbar {
+        padding: 10px 0;
+        gap: 8px;
+    }
+
+    .projects-btn {
+        padding: 10px 16px;
+        font-size: 0.8rem;
+        min-height: 44px;
+    }
+}
+

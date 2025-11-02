@@ -201,15 +201,54 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       lockPoints: NAV_ITEMS.map((_, i) => i * ROTATION_STEP),
     };
 
+    const scrollNavItemIntoView = (btn: HTMLButtonElement) => {
+      // Only on mobile, check if nav item is out of viewport
+      if (window.innerWidth > 768) return;
+      
+      const rect = btn.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      
+      // Check if nav item is outside viewport
+      const isOutOfView = 
+        rect.bottom < 0 || 
+        rect.top > viewportHeight ||
+        rect.right < 0 || 
+        rect.left > viewportWidth;
+      
+      if (isOutOfView) {
+        // Scroll the orb container into view, centered if possible
+        const orbShell = container.closest('.floating-orb-shell');
+        if (orbShell) {
+          orbShell.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          });
+        }
+      }
+    };
+
     const updateCenterPreview = () => {
       const item = NAV_ITEMS[activeIndex];
       if (previewEl) previewEl.textContent = item.icon;
-      if (labelEl) labelEl.textContent = item.label;
+      if (labelEl) {
+        // Add fade animation when label changes
+        labelEl.style.opacity = '0';
+        requestAnimationFrame(() => {
+          labelEl.textContent = item.label;
+          labelEl.style.opacity = '1';
+        });
+      }
       orbButton.setAttribute('aria-label', item.label);
 
       navButtons.forEach((btn, idx) => {
         if (idx === activeIndex) {
           btn.classList.add('in-front');
+          // Scroll active nav item into view on mobile
+          requestAnimationFrame(() => {
+            scrollNavItemIntoView(btn);
+          });
         } else {
           btn.classList.remove('in-front');
         }
@@ -477,7 +516,28 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     };
 
     window.addEventListener('resize', handleResize);
-  return () => {
+
+    // Arrow navigation buttons
+    const orbShell = container.closest('.floating-orb-shell');
+    const leftArrow = orbShell?.querySelector<HTMLButtonElement>('.orb-nav-arrow-left');
+    const rightArrow = orbShell?.querySelector<HTMLButtonElement>('.orb-nav-arrow-right');
+
+    const handleLeftArrowClick = () => {
+      recordInteraction();
+      setActiveIndex(activeIndex - 1, true);
+    };
+
+    const handleRightArrowClick = () => {
+      recordInteraction();
+      setActiveIndex(activeIndex + 1, true);
+    };
+
+    leftArrow?.addEventListener('click', handleLeftArrowClick);
+    rightArrow?.addEventListener('click', handleRightArrowClick);
+
+    return () => {
+      leftArrow?.removeEventListener('click', handleLeftArrowClick);
+      rightArrow?.removeEventListener('click', handleRightArrowClick);
       cancelAnimationFrame(animationFrame);
       if (hideRingTimeout) window.clearTimeout(hideRingTimeout);
       if (tooltipTimeout) window.clearTimeout(tooltipTimeout);
@@ -497,6 +557,12 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         <div className="orb-center-preview" aria-hidden="true" />
         <div className="orb-center-label" aria-live="polite" />
       </div>
+      <button className="orb-nav-arrow orb-nav-arrow-left" aria-label="Previous navigation item">
+        ←
+      </button>
+      <button className="orb-nav-arrow orb-nav-arrow-right" aria-label="Next navigation item">
+        →
+      </button>
     </div>
   );
 };

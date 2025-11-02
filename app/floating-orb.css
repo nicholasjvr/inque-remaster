@@ -337,19 +337,50 @@
 
 .orb-center-label {
     position: absolute;
-    top: calc(100% + 12px);
+    top: calc(100% + 20px);
     left: 50%;
     transform: translateX(-50%);
-    font-size: 13px;
+    font-size: clamp(14px, 2vw, 18px);
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: #9ee8ff;
+    letter-spacing: 0.15em;
+    color: #66faff;
     pointer-events: none;
     user-select: none;
-    text-shadow: 0 0 6px rgba(0, 240, 255, 0.35);
+    text-shadow:
+        0 0 8px rgba(102, 250, 255, 0.6),
+        0 0 16px rgba(0, 240, 255, 0.4);
     z-index: 15;
     opacity: 1;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    white-space: nowrap;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 16px;
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(102, 250, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.2);
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .orb-center-label {
+        font-size: clamp(12px, 1.8vw, 16px);
+        padding: 6px 12px;
+        top: calc(100% + 16px);
+    }
+}
+
+@media (max-width: 480px) {
+    .orb-center-label {
+        font-size: clamp(11px, 1.5vw, 14px);
+        padding: 5px 10px;
+        top: calc(100% + 14px);
+        letter-spacing: 0.1em;
+    }
 }
 
 .orb-usage-tooltip {
@@ -590,5 +621,87 @@
 @media (max-width: 768px) {
     .orb-tooltip {
         display: none;
+    }
+}
+
+/* Arrow Navigation Buttons */
+.orb-nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    background: rgba(10, 20, 28, 0.75);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    border-radius: 50%;
+    color: #b7f7ff;
+    font-size: 24px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.28);
+    user-select: none;
+    pointer-events: auto;
+}
+
+.orb-nav-arrow:hover {
+    background: rgba(0, 240, 255, 0.18);
+    border-color: rgba(0, 240, 255, 0.6);
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.orb-nav-arrow:active {
+    transform: translateY(-50%) scale(0.95);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.orb-nav-arrow:focus-visible {
+    outline: 2px solid var(--orb-primary);
+    outline-offset: 4px;
+}
+
+.orb-nav-arrow-left {
+    left: -24px;
+}
+
+.orb-nav-arrow-right {
+    right: -24px;
+}
+
+@media (max-width: 768px) {
+    .orb-nav-arrow {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+
+    .orb-nav-arrow-left {
+        left: -22px;
+    }
+
+    .orb-nav-arrow-right {
+        right: -22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .orb-nav-arrow {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .orb-nav-arrow-left {
+        left: -20px;
+    }
+
+    .orb-nav-arrow-right {
+        right: -20px;
     }
 }

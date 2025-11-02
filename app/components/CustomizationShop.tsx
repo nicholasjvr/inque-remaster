@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useFirestore';
 import type { UserProfile } from '@/hooks/useFirestore';
 import BackgroundGallery from './BackgroundGallery';
+import './CustomizationShop.css';
 
 type CustomizationSection = 'avatar' | 'background';
 
