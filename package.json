@@ -12,6 +12,7 @@
     "@react-three/fiber": "^9.3.0",
     "@react-three/postprocessing": "^3.0.4",
     "@types/jszip": "^3.4.0",
+    "@vercel/speed-insights": "^1.2.0",
     "firebase": "^12.4.0",
     "jszip": "^3.10.1",
     "leva": "^0.10.0",

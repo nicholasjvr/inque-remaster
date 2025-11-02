@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore';
 import { useUserProfile } from '@/hooks/useFirestore';
@@ -92,11 +92,11 @@ type CollapsibleSectionProps = {
   quickbar?: React.ReactNode; // optional sidebar rendered when open
 };
 
-const CollapsibleSection = ({ 
-  id, 
-  title, 
-  defaultOpen, 
-  children, 
+const CollapsibleSection = ({
+  id,
+  title,
+  defaultOpen,
+  children,
   sectionId,
   open,
   onToggle,
@@ -129,9 +129,9 @@ const CollapsibleSection = ({
   return (
     <div className="hub-collapsible" data-open={isOpen} data-section={sectionId}>
       <div className="hub-collapsible__header">
-        <div 
-          className="hub-collapsible__summary" 
-          aria-controls={id} 
+        <div
+          className="hub-collapsible__summary"
+          aria-controls={id}
           aria-expanded={isOpen}
           onClick={handleClick}
           onKeyDown={handleKeyDown}
@@ -211,7 +211,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const isDM = state === 'dm';
   const isModalOpen = isExpanded || isChatbot || isDM;
   const isPublicView = mode === 'public';
-  
+
   // Accordion: one open section at a time
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const isSectionActive = (id: string) => activeSection === id;
@@ -227,35 +227,35 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   useEffect(() => {
     setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
   }, [profile]);
-  
-  
+
+
   // Enhanced scroll focus when expanding - only on initial expansion
   useEffect(() => {
     if (!isModalOpen) return;
     if (typeof window === 'undefined') return;
-    
+
     const isMobile = window.innerWidth <= 768;
-    
+
     // Only scroll on initial expansion, not on every state change
     if (isMobile && isExpanded) {
       requestAnimationFrame(() => {
         const hubContent = document.querySelector('.hub-expanded-content');
         const hubElement = document.querySelector('.profile-hub-shell--expanded');
-        
+
         // Only scroll if element is not already in viewport
         if (hubElement) {
           const rect = hubElement.getBoundingClientRect();
           const viewportHeight = window.innerHeight;
-          const isVisible = rect.top >= 0 && rect.top < viewportHeight && 
-                           rect.bottom > 0 && rect.bottom <= viewportHeight;
-          
+          const isVisible = rect.top >= 0 && rect.top < viewportHeight &&
+            rect.bottom > 0 && rect.bottom <= viewportHeight;
+
           if (!isVisible && hubContent) {
-            (hubElement as HTMLElement).scrollIntoView({ 
-              behavior: 'smooth', 
+            (hubElement as HTMLElement).scrollIntoView({
+              behavior: 'smooth',
               block: 'nearest', // Use 'nearest' to avoid aggressive scrolling
               inline: 'nearest'
             });
-            
+
             // Focus the content area for keyboard navigation (without scrolling)
             setTimeout(() => {
               (hubContent as HTMLElement).focus({ preventScroll: true });
@@ -265,110 +265,100 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       });
     }
   }, [isModalOpen, isExpanded]);
-  
+
   // Enhanced scroll lock for modal and fullscreen sections
   // Only locks body scroll for non-billboard variants (modal overlays)
   // Billboard variant should allow normal page scrolling since it's embedded in page flow
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const isMobile = window.innerWidth <= 768;
     // Don't lock body scroll for billboard variant - it's part of page flow
-    const shouldLock = (isModalOpen && isMobile && variant !== 'billboard');
+    const shouldLock = isModalOpen && isMobile && variant !== 'billboard';
+
+    if (!shouldLock) return;
+
+    // Cache DOM elements for better performance
     const bodyElement = document.body;
     const htmlElement = document.documentElement;
-    
-    if (shouldLock) {
-      const scrollPosition = window.scrollY;
-      bodyElement.style.position = 'fixed';
-      bodyElement.style.width = '100%';
-      bodyElement.style.overflow = 'hidden';
-      bodyElement.style.top = `-${scrollPosition}px`;
-      htmlElement.style.overflow = 'hidden';
-      // Don't set touchAction to 'none' - let CSS handle it per element
-      // This allows scrolling within the hub content area
-      bodyElement.dataset.scrollPosition = scrollPosition.toString();
-      
-      // Ensure hub content can scroll independently
-      const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
-      if (hubContent) {
-        hubContent.style.touchAction = 'pan-y';
-        hubContent.style.overflowY = 'auto';
-      }
-    } else {
-      const scrollPosition = parseInt(bodyElement.dataset.scrollPosition || '0', 10);
-      bodyElement.style.position = '';
-      bodyElement.style.width = '';
-      bodyElement.style.overflow = '';
-      bodyElement.style.top = '';
-      htmlElement.style.overflow = '';
-      delete bodyElement.dataset.scrollPosition;
-      
-      // Reset hub content styles
-      const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
-      if (hubContent) {
-        hubContent.style.touchAction = '';
-        hubContent.style.overflowY = '';
-      }
-      
-      if (scrollPosition > 0) {
-        window.requestAnimationFrame(() => {
-          window.scrollTo({ top: scrollPosition, behavior: 'instant' });
-        });
-      }
+    const scrollPosition = window.scrollY;
+
+    // Lock body scroll
+    bodyElement.style.position = 'fixed';
+    bodyElement.style.width = '100%';
+    bodyElement.style.overflow = 'hidden';
+    bodyElement.style.top = `-${scrollPosition}px`;
+    htmlElement.style.overflow = 'hidden';
+    bodyElement.dataset.scrollPosition = scrollPosition.toString();
+
+    // Ensure hub content can scroll independently
+    const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
+    if (hubContent) {
+      hubContent.style.touchAction = 'pan-y';
+      hubContent.style.overflowY = 'auto';
     }
-    
+
+    // Cleanup function
     return () => {
+      const savedScrollPosition = parseInt(bodyElement.dataset.scrollPosition || '0', 10);
+
+      // Reset body styles
       bodyElement.style.position = '';
       bodyElement.style.width = '';
       bodyElement.style.overflow = '';
       bodyElement.style.top = '';
       htmlElement.style.overflow = '';
       delete bodyElement.dataset.scrollPosition;
-      
-      // Cleanup hub content styles
-      const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
+
+      // Reset hub content styles
       if (hubContent) {
         hubContent.style.touchAction = '';
         hubContent.style.overflowY = '';
+      }
+
+      // Restore scroll position
+      if (savedScrollPosition > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: savedScrollPosition, behavior: 'instant' });
+        });
       }
     };
   }, [isModalOpen, variant]);
-  
 
-  const handleLogout = async () => {
+
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
       setState('minimized');
     } catch (error) {
       console.error('Logout error:', error);
     }
-  };
+  }, [logout]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsClosing(true);
     setTimeout(() => {
       setState('minimized');
       setIsClosing(false);
     }, 600); // Match animation duration
-  };
+  }, []);
 
-  // Rep Rack functionality
-  const handleUploadProject = () => {
+  // Rep Rack functionality - Memoized for better performance
+  const handleUploadProject = useCallback(() => {
     // TODO: Implement project upload modal
     console.log('Upload new project');
-  };
+  }, []);
 
-  const handleSelectFromExisting = () => {
+  const handleSelectFromExisting = useCallback(() => {
     setShowRepRackManager(true);
-  };
+  }, []);
 
-  const handleRepRackAction = (action: string, slotIndex: number) => {
+  const handleRepRackAction = useCallback((action: string, slotIndex: number) => {
     console.log(`Rep Rack action: ${action} on slot ${slotIndex}`);
     // TODO: Implement like, share, view, remove actions
-  };
+  }, []);
 
-  const handleRepRackSelect = (project: { id: string; title: string; imageUrl: string }) => {
+  const handleRepRackSelect = useCallback((project: { id: string; title: string; imageUrl: string }) => {
     setLocalProfile((prev) => {
       const next: UserProfile = { ...(prev || {}), repRack: [...(prev?.repRack || [])] };
       next.repRack = next.repRack || [];
@@ -387,16 +377,16 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       return next;
     });
     setShowRepRackManager(false);
-  };
+  }, []);
 
-  const saveRepRack = async () => {
+  const saveRepRack = useCallback(async () => {
     if (!user?.uid || isPublicView) return;
     try {
       await saveProfile(user.uid, { repRack: localProfile?.repRack?.slice(0, 3) });
     } catch (e) {
       console.error('Save rep rack failed', e);
     }
-  };
+  }, [user?.uid, isPublicView, saveProfile, localProfile?.repRack]);
 
   useEffect(() => {
     persistPreferences({ theme, scale: 1 });
@@ -443,14 +433,14 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
         }
         return;
       }
-      
+
       // Tab navigation between sections when hub is expanded
       if (isExpanded) {
         const sections = document.querySelectorAll('.hub-collapsible[data-open="true"]');
-        const currentIndex = Array.from(sections).findIndex(section => 
+        const currentIndex = Array.from(sections).findIndex(section =>
           section.contains(document.activeElement)
         );
-        
+
         if (event.key === 'ArrowDown' && currentIndex < sections.length - 1) {
           event.preventDefault();
           const nextSection = sections[currentIndex + 1];
@@ -462,12 +452,12 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
         }
       }
     };
-    
+
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [isExpanded]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     const trimmed = messageDraft.trim();
     if (!trimmed) return;
     setMessages((prev): ChatMessage[] => [
@@ -480,7 +470,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       },
     ]);
     setMessageDraft('');
-  };
+  }, [messageDraft]);
 
   const themeClass = useMemo(() => THEME_MAP[theme], [theme]);
   const socialLinks = useMemo(
@@ -492,20 +482,26 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     []
   );
 
-  // Social interaction handlers
-  const handleFollow = async () => {
+  // Social interaction handlers - Memoized for better performance
+  const handleFollow = useCallback(async () => {
     if (!user?.uid || isPublicView) return;
     // TODO: Implement follow functionality
     console.log(`Following user ${profileUser?.id}`);
-  };
+  }, [user?.uid, isPublicView, profileUser?.id]);
 
-  const handleMessage = async () => {
+  const handleMessage = useCallback(async () => {
     if (!user?.uid || isPublicView) return;
     // TODO: Implement messaging functionality
     console.log(`Messaging user ${profileUser?.id}`);
-  };
+  }, [user?.uid, isPublicView, profileUser?.id]);
 
-  const handleShare = async () => {
+  const fallbackShare = useCallback((url: string, text: string) => {
+    navigator.clipboard.writeText(`${text} ${url}`);
+    // TODO: Show toast notification
+    console.log('Profile link copied to clipboard!');
+  }, []);
+
+  const handleShare = useCallback(async () => {
     if (!profileUser?.id) return;
 
     const shareUrl = `${window.location.origin}/u/${profileUser.id}`;
@@ -525,13 +521,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     } else {
       fallbackShare(shareUrl, shareText);
     }
-  };
-
-  const fallbackShare = (url: string, text: string) => {
-    navigator.clipboard.writeText(`${text} ${url}`);
-    // TODO: Show toast notification
-    console.log('Profile link copied to clipboard!');
-  };
+  }, [profileUser?.id, profileUser?.displayName, fallbackShare]);
 
   const handleShareToTwitter = () => {
     if (!profileUser?.id) return;
@@ -731,36 +721,36 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
               </div>
             )}
 
-<div className="hub-controls">
-  {!isPublicView && (
-    <button
-      type="button"
-      className="hub-button"
-      title="Toggle chat"
-      onClick={() => setState(prev => (prev === 'chatbot' ? 'minimized' : 'chatbot'))}
-    >
-      🤖
-    </button>
-  )}
-  {!isPublicView && (
-    <button
-      type="button"
-      className="hub-button"
-      title="Direct Messages"
-      onClick={() => setState(prev => (prev === 'dm' ? 'minimized' : 'dm'))}
-    >
-      💬
-    </button>
-  )}
-  <button
-    type="button"
-    className="hub-toggle"
-    title={isExpanded ? 'Collapse hub' : 'Expand hub'}
-    onClick={() => setState(prev => (prev === 'expanded' ? 'minimized' : 'expanded'))}
-  >
-    <span>⫷</span>
-  </button>
-</div>
+            <div className="hub-controls">
+              {!isPublicView && (
+                <button
+                  type="button"
+                  className="hub-button"
+                  title="Toggle chat"
+                  onClick={() => setState(prev => (prev === 'chatbot' ? 'minimized' : 'chatbot'))}
+                >
+                  🤖
+                </button>
+              )}
+              {!isPublicView && (
+                <button
+                  type="button"
+                  className="hub-button"
+                  title="Direct Messages"
+                  onClick={() => setState(prev => (prev === 'dm' ? 'minimized' : 'dm'))}
+                >
+                  💬
+                </button>
+              )}
+              <button
+                type="button"
+                className="hub-toggle"
+                title={isExpanded ? 'Collapse hub' : 'Expand hub'}
+                onClick={() => setState(prev => (prev === 'expanded' ? 'minimized' : 'expanded'))}
+              >
+                <span>⫷</span>
+              </button>
+            </div>
           </div>
           {isExpanded && (
             <div className="hub-expanded-layout">
@@ -773,38 +763,38 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 }}
               >
                 {!isPublicView && (
-                  <CollapsibleSection 
-                    id="customization-shop" 
-                    title="🛍️ Customization Shop" 
+                  <CollapsibleSection
+                    id="customization-shop"
+                    title="🛍️ Customization Shop"
                     defaultOpen={false}
                     sectionId="customization"
                     open={isSectionActive('customization')}
                     onToggle={() => handleSectionToggle('customization')}
-                  >             
-                      <CustomizationShop
-                        profile={localProfile}
-                        onSave={async (updates) => {
-                          if (!user?.uid) return;
-                          try {
-                            await saveProfile(user.uid, updates);
-                            setLocalProfile(prev => ({ ...prev, ...updates }));
-                            console.log('Customization saved successfully!');
-                          } catch (error) {
-                            console.error('Error saving customization:', error);
-                          }
-                        }}
-                        onReset={() => {
-                          setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
-                          setTheme(profile?.theme?.mode || 'neo');
-                        }}
-                      />
+                  >
+                    <CustomizationShop
+                      profile={localProfile}
+                      onSave={async (updates) => {
+                        if (!user?.uid) return;
+                        try {
+                          await saveProfile(user.uid, updates);
+                          setLocalProfile(prev => ({ ...prev, ...updates }));
+                          console.log('Customization saved successfully!');
+                        } catch (error) {
+                          console.error('Error saving customization:', error);
+                        }
+                      }}
+                      onReset={() => {
+                        setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+                        setTheme(profile?.theme?.mode || 'neo');
+                      }}
+                    />
                   </CollapsibleSection>
                 )}
 
                 {/* Featured Projects Section - Enhanced for public view */}
-                <CollapsibleSection 
-                  id="featured" 
-                  title="🏆 Featured Projects" 
+                <CollapsibleSection
+                  id="featured"
+                  title="🏆 Featured Projects"
                   defaultOpen={false}
                   sectionId="featured"
                   open={isSectionActive('featured')}
@@ -816,53 +806,53 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     </div>
                   )}
                 >
-                    <div className="featured-projects-enhanced">
-                      <div className="featured-projects-grid">
-                        {Array.from({ length: 12 }, (_, index) => {
-                          const item = localProfile?.repRack?.[index % 3];
-                          return (
-                            <div key={index} className="featured-project-card">
-                              <div className="project-image-container">
-                                {item?.imageUrl ? (
-                                  <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
-                                ) : (
-                                  <div className="project-image-placeholder">
-                                    {item?.title?.charAt(0) || '🎨'}
-                                  </div>
-                                )}
-                                <div className="project-overlay">
-                                  <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
-                                  <div className="project-stats">
-                                    <span className="project-stat">❤️ {Math.floor(Math.random() * 50)}</span>
-                                    <span className="project-stat">👁️ {Math.floor(Math.random() * 200)}</span>
-                                    <span className="project-stat">⭐ {Math.floor(Math.random() * 20)}</span>
-                                  </div>
-                                  <div className="project-actions">
-                                    <button className="project-action-btn view-btn">View</button>
-                                    <button className="project-action-btn edit-btn">Edit</button>
-                                  </div>
+                  <div className="featured-projects-enhanced">
+                    <div className="featured-projects-grid">
+                      {Array.from({ length: 12 }, (_, index) => {
+                        const item = localProfile?.repRack?.[index % 3];
+                        return (
+                          <div key={index} className="featured-project-card">
+                            <div className="project-image-container">
+                              {item?.imageUrl ? (
+                                <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
+                              ) : (
+                                <div className="project-image-placeholder">
+                                  {item?.title?.charAt(0) || '🎨'}
+                                </div>
+                              )}
+                              <div className="project-overlay">
+                                <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
+                                <div className="project-stats">
+                                  <span className="project-stat">❤️ {Math.floor(Math.random() * 50)}</span>
+                                  <span className="project-stat">👁️ {Math.floor(Math.random() * 200)}</span>
+                                  <span className="project-stat">⭐ {Math.floor(Math.random() * 20)}</span>
+                                </div>
+                                <div className="project-actions">
+                                  <button className="project-action-btn view-btn">View</button>
+                                  <button className="project-action-btn edit-btn">Edit</button>
                                 </div>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                      
+                          </div>
+                        );
+                      })}
                     </div>
+
+                  </div>
                 </CollapsibleSection>
 
                 {/* Activity Timeline - Enhanced */}
-                <CollapsibleSection 
-                  id="activity" 
-                  title="📅 Recent Activity" 
+                <CollapsibleSection
+                  id="activity"
+                  title="📅 Recent Activity"
                   defaultOpen={false}
                   sectionId="activity"
                   open={isSectionActive('activity')}
                   onToggle={() => handleSectionToggle('activity')}
                   quickbar={(
                     <div className="activity-filters">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Search activity..."
                         className="activity-search"
                       />
@@ -875,155 +865,155 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     </div>
                   )}
                 >
-                    <div className="activity-enhanced">
-                      <div className="activity-timeline">
-                        {Array.from({ length: 5 }, (_, index) => {
-                          const activities = [
-                            { icon: '🎨', text: 'Created a new interactive widget', time: '2 hours ago' },
-                            { icon: '❤️', text: 'Received 5 likes on "Portfolio Showcase"', time: '5 hours ago' },
-                            { icon: '👥', text: 'New follower: @designguru', time: '1 day ago' },
-                            { icon: '🏆', text: 'Earned "Popular Creator" badge', time: '3 days ago' },
-                            { icon: '💬', text: 'Commented on "Data Visualization Tool"', time: '1 week ago' },
-                            { icon: '🚀', text: 'Published "React Dashboard"', time: '2 weeks ago' },
-                            { icon: '🎆', text: 'Featured on community showcase', time: '3 weeks ago' },
-                            { icon: '📊', text: 'Project reached 1000 views', time: '1 month ago' }
-                          ];
-                          const activity = activities[index % activities.length];
-                          return (
-                            <div key={index} className="activity-item">
-                              <div className="activity-icon">{activity.icon}</div>
-                              <div className="activity-content">
-                                <div className="activity-text">{activity.text}</div>
-                                <div className="activity-time">{activity.time}</div>
-                              </div>
+                  <div className="activity-enhanced">
+                    <div className="activity-timeline">
+                      {Array.from({ length: 5 }, (_, index) => {
+                        const activities = [
+                          { icon: '🎨', text: 'Created a new interactive widget', time: '2 hours ago' },
+                          { icon: '❤️', text: 'Received 5 likes on "Portfolio Showcase"', time: '5 hours ago' },
+                          { icon: '👥', text: 'New follower: @designguru', time: '1 day ago' },
+                          { icon: '🏆', text: 'Earned "Popular Creator" badge', time: '3 days ago' },
+                          { icon: '💬', text: 'Commented on "Data Visualization Tool"', time: '1 week ago' },
+                          { icon: '🚀', text: 'Published "React Dashboard"', time: '2 weeks ago' },
+                          { icon: '🎆', text: 'Featured on community showcase', time: '3 weeks ago' },
+                          { icon: '📊', text: 'Project reached 1000 views', time: '1 month ago' }
+                        ];
+                        const activity = activities[index % activities.length];
+                        return (
+                          <div key={index} className="activity-item">
+                            <div className="activity-icon">{activity.icon}</div>
+                            <div className="activity-content">
+                              <div className="activity-text">{activity.text}</div>
+                              <div className="activity-time">{activity.time}</div>
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
+                  </div>
                 </CollapsibleSection>
 
                 {/* Social Connections - Only in public view */}
                 {isPublicView && (
-                  <CollapsibleSection 
-                    id="social" 
-                    title="🌐 Social Connections" 
+                  <CollapsibleSection
+                    id="social"
+                    title="🌐 Social Connections"
                     defaultOpen={false}
                     sectionId="social"
                     open={isSectionActive('social')}
                     onToggle={() => handleSectionToggle('social')}
                   >
-                      <div className="social-connections-enhanced">
-                        <div className="social-stats-enhanced">
-                          <div className="social-stat">
-                            <span className="social-number">{profileUser?.stats?.followersCount || 0}</span>
-                            <span className="social-label">Followers</span>
-                          </div>
-                          <div className="social-stat">
-                            <span className="social-number">{profileUser?.stats?.followingCount || 0}</span>
-                            <span className="social-label">Following</span>
-                          </div>
-                          <div className="social-stat">
-                            <span className="social-number">{profileUser?.stats?.totalViews || 0}</span>
-                            <span className="social-label">Profile Views</span>
-                          </div>
-                          <div className="social-stat">
-                            <span className="social-number">{Math.floor((profileUser?.stats?.totalViews || 0) / 10)}</span>
-                            <span className="social-label">Engagement</span>
-                          </div>
+                    <div className="social-connections-enhanced">
+                      <div className="social-stats-enhanced">
+                        <div className="social-stat">
+                          <span className="social-number">{profileUser?.stats?.followersCount || 0}</span>
+                          <span className="social-label">Followers</span>
                         </div>
-                        <div className="social-actions">
-                          <button className="social-btn follow-btn" onClick={handleFollow}>
-                            {profileUser?.stats?.followersCount && profileUser.stats.followersCount > 0 ? 'Following' : 'Follow'}
-                          </button>
-                          <button className="social-btn message-btn" onClick={handleMessage}>
-                            Message
-                          </button>
-                          <div className="share-dropdown">
-                            <button
-                              className="social-btn share-btn"
-                              onClick={() => setShowShareMenu(!showShareMenu)}
-                            >
-                              Share Profile
-                            </button>
-                            {showShareMenu && (
-                              <div className="share-menu">
-                                <button className="share-option" onClick={handleShare}>
-                                  <span>📱</span>
-                                  Share
-                                </button>
-                                <button className="share-option" onClick={handleShareToTwitter}>
-                                  <span>🐦</span>
-                                  Twitter
-                                </button>
-                                <button className="share-option" onClick={handleShareToLinkedIn}>
-                                  <span>💼</span>
-                                  LinkedIn
-                                </button>
-                                <button className="share-option" onClick={() => fallbackShare(`${window.location.origin}/u/${profileUser?.id}`, `Check out ${profileUser?.displayName || 'this creator'}'s profile on inQ!`)}>
-                                  <span>📋</span>
-                                  Copy Link
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                        <div className="social-stat">
+                          <span className="social-number">{profileUser?.stats?.followingCount || 0}</span>
+                          <span className="social-label">Following</span>
+                        </div>
+                        <div className="social-stat">
+                          <span className="social-number">{profileUser?.stats?.totalViews || 0}</span>
+                          <span className="social-label">Profile Views</span>
+                        </div>
+                        <div className="social-stat">
+                          <span className="social-number">{Math.floor((profileUser?.stats?.totalViews || 0) / 10)}</span>
+                          <span className="social-label">Engagement</span>
                         </div>
                       </div>
+                      <div className="social-actions">
+                        <button className="social-btn follow-btn" onClick={handleFollow}>
+                          {profileUser?.stats?.followersCount && profileUser.stats.followersCount > 0 ? 'Following' : 'Follow'}
+                        </button>
+                        <button className="social-btn message-btn" onClick={handleMessage}>
+                          Message
+                        </button>
+                        <div className="share-dropdown">
+                          <button
+                            className="social-btn share-btn"
+                            onClick={() => setShowShareMenu(!showShareMenu)}
+                          >
+                            Share Profile
+                          </button>
+                          {showShareMenu && (
+                            <div className="share-menu">
+                              <button className="share-option" onClick={handleShare}>
+                                <span>📱</span>
+                                Share
+                              </button>
+                              <button className="share-option" onClick={handleShareToTwitter}>
+                                <span>🐦</span>
+                                Twitter
+                              </button>
+                              <button className="share-option" onClick={handleShareToLinkedIn}>
+                                <span>💼</span>
+                                LinkedIn
+                              </button>
+                              <button className="share-option" onClick={() => fallbackShare(`${window.location.origin}/u/${profileUser?.id}`, `Check out ${profileUser?.displayName || 'this creator'}'s profile on inQ!`)}>
+                                <span>📋</span>
+                                Copy Link
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </CollapsibleSection>
                 )}
                 {/* Recent Followers Section - Only in public view */}
                 {isPublicView && (
-                  <CollapsibleSection 
-                    id="followers" 
-                    title="👥 Recent Followers" 
+                  <CollapsibleSection
+                    id="followers"
+                    title="👥 Recent Followers"
                     defaultOpen={false}
                     sectionId="followers"
                     open={isSectionActive('followers')}
                     onToggle={() => handleSectionToggle('followers')}
                     quickbar={(
                       <div className="followers-search">
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Search followers..."
                           className="search-input"
                         />
                       </div>
                     )}
                   >
-                      <div className="followers-enhanced">
-                        <div className="followers-grid">
-                          {Array.from({ length: 6 }, (_, index) => (
-                            <div key={index} className="follower-item">
-                              <div className="follower-avatar">
-                                <span role="img" aria-label="Follower avatar">
-                                  {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
-                                </span>
-                              </div>
-                              <div className="follower-info">
-                                <span className="follower-name">Creator {index + 1}</span>
-                                <span className="follower-handle">@creator{index + 1}</span>
-                              </div>
-                              <button className="follower-action">Follow</button>
+                    <div className="followers-enhanced">
+                      <div className="followers-grid">
+                        {Array.from({ length: 6 }, (_, index) => (
+                          <div key={index} className="follower-item">
+                            <div className="follower-avatar">
+                              <span role="img" aria-label="Follower avatar">
+                                {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      </div>                
+                            <div className="follower-info">
+                              <span className="follower-name">Creator {index + 1}</span>
+                              <span className="follower-handle">@creator{index + 1}</span>
+                            </div>
+                            <button className="follower-action">Follow</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </CollapsibleSection>
                 )}
 
                 {/* Following Section - Only in edit mode */}
                 {!isPublicView && (
-                  <CollapsibleSection 
-                    id="following" 
-                    title="👥 Following" 
+                  <CollapsibleSection
+                    id="following"
+                    title="👥 Following"
                     defaultOpen={false}
                     sectionId="following"
                     open={isSectionActive('following')}
                     onToggle={() => handleSectionToggle('following')}
                     quickbar={(
                       <div className="following-controls">
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Search following..."
                           className="search-input"
                         />
@@ -1035,86 +1025,86 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       </div>
                     )}
                   >
-                      <div className="following-enhanced">
-                        <div className="following-grid">
-                          {Array.from({ length: 6 }, (_, index) => (
-                            <div key={index} className="following-item">
-                              <div className="following-avatar">
-                                <span role="img" aria-label="Following avatar">
-                                  {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
-                                </span>
-                              </div>
-                              <div className="following-info">
-                                <span className="following-name">Creator {index + 1}</span>
-                                <span className="following-handle">@creator{index + 1}</span>
-                                <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
-                              </div>
-                              <div className="following-actions">
-                                <button className="following-action">Unfollow</button>
-                              </div>
+                    <div className="following-enhanced">
+                      <div className="following-grid">
+                        {Array.from({ length: 6 }, (_, index) => (
+                          <div key={index} className="following-item">
+                            <div className="following-avatar">
+                              <span role="img" aria-label="Following avatar">
+                                {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
+                              </span>
                             </div>
-                          ))}
-                        </div>
+                            <div className="following-info">
+                              <span className="following-name">Creator {index + 1}</span>
+                              <span className="following-handle">@creator{index + 1}</span>
+                              <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
+                            </div>
+                            <div className="following-actions">
+                              <button className="following-action">Unfollow</button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
+                    </div>
                   </CollapsibleSection>
                 )}
-                <CollapsibleSection 
-                  id="quicknav" 
-                  title="🧰 Quick Navigation" 
+                <CollapsibleSection
+                  id="quicknav"
+                  title="🧰 Quick Navigation"
                   defaultOpen={false}
                   sectionId="navigation"
                   open={isSectionActive('navigation')}
                   onToggle={() => handleSectionToggle('navigation')}
                 >
-                    <div className="navigation-enhanced">
-                      <div className="expanded-nav-buttons">
-                        <a
-                          href="/explore"
-                          className="expanded-nav-btn"
-                          title="Explore Projects"
-                        >
-                          <span className="nav-icon">🔍</span>
-                          <span className="nav-label">Explore</span>
-                          <span className="nav-desc">Discover amazing projects from the community</span>
-                        </a>
-                        <a
-                          href="/explore-reels"
-                          className="expanded-nav-btn"
-                          title="Explore Reels"
-                        >
-                          <span className="nav-icon">🎞️</span>
-                          <span className="nav-label">Reels</span>
-                          <span className="nav-desc">Swipe through demo videos</span>
-                        </a>
-                        <a
-                          href="/users"
-                          className="expanded-nav-btn"
-                          title="Browse Creators"
-                        >
-                          <span className="nav-icon">👥</span>
-                          <span className="nav-label">Creators</span>
-                          <span className="nav-desc">Find and follow creators</span>
-                        </a>
-                        <a
-                          href="/showcase"
-                          className="expanded-nav-btn"
-                          title="View Showcase"
-                        >
-                          <span className="nav-icon">🏆</span>
-                          <span className="nav-label">Showcase</span>
-                          <span className="nav-desc">Top projects and features</span>
-                        </a>
-                        <a
-                          href="/studio"
-                          className="expanded-nav-btn"
-                          title="Widget Studio"
-                        >
-                          <span className="nav-icon">🎨</span>
-                          <span className="nav-label">Studio</span>
-                          <span className="nav-desc">Create new widgets</span>
-                        </a>
-                      </div>
+                  <div className="navigation-enhanced">
+                    <div className="expanded-nav-buttons">
+                      <a
+                        href="/explore"
+                        className="expanded-nav-btn"
+                        title="Explore Projects"
+                      >
+                        <span className="nav-icon">🔍</span>
+                        <span className="nav-label">Explore</span>
+                        <span className="nav-desc">Discover amazing projects from the community</span>
+                      </a>
+                      <a
+                        href="/explore-reels"
+                        className="expanded-nav-btn"
+                        title="Explore Reels"
+                      >
+                        <span className="nav-icon">🎞️</span>
+                        <span className="nav-label">Reels</span>
+                        <span className="nav-desc">Swipe through demo videos</span>
+                      </a>
+                      <a
+                        href="/users"
+                        className="expanded-nav-btn"
+                        title="Browse Creators"
+                      >
+                        <span className="nav-icon">👥</span>
+                        <span className="nav-label">Creators</span>
+                        <span className="nav-desc">Find and follow creators</span>
+                      </a>
+                      <a
+                        href="/showcase"
+                        className="expanded-nav-btn"
+                        title="View Showcase"
+                      >
+                        <span className="nav-icon">🏆</span>
+                        <span className="nav-label">Showcase</span>
+                        <span className="nav-desc">Top projects and features</span>
+                      </a>
+                      <a
+                        href="/studio"
+                        className="expanded-nav-btn"
+                        title="Widget Studio"
+                      >
+                        <span className="nav-icon">🎨</span>
+                        <span className="nav-label">Studio</span>
+                        <span className="nav-desc">Create new widgets</span>
+                      </a>
                     </div>
+                  </div>
                 </CollapsibleSection>
 
               </div>

@@ -7,7 +7,7 @@ import TutorialModal from './components/TutorialModal';
 import PersonalInfoModal from './components/PersonalInfoModal';
 import SiteStatsSection from './components/SiteStatsSection';
 import './styles/hero-hub.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 // Different slogans to cycle through
 const SLOGANS = [
@@ -46,50 +46,52 @@ export default function Home() {
     }
   }, []);
 
-  // Smooth scroll to extended hub section when it opens
+  // Smooth scroll to extended hub section when it opens - Memoized for better performance
+  const scrollToExtendedSection = useCallback(() => {
+    const section = document.getElementById('hub-extended-section');
+    if (!section) return;
+
+    // Use multiple requestAnimationFrame and a small delay to ensure DOM is ready
+    // This is especially important on mobile where body scroll lock might have been prevented
+    const scrollTimeout = setTimeout(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const isMobile = window.innerWidth <= 768;
+
+          // Get section position relative to viewport
+          const rect = section.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          const viewportTop = 0;
+
+          // Check if section is fully visible in viewport
+          // On mobile, check if at least top is visible
+          const isFullyVisible = isMobile
+            ? (rect.top >= viewportTop && rect.top < viewportHeight)
+            : (rect.top >= viewportTop && rect.bottom <= viewportHeight);
+
+          // If not fully visible, scroll to it
+          if (!isFullyVisible) {
+            // On mobile, use 'start' to ensure section appears at top
+            // Add offset to account for fixed headers
+            section.scrollIntoView({
+              behavior: 'smooth',
+              block: isMobile ? 'start' : 'nearest',
+              inline: 'nearest'
+            });
+          }
+        });
+      });
+    }, 100); // Small delay to ensure state updates are complete
+
+    return () => clearTimeout(scrollTimeout);
+  }, []);
+
   useEffect(() => {
     const modalOpen = hubState === 'expanded' || hubState === 'chatbot' || hubState === 'dm';
     if (modalOpen) {
-      const section = document.getElementById('hub-extended-section');
-      if (section) {
-        // Use multiple requestAnimationFrame and a small delay to ensure DOM is ready
-        // This is especially important on mobile where body scroll lock might have been prevented
-        const scrollTimeout = setTimeout(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              const isMobile = window.innerWidth <= 768;
-
-              // Get section position relative to viewport
-              const rect = section.getBoundingClientRect();
-              const viewportHeight = window.innerHeight;
-              const viewportTop = 0;
-
-              // Check if section is fully visible in viewport
-              // On mobile, check if at least top is visible
-              const isFullyVisible = isMobile
-                ? (rect.top >= viewportTop && rect.top < viewportHeight)
-                : (rect.top >= viewportTop && rect.bottom <= viewportHeight);
-
-              // If not fully visible, scroll to it
-              if (!isFullyVisible) {
-                // On mobile, use 'start' to ensure section appears at top
-                // Add offset to account for fixed headers
-                const scrollOptions: ScrollIntoViewOptions = {
-                  behavior: 'smooth',
-                  block: isMobile ? 'start' : 'nearest',
-                  inline: 'nearest'
-                };
-
-                section.scrollIntoView(scrollOptions);
-              }
-            });
-          });
-        }, 100); // Small delay to ensure state updates are complete
-
-        return () => clearTimeout(scrollTimeout);
-      }
+      return scrollToExtendedSection();
     }
-  }, [hubState]);
+  }, [hubState, scrollToExtendedSection]);
 
   // Typing effect animation
   useEffect(() => {

@@ -6,6 +6,7 @@ import "./profile-hub.css";
 import "./user-onboarding.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import OnboardingWrapper from "@/components/OnboardingWrapper";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
