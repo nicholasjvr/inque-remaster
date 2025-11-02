@@ -208,6 +208,8 @@ export interface Widget {
   tags?: string[];
   userId: string;
   uploadId?: string;
+  storagePath?: string; // optional storage base path for this widget's files
+  entry?: string; // relative path to the HTML entry file
   createdAt: any;
   updatedAt: any;
 }

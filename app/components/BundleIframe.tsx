@@ -42,7 +42,16 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
           fileMap = await buildBundleFileMap(basePath);
         }
 
-        let entry = findHtmlEntry(fileMap);
+        // Prefer explicit entry on the document if provided
+        const explicitEntry = (bundle as any)?.entry as string | undefined;
+        let entry: string | null = null;
+        if (explicitEntry) {
+          const norm = explicitEntry.replace(/^\.\//, '').replace(/^\//, '');
+          entry = fileMap[norm] ? norm : null;
+        }
+        if (!entry) {
+          entry = findHtmlEntry(fileMap);
+        }
 
         // Fallback: read manifest.json for custom entry
         if (!entry && fileMap['manifest.json']) {
@@ -51,12 +60,14 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
             if (res.ok) {
               const manifest = await res.json();
               const candidate: string | undefined = manifest.entry || manifest.index || manifest.main;
-              if (candidate && fileMap[candidate]) entry = candidate;
+              const norm = candidate ? candidate.replace(/^\.\//, '').replace(/^\//, '') : '';
+              if (norm && fileMap[norm]) entry = norm;
             }
           } catch {/* ignore */}
         }
 
         if (!entry) {
+          console.warn('Bundle files available:', Object.keys(fileMap));
           showError(iframe, 'No entry point found. Include index.html or set entry in manifest.json');
           return;
         }

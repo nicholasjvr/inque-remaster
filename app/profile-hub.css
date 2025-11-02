@@ -35,6 +35,28 @@
     z-index: 1000;
 }
 
+/* Expanded overlay wrapper (centers modal and fills viewport) */
+.profile-hub-wrapper--expanded {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.3);
+    /* Focus and rendering optimizations */
+    outline: none;
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
 .profile-hub-wrapper.profile-hub-wrapper--static {
     overflow: hidden;
 }
@@ -1186,7 +1208,7 @@
         margin: clamp(18px, 2.6vw, 24px) 0 0 0;
     }
 
-    .profile-hub-shell--expanded .profile-hub-wrapper {
+    .profile-hub-wrapper--expanded {
         top: 0;
         left: 0;
         right: 0;

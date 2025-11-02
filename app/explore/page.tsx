@@ -25,7 +25,7 @@ export default function ExplorePage() {
       case 'random':
         return arr.sort(() => Math.random() - 0.5);
       default:
-        return arr; // already recent
+        return arr;
     }
   }, [widgets, sortBy]);
 

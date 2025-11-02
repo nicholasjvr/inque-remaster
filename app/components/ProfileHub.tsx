@@ -6,6 +6,7 @@ import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore'
 import { useUserProfile } from '@/hooks/useFirestore';
 import RepRackManager from './RepRackManager';
 import CustomizationShop from './CustomizationShop';
+import FullscreenWrapper from './FullscreenWrapper';
 
 // Interest and goal option mappings for display
 const INTEREST_OPTIONS = [
@@ -586,8 +587,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 
   return (
     <div
-      className="profile-hub-wrapper"
+      className={`profile-hub-wrapper${isModalOpen && mode !== 'edit' ? ' profile-hub-wrapper--expanded' : ''}`}
       data-variant={variant}
+      data-expanded={isModalOpen && mode !== 'edit' ? 'true' : 'false'}
       aria-live="polite"
       style={variant === 'billboard' ? {
         position: 'relative',
@@ -984,7 +986,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       </div>
                   </CollapsibleSection>
                 )}
-
                 {/* Recent Followers Section - Only in public view */}
                 {isPublicView && (
                   <CollapsibleSection 

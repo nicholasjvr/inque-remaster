@@ -14,7 +14,7 @@ interface UploadWorkspaceProps {
 export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWorkspaceProps) {
   const { user } = useAuth();
   const { addWidget } = useWidgets(user?.uid);
-  const { uploadMultipleFiles, uploading } = useStorage();
+  const { uploadMultipleFiles, uploadFile, uploading } = useStorage();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingToSlot, setUploadingToSlot] = useState<number | null>(null);
@@ -134,6 +134,24 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
               const basePath = `uploads/upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
               const uploadedFiles = await uploadMultipleFiles(selectedFiles, basePath);
 
+      // Determine entry file from selected files
+      const names = selectedFiles.map(f => f.name);
+      const htmls = names.filter(n => /\.html?$/i.test(n));
+      const byIndex = htmls.find(n => /(^|\/)index\.html?$/i.test(n));
+      let entry = byIndex || htmls[0] || '';
+      if (!entry || (htmls.length > 1 && !byIndex)) {
+        const choice = window.prompt('Select the entry HTML file (relative path)', entry || (htmls[0] || ''));
+        if (choice) entry = choice.trim();
+      }
+
+      // Upload a small manifest.json so client fallback can find the entry too
+      try {
+        const manifest = new File([JSON.stringify({ entry })], 'manifest.json', { type: 'application/json' });
+        await uploadFile(manifest, `${basePath}/manifest.json`);
+      } catch (e) {
+        console.warn('manifest.json upload failed or skipped', e);
+      }
+
       // Create widget document in Firestore
       await addWidget({
         title,
@@ -143,6 +161,8 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
         tags,
         userId: user.uid,
         uploadId: basePath.split('/')[1], // Extract upload ID from path
+        storagePath: basePath,
+        entry,
       });
 
       // Clear form

@@ -51,29 +51,25 @@ export default function Home() {
   // Typing effect animation
   useEffect(() => {
     const currentSlogan = SLOGANS[currentSloganIndex];
-    const typingSpeed = 80; // milliseconds per character
-    const deletingSpeed = 80; // milliseconds per character when deleting
-    const pauseTime = 3000; // pause at the end of a slogan
+    const typingSpeed = 80; 
+    const deletingSpeed = 80; 
+    const pauseTime = 3000; 
 
     const timer = setTimeout(() => {
       if (isTyping) {
-        // Typing phase
         if (currentCharIndex < currentSlogan.length) {
           setDisplayedText(currentSlogan.slice(0, currentCharIndex + 1));
           setCurrentCharIndex(currentCharIndex + 1);
-        } else {
-          // Finished typing, start pause before deleting
+        } else {     
           setTimeout(() => {
             setIsTyping(false);
           }, pauseTime);
         }
       } else {
-        // Deleting phase
         if (currentCharIndex > 0) {
           setDisplayedText(currentSlogan.slice(0, currentCharIndex - 1));
           setCurrentCharIndex(currentCharIndex - 1);
         } else {
-          // Finished deleting, move to next slogan
           setCurrentSloganIndex((prev) => (prev + 1) % SLOGANS.length);
           setIsTyping(true);
         }
