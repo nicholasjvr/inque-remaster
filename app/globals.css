@@ -513,15 +513,15 @@ main.mx-auto {
 .personal-info-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 13, 0.85);
-  backdrop-filter: blur(8px);
+  background: rgba(4, 6, 13, 0.82);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   opacity: 1;
-  transition: opacity 0.2s ease;
-  padding: 20px;
+  transition: opacity 0.25s ease;
+  padding: clamp(16px, 4vw, 32px);
 }
 
 .personal-info-modal-overlay.closing {
@@ -529,18 +529,29 @@ main.mx-auto {
 }
 
 .personal-info-modal {
-  background: linear-gradient(135deg, rgba(7, 16, 24, 0.95) 0%, rgba(4, 12, 22, 0.95) 100%);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  border-radius: 20px;
-  max-width: 600px;
+  background: linear-gradient(160deg, rgba(6, 18, 30, 0.96) 0%, rgba(2, 10, 20, 0.92) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  border-radius: 24px;
+  max-width: min(1000px, calc(100vw - 32px));
   width: 100%;
-  max-height: 85vh;
+  max-height: min(92vh, 820px);
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 240, 255, 0.15);
+  box-shadow: 0 24px 80px rgba(1, 12, 24, 0.65), 0 0 60px rgba(0, 240, 255, 0.18);
   display: flex;
   flex-direction: column;
   transform: scale(1);
-  transition: transform 0.2s ease;
+  transition: transform 0.25s ease;
+  position: relative;
+}
+
+.personal-info-modal::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 23px;
+  pointer-events: none;
+  background: radial-gradient(circle at top right, rgba(0, 240, 255, 0.18), transparent 55%);
+  opacity: 0.85;
 }
 
 .personal-info-modal-overlay.closing .personal-info-modal {
@@ -548,29 +559,58 @@ main.mx-auto {
 }
 
 .personal-info-modal-header {
-  padding: 24px;
-  border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+  position: relative;
+  z-index: 1;
+  padding: clamp(24px, 5vw, 36px);
+  padding-bottom: clamp(20px, 4vw, 28px);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.12);
   display: flex;
+  gap: clamp(20px, 4vw, 36px);
+  align-items: flex-start;
   justify-content: space-between;
+}
+
+.personal-info-header-text {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.personal-info-eyebrow {
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(111, 252, 255, 0.75);
 }
 
 .personal-info-title {
-  font-size: 22px;
+  font-size: clamp(24px, 3.5vw, 34px);
   font-weight: 600;
-  color: #66faff;
+  color: #6af8ff;
   margin: 0;
-  text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+  line-height: 1.2;
+  text-shadow: 0 0 18px rgba(0, 236, 255, 0.35);
+}
+
+.personal-info-subtitle {
+  margin: 0;
+  color: rgba(197, 245, 255, 0.85);
+  font-size: clamp(15px, 2vw, 17px);
+  line-height: 1.7;
 }
 
 .personal-info-close-btn {
-  background: transparent;
-  border: none;
-  color: #9ee8ff;
+  background: rgba(9, 24, 34, 0.6);
+  border: 1px solid rgba(98, 246, 255, 0.4);
+  color: #a8f6ff;
   font-size: 28px;
   cursor: pointer;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -580,126 +620,452 @@ main.mx-auto {
 }
 
 .personal-info-close-btn:hover {
-  background: rgba(0, 240, 255, 0.15);
-  color: #baffff;
-  transform: rotate(90deg);
+  background: rgba(0, 240, 255, 0.18);
+  color: #e8fdff;
+  transform: rotate(90deg) scale(1.05);
 }
 
-.personal-info-modal-content {
-  padding: 24px;
+.personal-info-layout {
+  position: relative;
+  z-index: 1;
   flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: clamp(24px, 4vw, 44px);
+  padding: clamp(24px, 5vw, 36px);
   overflow-y: auto;
+}
+
+.personal-info-overview {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: clamp(20px, 4vw, 32px);
 }
 
-.personal-info-section {
+.personal-info-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: clamp(16px, 3vw, 20px);
+}
+
+.personal-info-highlight-card {
+  background: linear-gradient(150deg, rgba(5, 18, 28, 0.92) 0%, rgba(1, 10, 20, 0.75) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 16px;
+  padding: clamp(16px, 3vw, 20px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
-.personal-info-icon {
-  font-size: 32px;
-  margin-bottom: 4px;
-  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.3));
-}
-
-.personal-info-section-title {
-  font-size: 18px;
+.personal-info-highlight-card h3 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
-  color: #4ff1ff;
-  margin: 0;
+  color: #79f5ff;
 }
 
-.personal-info-text {
+.personal-info-highlight-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(183, 245, 255, 0.85);
+}
+
+.personal-info-highlight-icon {
+  font-size: 22px;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
+}
+
+.personal-info-capabilities h4 {
+  margin: 0 0 12px;
   font-size: 15px;
-  line-height: 1.7;
-  color: #bdefff;
-  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(125, 249, 255, 0.9);
 }
 
-.personal-info-list {
+.personal-info-chip-group {
   list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.personal-info-chip-group li {
+  font-size: 13px;
+  color: rgba(205, 248, 255, 0.9);
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  border-radius: 999px;
+  padding: 8px 14px;
+  backdrop-filter: blur(6px);
+}
+
+.personal-info-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(16px, 4vw, 24px);
+}
+
+.personal-info-metrics > div {
+  flex: 1 1 140px;
+  background: rgba(4, 20, 30, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.personal-info-metric-number {
+  font-size: 24px;
+  font-weight: 600;
+  color: #6ffcff;
+}
+
+.personal-info-metric-label {
+  font-size: 12px;
+  color: rgba(185, 244, 255, 0.8);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.personal-info-cta-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.personal-info-primary-cta,
+.personal-info-secondary-cta {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 12px 22px;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease, background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.personal-info-primary-cta {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(120, 255, 249, 0.2));
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #e8fdff;
+  box-shadow: 0 10px 30px rgba(0, 240, 255, 0.25);
+}
+
+.personal-info-primary-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 40px rgba(0, 240, 255, 0.35);
+  border-color: rgba(0, 240, 255, 0.7);
+}
+
+.personal-info-primary-cta:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+.personal-info-secondary-cta {
+  background: rgba(5, 24, 34, 0.6);
+  border-color: rgba(0, 240, 255, 0.18);
+  color: rgba(197, 245, 255, 0.85);
+}
+
+.personal-info-secondary-cta:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 240, 255, 0.45);
+  color: #f2ffff;
+}
+
+.personal-info-disclaimer {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(180, 242, 255, 0.65);
+}
+
+.personal-info-form-container {
+  background: linear-gradient(160deg, rgba(3, 16, 26, 0.94) 0%, rgba(2, 12, 22, 0.86) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  border-radius: 20px;
+  padding: clamp(20px, 4.5vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 20px 40px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.personal-info-form-container.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.personal-info-form-header {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.personal-info-list li {
-  font-size: 15px;
-  color: #bdefff;
-  padding-left: 24px;
-  position: relative;
-  line-height: 1.6;
+.personal-info-form-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: rgba(183, 244, 255, 0.85);
 }
 
-.personal-info-list li::before {
-  content: '▸';
-  position: absolute;
-  left: 0;
-  color: #00f0ff;
-  font-size: 14px;
-}
-
-.personal-info-contact {
-  margin-top: 8px;
-  padding: 16px;
-  background: rgba(0, 240, 255, 0.08);
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  border-radius: 12px;
-}
-
-.personal-info-contact-text {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #9ee8ff;
+.personal-info-form-header h3 {
   margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #82f8ff;
+}
+
+.personal-info-form-header p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(194, 246, 255, 0.78);
+}
+
+.personal-info-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.personal-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.personal-info-field-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.personal-info-field label {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: rgba(142, 245, 255, 0.75);
+}
+
+.personal-info-field input,
+.personal-info-field select,
+.personal-info-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  background: rgba(4, 18, 26, 0.75);
+  color: #e6fbff;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.personal-info-field input:focus,
+.personal-info-field select:focus,
+.personal-info-field textarea:focus {
+  outline: none;
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.18);
+  background: rgba(3, 18, 28, 0.95);
+}
+
+.personal-info-field select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, rgba(0, 240, 255, 0.7) 50%), linear-gradient(135deg, rgba(0, 240, 255, 0.7) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 14px) calc(50% - 3px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+.personal-info-field-error {
+  font-size: 12px;
+  color: #ff9f9f;
+}
+
+.personal-info-form-error {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 140, 140, 0.4);
+  background: rgba(62, 20, 26, 0.7);
+  color: #ffd7d7;
+  font-size: 13px;
+}
+
+.personal-info-privacy {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(167, 234, 255, 0.6);
+  line-height: 1.6;
+}
+
+.personal-info-success {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  text-align: left;
+}
+
+.personal-info-success-icon {
+  font-size: 34px;
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.35));
+}
+
+.personal-info-success h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #81faff;
+}
+
+.personal-info-success p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(205, 247, 255, 0.85);
+}
+
+.personal-info-success-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .personal-info-modal-footer {
-  padding: 20px 24px;
-  border-top: 1px solid rgba(0, 240, 255, 0.15);
+  position: relative;
+  z-index: 1;
+  padding: clamp(18px, 3.5vw, 28px);
+  border-top: 1px solid rgba(0, 240, 255, 0.12);
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.personal-info-footer-text {
+  font-size: 13px;
+  color: rgba(188, 244, 255, 0.75);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.personal-info-footer-link {
+  background: none;
+  border: none;
+  color: #79f7ff;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-decoration-color: rgba(121, 247, 255, 0.5);
+  transition: color 0.2s ease;
+}
+
+.personal-info-footer-link:hover {
+  color: #c0feff;
 }
 
 .personal-info-btn {
   padding: 10px 24px;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  background: rgba(6, 24, 34, 0.6);
+  color: rgba(210, 247, 255, 0.85);
+  font-size: 13px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(79, 241, 255, 0.2));
-  border: 1px solid rgba(0, 240, 255, 0.5);
-  color: #baffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, border 0.2s ease;
 }
 
 .personal-info-btn:hover {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.3), rgba(79, 241, 255, 0.3));
-  border-color: #00f0ff;
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  border-color: rgba(0, 240, 255, 0.6);
+}
+
+@media (max-width: 1024px) {
+  .personal-info-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .personal-info-form-container {
+    order: -1;
+  }
 }
 
 @media (max-width: 768px) {
   .personal-info-modal {
-    max-width: 95%;
+    max-width: calc(100vw - 24px);
   }
 
-  .personal-info-modal-content {
-    padding: 20px;
-    gap: 24px;
+  .personal-info-modal-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .tutorial-modal-content {
+  .personal-info-close-btn {
+    align-self: flex-end;
+  }
+
+  .personal-info-layout {
     padding: 24px 20px;
+  }
+
+  .personal-info-form-container {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .personal-info-highlight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .personal-info-form-container.active {
+    transform: none;
+  }
+
+  .personal-info-form-badge {
+    letter-spacing: 0.2em;
+  }
+
+  .personal-info-field-group {
+    grid-template-columns: 1fr;
   }
 }
