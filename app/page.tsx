@@ -5,6 +5,7 @@ import ProfileHub from './components/ProfileHub';
 import AuthButton from './components/AuthButton';
 import TutorialModal from './components/TutorialModal';
 import PersonalInfoModal from './components/PersonalInfoModal';
+import ContactUsModal from './components/ContactUsModal';
 import SiteStatsSection from './components/SiteStatsSection';
 import './styles/hero-hub.css';
 import { useEffect, useState, useCallback } from 'react';
@@ -34,6 +35,7 @@ export default function Home() {
   // Modal states
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isPersonalInfoOpen, setIsPersonalInfoOpen] = useState(false);
+  const [isContactUsOpen, setIsContactUsOpen] = useState(false);
 
   // Legacy redirect: support /?user=ID -> /u/ID
   useEffect(() => {
@@ -148,7 +150,15 @@ export default function Home() {
 
       {/* Modals */}
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      <PersonalInfoModal isOpen={isPersonalInfoOpen} onClose={() => setIsPersonalInfoOpen(false)} />
+      <PersonalInfoModal 
+        isOpen={isPersonalInfoOpen} 
+        onClose={() => setIsPersonalInfoOpen(false)}
+        onContactClick={() => {
+          setIsPersonalInfoOpen(false);
+          setTimeout(() => setIsContactUsOpen(true), 250);
+        }}
+      />
+      <ContactUsModal isOpen={isContactUsOpen} onClose={() => setIsContactUsOpen(false)} />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col items-center gap-12 px-6 py-20 sm:px-10 md:py-16">
         <header className="flex flex-col items-center gap-8 text-center">
