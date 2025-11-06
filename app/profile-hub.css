@@ -33,63 +33,9 @@
     top: 24px;
     right: 24px;
     z-index: 1000;
-}
-
-/* Expanded overlay wrapper (centers modal and fills viewport) */
-.profile-hub-wrapper--expanded {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(8px);
-    background: rgba(0, 0, 0, 0.3);
-    /* Focus and rendering optimizations */
-    outline: none;
-    will-change: transform;
-    backface-visibility: hidden;
-    perspective: 1000px;
-}
-
-/* Billboard variant should NOT use fixed positioning - keep in page flow */
-.profile-hub-wrapper[data-variant="billboard"].profile-hub-wrapper--expanded {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: 100% !important;
-    height: auto !important;
-    display: block !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-    backdrop-filter: none !important;
-    background: transparent !important;
-    z-index: auto !important;
-}
-
-.profile-hub-wrapper.profile-hub-wrapper--static {
+    /* ADDED: Ensure wrapper doesn't cause horizontal overflow */
+    max-width: calc(100vw - 48px);
     overflow: hidden;
-}
-
-.profile-hub-wrapper.profile-hub-wrapper--static .profile-hub {
-    overflow: hidden;
-}
-
-.profile-hub-wrapper.profile-hub-wrapper--static .profile-hub * {
-    overscroll-behavior: contain;
-}
-
-/* Billboard mode - ensure compact display */
-.profile-hub--billboard {
-    max-width: 280px;
-    min-width: 240px;
 }
 
 /* Ensure billboard variant buttons work properly */
@@ -203,7 +149,6 @@
 
 .profile-hub-shell.profile-hub-shell--expanded {
     align-items: stretch;
-    overflow: hidden;
     max-height: none;
 }
 
@@ -218,29 +163,19 @@
 .profile-hub-shell.profile-hub-shell--expanded .hub-expanded-content,
 .profile-hub-shell.profile-hub-shell--expanded .hub-chatbot,
 .profile-hub-shell.profile-hub-shell--expanded .hub-customization-panel {
-    overflow: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: min(80vh, calc(100vh - 200px));
+    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
 }
 
 .profile-hub-shell--expanded {
     align-items: stretch;
 }
 
-/* Hub modules are now integrated into the expanded layout */
-
-.profile-hub {
-    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    border-radius: 18px;
-    border: 2px solid var(--hub-border-color);
-    background: var(--hub-bg-primary);
-    box-shadow: var(--hub-shadow);
-    width: min(var(--hub-width), calc(90vw - (2 * var(--hub-gap))));
-    min-width: clamp(320px, 28vw, 400px);
-    min-height: var(--hub-core-height);
-    position: relative;
-    z-index: 950;
-    transform-origin: top right;
-    transform: scale(var(--hub-scale));
-    transition: none;
+.profile-hub[data-state="expanded"] {
+    transform: none;
 }
 
 .profile-hub[data-state="minimized"] {
@@ -360,6 +295,10 @@
     background: linear-gradient(140deg, rgba(0, 240, 255, 0.08), rgba(0, 240, 255, 0));
     box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.04);
     min-height: 112px;
+    /* Ensure hub-core doesn't overflow its container */
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* keep header visible when the expanded modal scrolls */
@@ -376,8 +315,12 @@
     gap: 16px;
     align-items: center;
     flex: 1 1 auto;
-    min-width: 120px;
+    min-width: 0;
+    /* CHANGED from 120px to allow shrinking on mobile */
     padding: 8px 0;
+    /* Prevent section from growing beyond available space */
+    max-width: calc(100% - 120px);
+    overflow: hidden;
 }
 
 .hub-avatar {
@@ -393,6 +336,9 @@
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
+    /* ADDED: Ensure avatar doesn't shrink below minimum */
+    min-width: 56px;
+    min-height: 56px;
 }
 
 .hub-avatar::after {
@@ -505,7 +451,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    min-width: 80px;
+    min-width: 0;
+    /* CHANGED from 80px to allow proper text truncation */
     flex: 1;
     overflow: hidden;
 }
@@ -521,6 +468,11 @@
     hyphens: auto;
     white-space: normal;
     max-width: 100%;
+    /* ADDED: Handle long names better */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
 }
 
 .hub-user-status {
@@ -528,6 +480,11 @@
     font-size: 0.8rem;
     line-height: 1.1;
     opacity: 0.8;
+    /* ADDED: Prevent status from breaking layout */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
 }
 
 .hub-user-level {
@@ -544,6 +501,8 @@
     gap: 12px;
     align-items: center;
     flex-shrink: 0;
+    /* ADDED: Set minimum width for controls */
+    min-width: max-content;
 }
 
 .hub-button,
@@ -652,7 +611,7 @@
     overflow: hidden;
 }
 
-.expanded-nav-btn::before {
+.expanded-nav-btn {
     content: '';
     position: absolute;
     top: 0;
@@ -664,13 +623,6 @@
     transition: opacity 0.3s ease;
 }
 
-.expanded-nav-btn:hover {
-    background: var(--hub-bg-primary);
-    border-color: var(--hub-primary);
-    color: var(--hub-text-primary);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 240, 255, 0.2);
-}
 
 .expanded-nav-btn:hover::before {
     opacity: 1;
@@ -702,6 +654,72 @@
     display: grid;
     gap: 20px;
     animation: none;
+    /* Mobile-friendly scrolling */
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(100vh - 200px);
+    -webkit-overflow-scrolling: touch;
+}
+
+.hub-collapsible[data-fullscreen="true"] {
+    position: fixed;
+    inset: clamp(24px, 6vh, 90px) clamp(20px, 5vw, 60px);
+    margin: 0;
+    width: auto;
+    max-width: min(960px, 100vw - 40px);
+    max-height: calc(100vh - clamp(80px, 20vh, 220px));
+    z-index: 1400;
+    background: var(--hub-bg-secondary);
+    border: 1px solid rgba(0, 240, 255, 0.22);
+    border-radius: 18px;
+    box-shadow: 0 28px 80px rgba(2, 12, 24, 0.65);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.hub-collapsible[data-fullscreen="true"] .hub-collapsible__content {
+    padding: 28px;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) !important;
+    flex: 1;
+    max-height: calc(100vh - clamp(160px, 30vh, 320px));
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.hub-collapsible[data-fullscreen="true"] .hub-collapsible__main {
+    max-height: calc(100vh - clamp(180px, 36vh, 340px));
+    padding-right: 0;
+    overflow-y: auto;
+}
+
+
+@media (max-width: 768px) {
+    .hub-collapsible[data-fullscreen="true"] {
+        inset: 16px;
+        max-width: calc(100vw - 32px);
+        border-radius: 16px;
+    }
+
+    .hub-collapsible[data-fullscreen="true"] .hub-collapsible__content {
+        padding: 20px;
+        max-height: calc(100vh - 140px);
+    }
+}
+
+@media (max-width: 480px) {
+    .hub-collapsible[data-fullscreen="true"] {
+        inset: 0;
+        border-radius: 0;
+        max-width: 100vw;
+        max-height: 100vh;
+    }
+
+    .hub-collapsible[data-fullscreen="true"] .hub-collapsible__content {
+        padding: 18px 16px 32px;
+        max-height: 100vh;
+    }
 }
 
 .hub-expanded-layout .hub-modules {
@@ -719,8 +737,8 @@
 .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules {
     width: clamp(280px, 24vw, 340px);
     min-width: 260px;
-    max-height: calc(100vh - 240px);
-    overflow-y: auto;
+    /* Removed conflicting max-height - let parent handle it */
+    overflow: visible;
 }
 
 .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules::-webkit-scrollbar {
@@ -1090,15 +1108,48 @@
     gap: 12px;
 }
 
+.hub-collapsible__actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.hub-collapsible__fullscreen-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    background: rgba(0, 240, 255, 0.08);
+    color: var(--hub-text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.hub-collapsible__fullscreen-btn:hover {
+    background: rgba(0, 240, 255, 0.12);
+    border-color: rgba(0, 240, 255, 0.35);
+}
+
+.hub-collapsible__fullscreen-btn:focus-visible {
+    outline: 2px solid var(--hub-primary);
+    outline-offset: 2px;
+}
+
 .hub-collapsible__summary {
     display: flex;
     align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    padding: 12px 14px;
-    user-select: none;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
     color: var(--hub-text-primary);
-    transition: background-color 0.2s ease;
+    background: transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
     flex: 1;
 }
 
@@ -1149,13 +1200,17 @@
 }
 
 .hub-collapsible__summary:hover {
-    background-color: rgba(0, 240, 255, 0.05);
+    background: rgba(0, 0, 0, 0.22);
 }
 
-.hub-collapsible__summary:focus {
+.hub-collapsible[data-open="true"] .hub-collapsible__summary {
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.hub-collapsible__summary:focus-visible {
     outline: 2px solid var(--hub-primary);
-    outline-offset: -2px;
-    background-color: rgba(0, 240, 255, 0.1);
+    outline-offset: 2px;
+    background: rgba(0, 0, 0, 0.22);
 }
 
 .hub-collapsible[data-open="true"] .hub-collapsible__caret {
@@ -1180,43 +1235,21 @@
     padding: 12px 14px 16px;
     border-top: 1px solid rgba(0, 240, 255, 0.08);
     background-color: rgba(0, 0, 0, 0.1);
-    /* Grid layout is set inline in ProfileHub.tsx, but we ensure proper overflow */
-    max-height: calc(100vh - 280px);
     overflow: visible;
     overscroll-behavior: contain;
 }
 
 .hub-collapsible__main {
     min-width: 0;
-    /* prevent grid overflow from intrinsic width */
-    overflow-y: auto;
     overflow-x: hidden;
-    padding: 16px;
-    padding-bottom: 24px;
-    padding-right: 12px;
-    /* Ensure Save Changes button is always accessible */
+    overflow-y: visible;
+    padding: 16px 12px 24px;
     scroll-padding-bottom: 80px;
-    /* Smooth scrolling */
     scroll-behavior: smooth;
+    max-height: none;
 }
-
-@media (max-width: 1024px) {
-    .hub-collapsible__content {
-        max-height: calc(100vh - 240px);
-    }
-
-    .hub-collapsible__quickbar {
-        width: 100%;
-    }
-}
-
 
 @media (max-width: 768px) {
-    .profile-hub-wrapper {
-        top: 18px;
-        right: 18px;
-    }
-
     .profile-hub-wrapper[data-variant="billboard"] {
         max-width: none;
         margin: clamp(18px, 2.6vw, 24px) 0 0 0;
@@ -1724,17 +1757,27 @@
         right: 12px;
         bottom: auto;
         width: calc(100vw - 24px);
+        /* ENSURE: Full width minus padding */
+        max-width: calc(100vw - 24px);
+        /* ADDED: Cap maximum width */
         position: fixed;
         z-index: 1000;
+        box-sizing: border-box;
+        /* ADDED: Include padding in width calculation */
     }
 
     .profile-hub-wrapper[data-variant="billboard"] {
         position: relative;
         width: 100%;
+        max-width: 100%;
+        /* ADDED: Prevent overflow */
         left: auto;
         right: auto;
         top: auto;
         margin: clamp(16px, 4vw, 24px) auto 0;
+        padding: 0 12px;
+        /* ADDED: Add padding instead */
+        box-sizing: border-box;
     }
 
     .profile-hub-wrapper[data-variant="billboard"]::before {
@@ -1743,10 +1786,17 @@
 
     .profile-hub-shell[data-variant="billboard"] {
         justify-content: center;
+        /* ADDED: Ensure shell doesn't overflow */
+        overflow: hidden;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .profile-hub-shell[data-variant="billboard"] .hub-core {
-        padding: 16px;
+        padding: 12px 14px;
+        /* CHANGED: Reduced padding */
+        width: 100%;
+        box-sizing: border-box;
     }
 
     /* Mobile modal styles handled by main modal CSS */
@@ -1920,66 +1970,90 @@
 
     /* Mobile Header Core Styling */
     .hub-core {
-        padding: 16px 20px;
-        min-height: 80px;
-        border-radius: 14px;
+        padding: 14px 16px;
+        /* CHANGED: Reduced padding for mobile */
+        min-height: auto;
+        /* CHANGED: Allow height to fit content */
+        max-height: 90px;
+        /* ADDED: Prevent growing too tall */
+        border-radius: 12px;
         background: linear-gradient(140deg,
                 rgba(0, 240, 255, 0.1),
                 rgba(0, 240, 255, 0.02));
         box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.08);
+        gap: 12px;
+        /* ADDED: Reduce gap on mobile */
     }
 
     /* Mobile Header User Section */
     .hub-user-section {
-        gap: 14px;
-        padding: 4px 0;
-        min-width: 120px;
+        gap: 10px;
+        /* CHANGED: Reduced gap */
+        padding: 2px 0;
+        /* CHANGED: Reduced padding */
+        min-width: 0;
+        /* CHANGED: Allow shrinking */
+        max-width: calc(100% - 80px);
+        /* ADDED: Account for controls */
     }
 
     .hub-avatar {
-        width: 44px;
-        height: 44px;
+        width: 48px;
+        /* CHANGED: Smaller avatar on mobile */
+        height: 48px;
+        min-width: 48px;
+        min-height: 48px;
         font-size: 1rem;
-        border: 2px solid rgba(0, 240, 255, 0.4);
-        box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+        flex-shrink: 0;
+    }
+
+    .hub-user-info {
+        min-width: 0;
+        /* ADDED: Allow proper text truncation */
+        gap: 2px;
+        /* CHANGED: Tighter spacing */
     }
 
     .hub-user-name {
         font-size: 0.85rem;
+        /* CHANGED: Slightly smaller */
         font-weight: 600;
-        color: var(--hub-text-primary);
+    }
+
+    .hub-user-handle {
+        font-size: 0.7rem;
+        opacity: 0.7;
     }
 
     .hub-user-status {
         font-size: 0.7rem;
-        opacity: 0.8;
+        /* CHANGED: Smaller status */
+        display: none;
+        /* CHANGED: Hide on mobile for space */
     }
 
     .hub-user-level {
         font-size: 0.65rem;
+        /* CHANGED: Smaller badges */
     }
 
-    /* Mobile Header Controls */
     .hub-controls {
-        gap: 10px;
+        gap: 8px;
+        /* CHANGED: Tighter gap */
+        flex-shrink: 0;
     }
 
     .hub-button,
     .hub-toggle {
         width: 40px;
+        /* CHANGED: Smaller buttons */
         height: 40px;
-        border-radius: 12px;
-        border: 1px solid rgba(0, 240, 255, 0.3);
-        background: rgba(13, 20, 32, 0.8);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        font-size: 1.1rem;
+        border-radius: 10px;
     }
 
-    .hub-button:hover,
-    .hub-toggle:hover {
-        background: rgba(0, 240, 255, 0.2);
-        border-color: rgba(0, 240, 255, 0.6);
-        box-shadow: 0 4px 16px rgba(0, 240, 255, 0.3);
+    .hub-toggle span {
+        font-size: 1rem;
     }
 
     /* Mobile Header Animation */
@@ -2695,7 +2769,7 @@
     overscroll-behavior: contain;
     /* Enhanced focus management */
     outline: none;
-    scroll-behavior: smooth;
+    /* Smooth scrolling handled by parent */
 }
 
 .profile-hub-shell--expanded .profile-hub::-webkit-scrollbar {
@@ -2760,6 +2834,8 @@
     overflow-x: hidden;
     padding-right: 4px;
     min-height: 0;
+    /* Ensure content is scrollable on mobile */
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Edit mode specific styling */
@@ -2778,7 +2854,8 @@
 }
 
 .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content {
-    max-height: calc(100vh - 220px) !important;
+    /* Use flexible height instead of calc */
+    max-height: 75vh !important;
     padding-bottom: 20px;
     scrollbar-gutter: stable;
 }
@@ -2802,12 +2879,6 @@
     background: rgba(0, 240, 255, 0.6);
 }
 
-/* Edit page container styling */
-body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
-    overflow: hidden;
-}
-
-/* Prevent page scroll when hub is in edit mode */
 .profile-hub[data-state="expanded"][data-customizing="true"] {
     position: relative;
     z-index: 1000;
@@ -2943,7 +3014,8 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
     }
 
     .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content {
-        max-height: calc(100vh - 180px) !important;
+        /* Use viewport units for mobile */
+        max-height: 70vh !important;
         gap: 16px;
     }
 
@@ -3015,7 +3087,8 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
     }
 
     .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content {
-        max-height: calc(100vh - 160px) !important;
+        /* Use viewport units for mobile */
+        max-height: 65vh !important;
         gap: 12px;
     }
 
@@ -5168,12 +5241,14 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
 .customization-shop.fullscreen {
     height: 100%;
     max-height: none;
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(6, 10, 18, 0.98), rgba(13, 20, 32, 0.95));
-    border: 1px solid rgba(0, 240, 255, 0.4);
+    border-radius: 0;
+    background: transparent;
+    border: none;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
 }
 
 .customization-shop.fullscreen .shop-content {
@@ -5181,6 +5256,9 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
     overflow-y: auto;
     padding: 24px;
     gap: 24px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .shop-title-row {
@@ -5297,6 +5375,24 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
     .customization-shop.fullscreen .shop-content {
         padding: 20px;
         gap: 20px;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    /* Ensure fullscreen wrapper takes full space */
+    .hub-section-wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .hub-section-content.fullscreen {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 
     /* Better mobile spacing for enhanced sections */
@@ -5371,50 +5467,62 @@ body:has(.profile-hub[data-state="expanded"][data-customizing="true"]) {
     .customization-shop.fullscreen .shop-content {
         padding: 16px;
     }
-}
 
-/* Enhanced Mobile Scroll Context & Load Order */
-.hub-expanded-content {
-    scroll-behavior: smooth;
-    scroll-snap-type: y proximity;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-gutter: stable;
-}
-
-.hub-expanded-content:focus-visible {
-    outline: 2px solid var(--hub-primary);
-    outline-offset: 4px;
-}
-
-/* Enhanced section focus and spacing */
-.hub-collapsible {
-    scroll-snap-align: start;
-    scroll-margin-top: 16px;
-    contain: layout style;
-}
-
-.hub-collapsible[data-open="true"] .hub-collapsible__content {
-    animation: slideUp 0.3s ease-out;
-    transform-origin: top;
-}
-
-/* Mobile load order optimization */
-@media (max-width: 768px) {
-    .profile-hub-shell--expanded .hub-expanded-content {
-        scroll-padding-top: 20px;
-        scroll-snap-type: y mandatory;
-        overscroll-behavior: contain;
-        touch-action: pan-y;
+    /* Fullscreen toggle button styling */
+    .fullscreen-toggle-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        background: rgba(0, 240, 255, 0.15);
+        border: 1px solid rgba(0, 240, 255, 0.3);
+        border-radius: 8px;
+        color: var(--hub-primary);
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 10;
     }
 
-    .hub-collapsible {
-        scroll-snap-align: start;
-        scroll-margin-top: 24px;
+    .fullscreen-toggle-btn:hover {
+        background: rgba(0, 240, 255, 0.25);
+        border-color: rgba(0, 240, 255, 0.5);
+        transform: scale(1.05);
     }
 
-    .hub-collapsible[data-open="true"] {
-        scroll-snap-align: start;
+    /* ProfileHub Fullscreen Styles */
+    .profile-hub-fullscreen .profile-hub-wrapper {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none !important;
+        max-height: none !important;
+        position: relative !important;
+    }
+
+    .profile-hub-fullscreen .profile-hub {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+
+    .profile-hub-fullscreen .hub-expanded-content {
+        max-height: none !important;
+        height: 100% !important;
+        overflow-y: auto !important;
+        padding: 20px !important;
+    }
+
+    .profile-hub-fullscreen .customization-shop {
+        height: 100% !important;
+        max-height: none !important;
+        width: 100% !important;
+        max-width: none !important;
     }
 }
 

@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react';
 interface PersonalInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onContactClick?: () => void;
 }
 
-export default function PersonalInfoModal({ isOpen, onClose }: PersonalInfoModalProps) {
+export default function PersonalInfoModal({ isOpen, onClose, onContactClick }: PersonalInfoModalProps) {
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
@@ -105,7 +106,17 @@ export default function PersonalInfoModal({ isOpen, onClose }: PersonalInfoModal
 
         <div className="personal-info-modal-footer">
           <button 
-            className="personal-info-btn" 
+            className="personal-info-btn personal-info-btn-contact" 
+            onClick={() => {
+              if (onContactClick) {
+                onContactClick();
+              }
+            }}
+          >
+            Get Started →
+          </button>
+          <button 
+            className="personal-info-btn personal-info-btn-secondary" 
             onClick={handleClose}
           >
             Close

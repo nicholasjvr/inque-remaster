@@ -82,7 +82,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     const labelEl = container.querySelector<HTMLDivElement>(
       '.orb-center-label',
     );
-    
+
     const wrapper = document.createElement('div');
     wrapper.className = 'floating-orb-wrapper';
     wrapper.setAttribute('data-debug', 'false');
@@ -184,7 +184,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     let longPressTimer: number | null = null;
     const LONG_PRESS_MS = 1500;
     const AUTO_ROTATE_DELAY_MS = 2200;
-    const AUTO_ROTATE_DEG_PER_SEC = 20; 
+    const AUTO_ROTATE_DEG_PER_SEC = 20;
 
     const recordInteraction = () => {
       lastInteractionAt = performance.now();
@@ -204,24 +204,24 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     const scrollNavItemIntoView = (btn: HTMLButtonElement) => {
       // Only on mobile, check if nav item is out of viewport
       if (window.innerWidth > 768) return;
-      
+
       const rect = btn.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
-      
+
       // Check if nav item is outside viewport
-      const isOutOfView = 
-        rect.bottom < 0 || 
+      const isOutOfView =
+        rect.bottom < 0 ||
         rect.top > viewportHeight ||
-        rect.right < 0 || 
+        rect.right < 0 ||
         rect.left > viewportWidth;
-      
+
       if (isOutOfView) {
         // Scroll the orb container into view, centered if possible
         const orbShell = container.closest('.floating-orb-shell');
         if (orbShell) {
-          orbShell.scrollIntoView({ 
-            behavior: 'smooth', 
+          orbShell.scrollIntoView({
+            behavior: 'smooth',
             block: 'center',
             inline: 'center'
           });
@@ -295,46 +295,71 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       });
     };
 
+    // Track if orb is in viewport to pause animations
+    let isOrbInViewport = true;
+
+    // Set up Intersection Observer to pause animations when orb is out of view
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          isOrbInViewport = entry.isIntersecting;
+          console.log('🎯 Orb viewport visibility:', isOrbInViewport);
+        });
+      },
+      {
+        rootMargin: '50px', // Add margin to prevent edge case issues
+        threshold: 0
+      }
+    );
+
+    intersectionObserver.observe(container);
+
     const animate = () => {
       const now = performance.now();
       const dt = (now - lastFrameAt) / 1000;
       lastFrameAt = now;
 
-      // Idle auto-rotation when user is not interacting
-      if (!prefersReducedMotion() && !pointerActive && now - lastInteractionAt > AUTO_ROTATE_DELAY_MS) {
-        scrollState.targetRotation -= AUTO_ROTATE_DEG_PER_SEC * dt;
-      }
+      // Only update animations if orb is in viewport
+      if (isOrbInViewport) {
+        // Idle auto-rotation when user is not interacting
+        if (!prefersReducedMotion() && !pointerActive && now - lastInteractionAt > AUTO_ROTATE_DELAY_MS) {
+          scrollState.targetRotation -= AUTO_ROTATE_DEG_PER_SEC * dt;
+        }
 
-      const diff = scrollState.targetRotation - scrollState.currentRotation;
-      const damping = prefersReducedMotion() ? 1 : 0.12;
-      if (Math.abs(diff) > 0.05) {
-        scrollState.currentRotation += diff * damping;
-      } else {
-        scrollState.currentRotation = scrollState.targetRotation;
-      }
+        const diff = scrollState.targetRotation - scrollState.currentRotation;
+        const damping = prefersReducedMotion() ? 1 : 0.12;
+        if (Math.abs(diff) > 0.05) {
+          scrollState.currentRotation += diff * damping;
+        } else {
+          scrollState.currentRotation = scrollState.targetRotation;
+        }
 
-      if (scrollLine) {
-        scrollLine.style.setProperty(
-          '--scroll-rotation',
-          `${scrollState.currentRotation}deg`,
-        );
-      }
+        // DISABLED: Scroll line rotation was causing continuous layout thrashing
+        // This caused automatic scroll resets on mobile when scrolling
+        // if (scrollLine) {
+        //   scrollLine.style.setProperty(
+        //     '--scroll-rotation',
+        //     `${scrollState.currentRotation}deg`,
+        //   );
+        // }
 
-      updateOrbitPositions();
-      updateActiveFromRotation();
+        updateOrbitPositions();
+        updateActiveFromRotation();
+      }
 
       animationFrame = requestAnimationFrame(animate);
     };
 
     const showRing = () => {
-      if (!scrollLine) return;
-      scrollLine.style.opacity = '1';
-      if (hideRingTimeout) {
-        window.clearTimeout(hideRingTimeout);
-      }
-      hideRingTimeout = window.setTimeout(() => {
-        scrollLine.style.opacity = '0.3';
-      }, 1600);
+      // DISABLED: This was causing layout thrashing during scroll
+      // if (!scrollLine) return;
+      // scrollLine.style.opacity = '1';
+      // if (hideRingTimeout) {
+      //   window.clearTimeout(hideRingTimeout);
+      // }
+      // hideRingTimeout = window.setTimeout(() => {
+      //   scrollLine.style.opacity = '0.3';
+      // }, 1600);
     };
 
     const snapToNearestLockPoint = () => {
@@ -366,20 +391,20 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         event.preventDefault();
       }
       scrollState.targetRotation += event.deltaY * 0.35;
-      showRing();
+      // showRing(); // DISABLED: Causes layout thrashing
       recordInteraction();
     };
 
     const handlePointerDown = (event: PointerEvent) => {
       // Do not start drag when pressing on center orb or a nav item
       if ((event.target as HTMLElement).closest('.orb-nav-item') ||
-          (event.target as HTMLElement).closest('.floating-orb')) {
+        (event.target as HTMLElement).closest('.floating-orb')) {
         return;
       }
       pointerActive = true;
       lastPointerX = event.clientX;
       container.setPointerCapture(event.pointerId);
-      showRing();
+      // showRing(); // DISABLED: Causes layout thrashing
       recordInteraction();
     };
 
@@ -420,8 +445,8 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       orbDragActive = true;
       orbMovedSinceDown = false;
       orbLastX = e.clientX;
-      try { orbButton.setPointerCapture(e.pointerId); } catch {}
-      showRing();
+      try { orbButton.setPointerCapture(e.pointerId); } catch { }
+      // showRing(); // DISABLED: Causes layout thrashing
     });
 
     orbButton.addEventListener('pointermove', (e) => {
@@ -439,7 +464,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       if (!orbDragActive) return;
       e.stopPropagation();
       orbDragActive = false;
-      try { orbButton.releasePointerCapture(e.pointerId); } catch {}
+      try { orbButton.releasePointerCapture(e.pointerId); } catch { }
       if (longPressTimer) { window.clearTimeout(longPressTimer); longPressTimer = null; }
       if (orbMovedSinceDown) {
         snapToNearestLockPoint();
@@ -504,7 +529,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
 
     const hideSwipe = () => {
       swipeIndicator.classList.remove('visible');
-      try { localStorage.setItem('orb-swipe-seen', '1'); } catch {}
+      try { localStorage.setItem('orb-swipe-seen', '1'); } catch { }
     };
 
     // Hide swipe hint after first interaction
@@ -547,6 +572,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('pointercancel', handlePointerUp);
+      intersectionObserver.disconnect(); // Clean up intersection observer
       wrapper.remove();
     };
   }, []);

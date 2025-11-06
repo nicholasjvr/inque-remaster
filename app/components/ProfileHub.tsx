@@ -90,6 +90,9 @@ type CollapsibleSectionProps = {
   open?: boolean; // controlled open state (preferred)
   onToggle?: () => void; // controlled toggle
   quickbar?: React.ReactNode; // optional sidebar rendered when open
+  isFullscreen?: boolean;
+  onEnterFullscreen?: () => void;
+  onExitFullscreen?: () => void;
 };
 
 const CollapsibleSection = ({
@@ -100,7 +103,10 @@ const CollapsibleSection = ({
   sectionId,
   open,
   onToggle,
-  quickbar
+  quickbar,
+  isFullscreen = false,
+  onEnterFullscreen,
+  onExitFullscreen
 }: CollapsibleSectionProps) => {
   // Uncontrolled fallback for cases where parent doesn't manage open state
   const [uncontrolledOpen, setUncontrolledOpen] = useState<boolean>(() => defaultOpen ?? false);
@@ -126,8 +132,25 @@ const CollapsibleSection = ({
     }
   };
 
+  const showFullscreenToggle = Boolean(onEnterFullscreen || onExitFullscreen);
+
+  const handleFullscreenClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isFullscreen) {
+      onExitFullscreen?.();
+    } else {
+      onEnterFullscreen?.();
+    }
+  };
+
   return (
-    <div className="hub-collapsible" data-open={isOpen} data-section={sectionId}>
+    <div
+      className={`hub-collapsible${isFullscreen ? ' hub-collapsible--fullscreen' : ''}`}
+      data-open={isOpen}
+      data-section={sectionId}
+      data-fullscreen={isFullscreen ? 'true' : 'false'}
+    >
       <div className="hub-collapsible__header">
         <div
           className="hub-collapsible__summary"
@@ -141,6 +164,19 @@ const CollapsibleSection = ({
           <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
           <span className="hub-collapsible__title">{title}</span>
         </div>
+        {showFullscreenToggle ? (
+          <div className="hub-collapsible__actions">
+            <button
+              type="button"
+              className="hub-collapsible__fullscreen-btn"
+              aria-pressed={isFullscreen}
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Open fullscreen'}
+              onClick={handleFullscreenClick}
+            >
+              {isFullscreen ? '⤺' : '⤢'}
+            </button>
+          </div>
+        ) : null}
       </div>
       {isOpen && (
         <div
@@ -215,7 +251,30 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   // Accordion: one open section at a time
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const isSectionActive = (id: string) => activeSection === id;
-  const handleSectionToggle = (id: string) => setActiveSection(prev => (prev === id ? null : id));
+  const handleSectionToggle = (id: string) => {
+    setActiveSection(prev => {
+      const next = prev === id ? null : id;
+      if (next === null) {
+        setFullscreenSection(current => (current === id ? null : current));
+      }
+      return next;
+    });
+  };
+
+  const openFullscreen = useCallback((id: string) => {
+    setActiveSection(id);
+    setFullscreenSection(id);
+  }, []);
+
+  const closeFullscreen = useCallback(() => {
+    setFullscreenSection(null);
+  }, []);
+
+  // Fullscreen state for the entire ProfileHub
+  const [isHubFullscreen, setIsHubFullscreen] = useState(false);
+
+  // Fullscreen state for individual sections
+  const [fullscreenSection, setFullscreenSection] = useState<string | null>(null);
 
   // Load profile for target user (owner or public user)
   const targetUserId = profileUser?.id || user?.uid || null;
@@ -230,14 +289,19 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 
 
   // Enhanced scroll focus when expanding - only on initial expansion
+  // Skip for billboard variant as page.tsx handles scrolling to extended section
+  // Also skip if user has already scrolled down - don't interrupt their scroll position
   useEffect(() => {
-    if (!isModalOpen) return;
+    if (!isModalOpen || variant === 'billboard') return;
     if (typeof window === 'undefined') return;
 
     const isMobile = window.innerWidth <= 768;
+    // Don't scroll if user has already scrolled down - preserve their position
+    const hasScrolledDown = window.scrollY > 200;
 
     // Only scroll on initial expansion, not on every state change
-    if (isMobile && isExpanded) {
+    // AND only if user hasn't scrolled down
+    if (isMobile && isExpanded && !hasScrolledDown) {
       requestAnimationFrame(() => {
         const hubContent = document.querySelector('.hub-expanded-content');
         const hubElement = document.querySelector('.profile-hub-shell--expanded');
@@ -264,7 +328,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
         }
       });
     }
-  }, [isModalOpen, isExpanded]);
+  }, [isModalOpen, isExpanded, variant]);
 
   // Enhanced scroll lock for modal and fullscreen sections
   // Only locks body scroll for non-billboard variants (modal overlays)
@@ -273,8 +337,8 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     if (typeof window === 'undefined') return;
 
     const isMobile = window.innerWidth <= 768;
-    // Don't lock body scroll for billboard variant - it's part of page flow
-    const shouldLock = isModalOpen && isMobile && variant !== 'billboard';
+    // Only lock body scroll for chatbot and dm states, never for expanded state in billboard variant
+    const shouldLock = (isChatbot || isDM) && isMobile && !fullscreenSection;
 
     if (!shouldLock) return;
 
@@ -298,8 +362,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       hubContent.style.overflowY = 'auto';
     }
 
-    // Cleanup function
+    // Cleanup function - only runs when scroll was actually locked
     return () => {
+      const hadScrollPosition = bodyElement.dataset.scrollPosition !== undefined;
       const savedScrollPosition = parseInt(bodyElement.dataset.scrollPosition || '0', 10);
 
       // Reset body styles
@@ -316,14 +381,14 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
         hubContent.style.overflowY = '';
       }
 
-      // Restore scroll position
-      if (savedScrollPosition > 0) {
+      // Restore scroll position - only if we actually locked scroll and position was saved
+      if (hadScrollPosition && savedScrollPosition > 0) {
         requestAnimationFrame(() => {
           window.scrollTo({ top: savedScrollPosition, behavior: 'instant' });
         });
       }
     };
-  }, [isModalOpen, variant]);
+  }, [isModalOpen, variant, isChatbot, isDM, fullscreenSection]);
 
 
   const handleLogout = useCallback(async () => {
@@ -410,13 +475,16 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     const shouldShow = isModalOpen;
     overlay.classList.toggle('active', shouldShow);
 
-    // When expanding, focus and scroll the hub into view
+    // When expanding, focus the hub but only scroll if user hasn't scrolled down
     if (state === 'expanded') {
       const hubEl = document.querySelector('.profile-hub') as HTMLElement | null;
       if (hubEl) {
         hubEl.setAttribute('tabindex', '-1');
         hubEl.focus({ preventScroll: true });
-        hubEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        // Only scroll if user is near the top of the page - don't interrupt their scroll position
+        if (typeof window !== 'undefined' && window.scrollY < 200) {
+          hubEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        }
       }
     }
   }, [state]);
@@ -560,7 +628,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   };
 
 
-  return (
+  const hubContent = (
     <div
       className={`profile-hub-wrapper${isModalOpen && mode !== 'edit' ? ' profile-hub-wrapper--expanded' : ''}`}
       data-variant={variant}
@@ -770,6 +838,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     sectionId="customization"
                     open={isSectionActive('customization')}
                     onToggle={() => handleSectionToggle('customization')}
+                    isFullscreen={fullscreenSection === 'customization'}
+                    onEnterFullscreen={() => openFullscreen('customization')}
+                    onExitFullscreen={closeFullscreen}
                   >
                     <CustomizationShop
                       profile={localProfile}
@@ -799,6 +870,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   sectionId="featured"
                   open={isSectionActive('featured')}
                   onToggle={() => handleSectionToggle('featured')}
+                  isFullscreen={fullscreenSection === 'featured'}
+                  onEnterFullscreen={() => openFullscreen('featured')}
+                  onExitFullscreen={closeFullscreen}
                   quickbar={(
                     <div className="projects-toolbar">
                       <button className="projects-btn create-btn">+ New Project</button>
@@ -837,7 +911,10 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                         );
                       })}
                     </div>
-
+                    <div className="projects-toolbar">
+                      <button className="projects-btn create-btn">+ New Project</button>
+                      <button className="projects-btn manage-btn">Manage Projects</button>
+                    </div>
                   </div>
                 </CollapsibleSection>
 
@@ -849,6 +926,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   sectionId="activity"
                   open={isSectionActive('activity')}
                   onToggle={() => handleSectionToggle('activity')}
+                  isFullscreen={fullscreenSection === 'activity'}
+                  onEnterFullscreen={() => openFullscreen('activity')}
+                  onExitFullscreen={closeFullscreen}
                   quickbar={(
                     <div className="activity-filters">
                       <input
@@ -867,7 +947,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 >
                   <div className="activity-enhanced">
                     <div className="activity-timeline">
-                      {Array.from({ length: 5 }, (_, index) => {
+                      {Array.from({ length: 15 }, (_, index) => {
                         const activities = [
                           { icon: '🎨', text: 'Created a new interactive widget', time: '2 hours ago' },
                           { icon: '❤️', text: 'Received 5 likes on "Portfolio Showcase"', time: '5 hours ago' },
@@ -890,6 +970,19 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                         );
                       })}
                     </div>
+                    <div className="activity-filters">
+                      <input
+                        type="text"
+                        placeholder="Search activity..."
+                        className="activity-search"
+                      />
+                      <div className="activity-filter-buttons">
+                        <button className="filter-btn active">All</button>
+                        <button className="filter-btn">Projects</button>
+                        <button className="filter-btn">Social</button>
+                        <button className="filter-btn">Achievements</button>
+                      </div>
+                    </div>
                   </div>
                 </CollapsibleSection>
 
@@ -902,6 +995,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     sectionId="social"
                     open={isSectionActive('social')}
                     onToggle={() => handleSectionToggle('social')}
+                    isFullscreen={fullscreenSection === 'social'}
+                    onEnterFullscreen={() => openFullscreen('social')}
+                    onExitFullscreen={closeFullscreen}
                   >
                     <div className="social-connections-enhanced">
                       <div className="social-stats-enhanced">
@@ -970,6 +1066,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     sectionId="followers"
                     open={isSectionActive('followers')}
                     onToggle={() => handleSectionToggle('followers')}
+                    isFullscreen={fullscreenSection === 'followers'}
+                    onEnterFullscreen={() => openFullscreen('followers')}
+                    onExitFullscreen={closeFullscreen}
                     quickbar={(
                       <div className="followers-search">
                         <input
@@ -982,7 +1081,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   >
                     <div className="followers-enhanced">
                       <div className="followers-grid">
-                        {Array.from({ length: 6 }, (_, index) => (
+                        {Array.from({ length: 20 }, (_, index) => (
                           <div key={index} className="follower-item">
                             <div className="follower-avatar">
                               <span role="img" aria-label="Follower avatar">
@@ -997,6 +1096,13 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           </div>
                         ))}
                       </div>
+                      <div className="followers-search">
+                        <input
+                          type="text"
+                          placeholder="Search followers..."
+                          className="search-input"
+                        />
+                      </div>
                     </div>
                   </CollapsibleSection>
                 )}
@@ -1010,6 +1116,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     sectionId="following"
                     open={isSectionActive('following')}
                     onToggle={() => handleSectionToggle('following')}
+                    isFullscreen={fullscreenSection === 'following'}
+                    onEnterFullscreen={() => openFullscreen('following')}
+                    onExitFullscreen={closeFullscreen}
                     quickbar={(
                       <div className="following-controls">
                         <input
@@ -1027,7 +1136,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   >
                     <div className="following-enhanced">
                       <div className="following-grid">
-                        {Array.from({ length: 6 }, (_, index) => (
+                        {Array.from({ length: 20 }, (_, index) => (
                           <div key={index} className="following-item">
                             <div className="following-avatar">
                               <span role="img" aria-label="Following avatar">
@@ -1045,6 +1154,18 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                           </div>
                         ))}
                       </div>
+                      <div className="following-controls">
+                        <input
+                          type="text"
+                          placeholder="Search following..."
+                          className="search-input"
+                        />
+                        <div className="following-filter-buttons">
+                          <button className="filter-btn active">All</button>
+                          <button className="filter-btn">Active</button>
+                          <button className="filter-btn">Recent</button>
+                        </div>
+                      </div>
                     </div>
                   </CollapsibleSection>
                 )}
@@ -1055,6 +1176,9 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   sectionId="navigation"
                   open={isSectionActive('navigation')}
                   onToggle={() => handleSectionToggle('navigation')}
+                  isFullscreen={fullscreenSection === 'navigation'}
+                  onEnterFullscreen={() => openFullscreen('navigation')}
+                  onExitFullscreen={closeFullscreen}
                 >
                   <div className="navigation-enhanced">
                     <div className="expanded-nav-buttons">
@@ -1197,28 +1321,62 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           )}
         </div>
       </div>
-      {/* Only show overlay when expanded/chatbot AND not billboard AND not edit mode */}
-      {variant !== 'billboard' && isModalOpen && mode !== 'edit' ? (
+      {fullscreenSection ? (
         <div
-          className="profile-hub-overlay"
-          onClick={handleCloseModal}
-          style={{
-            pointerEvents: isExpanded ? 'none' : 'auto',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 999
-          } as React.CSSProperties}
+          role="presentation"
+          className="hub-fullscreen-overlay"
+          onClick={closeFullscreen}
         />
       ) : null}
+      {/* Only show overlay when expanded/chatbot AND not billboard AND not edit mode */}
+      {
+        variant !== 'billboard' && isModalOpen && mode !== 'edit' ? (
+          <div
+            className="profile-hub-overlay"
+            onClick={handleCloseModal}
+            style={{
+              pointerEvents: isExpanded ? 'none' : 'auto',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 999
+            } as React.CSSProperties}
+          />
+        ) : null}
       {!isPublicView && showRepRackManager && (
         <RepRackManager onProjectSelect={(p) => handleRepRackSelect({ id: p.id, title: p.title, imageUrl: p.imageUrl })} onClose={() => setShowRepRackManager(false)} />
       )}
     </div>
   );
+
+  // For billboard variant, return hub content directly
+  if (variant === 'billboard') {
+    return hubContent;
+  }
+
+  // For modal variants, wrap in FullscreenWrapper when expanded
+  if (isExpanded) {
+    return (
+      <FullscreenWrapper
+        isFullscreen={isHubFullscreen}
+        onToggle={() => setIsHubFullscreen(!isHubFullscreen)}
+        onClose={() => {
+          setIsHubFullscreen(false);
+          setState('minimized');
+        }}
+        title="Profile Hub"
+        sectionId="profile-hub"
+        className="profile-hub-fullscreen"
+      >
+        {hubContent}
+      </FullscreenWrapper>
+    );
+  }
+
+  return hubContent;
 };
 
 export default ProfileHub;

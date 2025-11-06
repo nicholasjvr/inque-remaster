@@ -5,6 +5,7 @@ import ProfileHub from './components/ProfileHub';
 import AuthButton from './components/AuthButton';
 import TutorialModal from './components/TutorialModal';
 import PersonalInfoModal from './components/PersonalInfoModal';
+import ContactUsModal from './components/ContactUsModal';
 import SiteStatsSection from './components/SiteStatsSection';
 import './styles/hero-hub.css';
 import { useEffect, useState, useCallback } from 'react';
@@ -30,10 +31,12 @@ export default function Home() {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
+  const [isUserScrolled, setIsUserScrolled] = useState(false);
 
   // Modal states
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isPersonalInfoOpen, setIsPersonalInfoOpen] = useState(false);
+  const [isContactUsOpen, setIsContactUsOpen] = useState(false);
 
   // Legacy redirect: support /?user=ID -> /u/ID
   useEffect(() => {
@@ -46,13 +49,32 @@ export default function Home() {
     }
   }, []);
 
+  // Detect when user scrolls away from top to pause typing animation
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const hasScrolled = scrollY > 100; // Consider scrolled if more than 100px from top
+      setIsUserScrolled(hasScrolled);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Smooth scroll to extended hub section when it opens - Memoized for better performance
   const scrollToExtendedSection = useCallback(() => {
     const section = document.getElementById('hub-extended-section');
     if (!section) return;
 
-    // Use multiple requestAnimationFrame and a small delay to ensure DOM is ready
-    // This is especially important on mobile where body scroll lock might have been prevented
+    // Don't scroll if user is already scrolled down (avoid interrupting natural scroll)
+    if (window.scrollY > 200) {
+      return;
+    }
+
+    // Use multiple requestAnimationFrame and delay to ensure DOM is ready
+    // This is especially important on mobile where content needs to render
     const scrollTimeout = setTimeout(() => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -63,16 +85,15 @@ export default function Home() {
           const viewportHeight = window.innerHeight;
           const viewportTop = 0;
 
-          // Check if section is fully visible in viewport
-          // On mobile, check if at least top is visible
-          const isFullyVisible = isMobile
-            ? (rect.top >= viewportTop && rect.top < viewportHeight)
+          // Check if section is accessible in viewport
+          // On mobile, ensure at least a significant portion is visible
+          const isAccessible = isMobile
+            ? (rect.top >= viewportTop - 100 && rect.bottom > viewportTop + 100) // Allow some tolerance
             : (rect.top >= viewportTop && rect.bottom <= viewportHeight);
 
-          // If not fully visible, scroll to it
-          if (!isFullyVisible) {
-            // On mobile, use 'start' to ensure section appears at top
-            // Add offset to account for fixed headers
+          // If not accessible, scroll to it
+          if (!isAccessible) {
+            // On mobile, use 'start' to ensure section appears at top with some padding
             section.scrollIntoView({
               behavior: 'smooth',
               block: isMobile ? 'start' : 'nearest',
@@ -81,7 +102,7 @@ export default function Home() {
           }
         });
       });
-    }, 100); // Small delay to ensure state updates are complete
+    }, 200); // Delay to ensure state updates and content rendering are complete
 
     return () => clearTimeout(scrollTimeout);
   }, []);
@@ -89,12 +110,25 @@ export default function Home() {
   useEffect(() => {
     const modalOpen = hubState === 'expanded' || hubState === 'chatbot' || hubState === 'dm';
     if (modalOpen) {
-      return scrollToExtendedSection();
+      // Only scroll for expanded state, not for chatbot/dm which are overlays
+      // BUT: Don't scroll if user has already scrolled down - let them stay where they are
+      if (hubState === 'expanded' && window.scrollY < 200) {
+        return scrollToExtendedSection();
+      }
     }
   }, [hubState, scrollToExtendedSection]);
 
-  // Typing effect animation
+  // Typing effect animation - only runs when user is at top of page
   useEffect(() => {
+    // Don't run typing animation if user has scrolled away from top
+    if (isUserScrolled) {
+      // Show complete current slogan when scrolled
+      if (displayedText !== SLOGANS[currentSloganIndex]) {
+        setDisplayedText(SLOGANS[currentSloganIndex]);
+      }
+      return;
+    }
+
     const currentSlogan = SLOGANS[currentSloganIndex];
     const typingSpeed = 80;
     const deletingSpeed = 80;
@@ -122,7 +156,7 @@ export default function Home() {
     }, isTyping ? typingSpeed : deletingSpeed);
 
     return () => clearTimeout(timer);
-  }, [currentCharIndex, isTyping, currentSloganIndex]);
+  }, [currentCharIndex, isTyping, currentSloganIndex, isUserScrolled, displayedText]);
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
@@ -148,7 +182,15 @@ export default function Home() {
 
       {/* Modals */}
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      <PersonalInfoModal isOpen={isPersonalInfoOpen} onClose={() => setIsPersonalInfoOpen(false)} />
+      <PersonalInfoModal
+        isOpen={isPersonalInfoOpen}
+        onClose={() => setIsPersonalInfoOpen(false)}
+        onContactClick={() => {
+          setIsPersonalInfoOpen(false);
+          setTimeout(() => setIsContactUsOpen(true), 250);
+        }}
+      />
+      <ContactUsModal isOpen={isContactUsOpen} onClose={() => setIsContactUsOpen(false)} />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col items-center gap-12 px-6 py-20 sm:px-10 md:py-16">
         <header className="flex flex-col items-center gap-8 text-center">
@@ -161,7 +203,7 @@ export default function Home() {
               <span className="text-content">
                 {displayedText}
                 <span
-                  className={`ml-1 inline-block h-5 w-0.5 bg-[#4ff1ff] ${isTyping && currentCharIndex === SLOGANS[currentSloganIndex].length ? 'animate-pulse' : ''
+                  className={`ml-1 inline-block h-5 w-0.5 bg-[#4ff1ff] ${!isUserScrolled && isTyping && currentCharIndex === SLOGANS[currentSloganIndex].length ? 'animate-pulse' : ''
                     }`}
                 />
               </span>

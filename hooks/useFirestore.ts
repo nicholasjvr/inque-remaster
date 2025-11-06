@@ -210,6 +210,7 @@ export interface Widget {
   uploadId?: string;
   storagePath?: string; // optional storage base path for this widget's files
   entry?: string; // relative path to the HTML entry file
+  thumbnailUrl?: string; // URL for the widget thumbnail/preview image
   createdAt: any;
   updatedAt: any;
 }

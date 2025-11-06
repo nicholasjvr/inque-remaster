@@ -29,9 +29,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: visible;
-    touch-action: none;
-    /* Prevent touch scrolling on mobile */
+    overflow: hidden;
+    /* Prevent any scrolling */
+    /* Orb container should not be scrollable */
+    /* ADDED: Ensure no scrolling whatsoever */
+    touch-action: pan-x;
+    /* Allow horizontal pan only for orb rotation */
+    overscroll-behavior: none;
 }
 
 #orb-container {
@@ -40,10 +44,16 @@
     height: var(--orbit-size);
     display: block;
     margin: 0 auto;
+    /* Prevent any scrolling on orb container */
+    overflow: hidden;
+    overscroll-behavior: none;
+    /* Ensure orb container is not scrollable */
+    /* ADDED: More aggressive scroll prevention */
     touch-action: none;
-    /* Prevent touch scrolling */
-    overscroll-behavior: contain;
-    /* Prevent scroll chaining */
+    user-select: none;
+    -webkit-user-select: none;
+    /* ADDED: CSS containment to prevent layout thrashing */
+    contain: layout style paint;
 }
 
 .floating-orb-wrapper {
@@ -58,6 +68,12 @@
     z-index: 8;
     display: block;
     border-radius: 100%;
+    /* ADDED: Prevent any accidental scrolling */
+    overflow: hidden;
+    touch-action: none;
+    /* ADDED: Optimize rendering performance */
+    will-change: transform;
+    contain: layout style;
 }
 
 .orb-webgl-layer {
@@ -99,10 +115,12 @@
     overflow: hidden;
     background: radial-gradient(circle at 50% 40%, rgba(12, 20, 30, 0.9) 0%, rgba(4, 6, 13, 0.85) 55%, rgba(3, 6, 10, 0.8) 100%);
     border-radius: 100%;
-    touch-action: none;
-    /* Prevent touch scrolling on the stage */
+    /* Allow page scrolling, stage is visual only */
     opacity: 1 !important;
     visibility: visible !important;
+    /* ADDED: Ensure stage cannot be scrolled */
+    touch-action: none;
+    user-select: none;
 }
 
 .floating-orb-wrapper.lock-snap {
@@ -120,11 +138,15 @@
     left: 50%;
     width: calc(var(--orbit-size) + 140px);
     height: calc(var(--orbit-size) + 140px);
-    transform: translate(-50%, -50%) scaleY(0.2) rotateZ(var(--scroll-rotation, 0deg));
+    transform: translate(-50%, -50%) scaleY(0.2) rotateZ(0deg);
+    /* Fixed rotation to prevent layout shifts */
     border-radius: 50%;
     pointer-events: none;
-    transition: opacity 0.3s ease;
+    /* transition: opacity 0.3s ease; */
     z-index: 1;
+    /* Hide scroll line to prevent layout issues */
+    opacity: 0;
+    visibility: hidden;
 }
 
 .orb-scroll-line::before {
@@ -208,6 +230,8 @@
     font-size: 24px;
     cursor: pointer;
     z-index: 2;
+    /* ADDED: Optimize rendering */
+    will-change: transform, opacity;
 }
 
 .orb-nav-item:hover,
@@ -257,6 +281,8 @@
     will-change: transform, filter;
     transition: transform 0.35s ease, filter 0.35s ease, box-shadow 0.35s ease;
     box-shadow: inset 0 0 24px rgba(0, 240, 255, 0.35), 0 0 32px rgba(0, 240, 255, 0.25);
+    /* Prevent touch scrolling on the orb itself for drag functionality */
+    touch-action: none;
     /* Fallback background gradient for visibility */
     background: radial-gradient(circle at 35% 35%,
             rgba(82, 247, 255, 0.7) 0%,
@@ -328,7 +354,8 @@
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 34px;
-    z-index: 20;
+    z-index: 30;
+    /* Increased to ensure visibility above orb elements */
     pointer-events: none;
     user-select: none;
     text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
@@ -350,7 +377,8 @@
     text-shadow:
         0 0 8px rgba(102, 250, 255, 0.6),
         0 0 16px rgba(0, 240, 255, 0.4);
-    z-index: 15;
+    z-index: 100;
+    /* Increased from 15 to ensure visibility */
     opacity: 1;
     transition: opacity 0.3s ease, transform 0.3s ease;
     white-space: nowrap;
@@ -364,6 +392,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Ensure label is always visible and positioned relative to orb */
+    position: absolute;
+    visibility: visible;
+    /* Add isolation to create new stacking context */
+    isolation: isolate;
 }
 
 @media (max-width: 768px) {
@@ -641,12 +674,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10;
+    z-index: 50;
+    /* Increased from 10 to ensure visibility */
     transition: all 0.3s ease;
     backdrop-filter: blur(8px);
     box-shadow: 0 0 12px rgba(0, 240, 255, 0.28);
     user-select: none;
     pointer-events: auto;
+    /* Ensure arrows stay with orb container */
+    position: absolute;
 }
 
 .orb-nav-arrow:hover {

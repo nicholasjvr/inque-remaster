@@ -179,6 +179,114 @@ export function useStorage() {
     }
   };
 
+  // Rename a file by copying to new path and deleting old one
+  const renameFile = async (oldPath: string, newPath: string): Promise<string> => {
+    if (!storage) {
+      throw new Error('Firebase Storage is not initialized');
+    }
+    try {
+      // Download the file
+      const oldRef = ref(storage, oldPath);
+      const downloadURL = await getDownloadURL(oldRef);
+      const response = await fetch(downloadURL);
+      const blob = await response.blob();
+      
+      // Upload to new path
+      const newRef = ref(storage, newPath);
+      await uploadBytes(newRef, blob);
+      
+      // Delete old file
+      await deleteObject(oldRef);
+      
+      // Return new download URL
+      return await getDownloadURL(newRef);
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      throw error;
+    }
+  };
+
+  // Move a file (same as rename but with different semantics)
+  const moveFile = async (sourcePath: string, destPath: string): Promise<string> => {
+    return renameFile(sourcePath, destPath);
+  };
+
+  // Add a file to a widget's storage path
+  const addFileToWidget = async (
+    widgetStoragePath: string,
+    file: File,
+    relativePath?: string
+  ): Promise<{ fileName: string; downloadURL: string; size: number; type: string }> => {
+    const fileName = relativePath || file.name;
+    const filePath = `${widgetStoragePath}/${fileName}`;
+    const downloadURL = await uploadFile(file, filePath);
+    
+    return {
+      fileName,
+      downloadURL,
+      size: file.size,
+      type: file.type,
+    };
+  };
+
+  // Remove a file from storage
+  const removeFileFromWidget = async (filePath: string): Promise<void> => {
+    return deleteFile(filePath);
+  };
+
+  // Generate thumbnail from iframe (client-side screenshot)
+  const generateThumbnail = async (
+    iframe: HTMLIFrameElement,
+    width: number = 400,
+    height: number = 300
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        // Use html2canvas or similar library for screenshot
+        // For now, we'll use a canvas-based approach
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          throw new Error('Could not get canvas context');
+        }
+
+        // Try to capture iframe content
+        // Note: This may fail due to CORS restrictions
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        // Alternative: use html2canvas library if available
+        if (typeof window !== 'undefined' && (window as any).html2canvas) {
+          (window as any).html2canvas(iframe.contentDocument?.body || iframe, {
+            width,
+            height,
+            useCORS: true,
+          }).then((canvas: HTMLCanvasElement) => {
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const file = new File([blob], 'thumbnail.png', { type: 'image/png' });
+                // Upload thumbnail and return URL
+                // This would need to be called with a storage path
+                resolve(URL.createObjectURL(blob));
+              } else {
+                reject(new Error('Failed to create thumbnail blob'));
+              }
+            }, 'image/png');
+          }).catch(reject);
+        } else {
+          // Fallback: return a placeholder or error
+          reject(new Error('html2canvas library not available. Please upload a thumbnail manually.'));
+        }
+      } catch (error) {
+        console.error('Error generating thumbnail:', error);
+        reject(error);
+      }
+    });
+  };
+
   return {
     uploading,
     uploadProgress,
@@ -191,6 +299,11 @@ export function useStorage() {
     buildBundleFileMap,
     findHtmlEntry,
     getFileURL,
+    renameFile,
+    moveFile,
+    addFileToWidget,
+    removeFileFromWidget,
+    generateThumbnail,
   };
 }
 
