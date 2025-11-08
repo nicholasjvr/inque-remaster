@@ -1130,14 +1130,46 @@
 }
 
 .sign-in-prompt-content {
-    background: var(--studio-surface);
-    border: 2px solid var(--studio-primary);
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.05) 0%, rgba(255, 0, 255, 0.05) 50%, rgba(255, 255, 0, 0.05) 100%);
+    background-size: 200% 200%;
+    border: 3px solid transparent;
     border-radius: 20px;
     padding: 3rem;
     text-align: center;
     max-width: 500px;
-    box-shadow: 0 20px 60px rgba(0, 240, 255, 0.2);
-    animation: promptSlideIn 0.5s ease-out;
+    box-shadow: 0 20px 60px rgba(0, 240, 255, 0.3),
+        0 0 80px rgba(255, 0, 255, 0.2),
+        inset 0 0 40px rgba(0, 240, 255, 0.1);
+    animation: promptSlideIn 0.5s ease-out, gradientShift 4s ease infinite, pulseBorder 3s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+.sign-in-prompt-content::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, var(--studio-primary) 0%, var(--studio-secondary) 50%, var(--studio-accent) 100%);
+    background-size: 200% 200%;
+    border-radius: 20px;
+    z-index: -1;
+    animation: gradientShift 4s ease infinite;
+    opacity: 0.8;
+}
+
+.sign-in-prompt-content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+    animation: pulseGlow 3s ease-in-out infinite;
 }
 
 @keyframes promptSlideIn {
@@ -1152,10 +1184,73 @@
     }
 }
 
+@keyframes gradientShift {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes pulseBorder {
+
+    0%,
+    100% {
+        box-shadow: 0 20px 60px rgba(0, 240, 255, 0.3),
+            0 0 80px rgba(255, 0, 255, 0.2),
+            inset 0 0 40px rgba(0, 240, 255, 0.1);
+    }
+
+    50% {
+        box-shadow: 0 20px 80px rgba(0, 240, 255, 0.5),
+            0 0 120px rgba(255, 0, 255, 0.4),
+            inset 0 0 60px rgba(0, 240, 255, 0.2);
+    }
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
 .sign-in-icon {
     font-size: 4rem;
     margin-bottom: 1.5rem;
-    animation: iconPulse 2s ease-in-out infinite;
+    animation: iconPulse 2s ease-in-out infinite, iconRotate 4s linear infinite;
+    filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.6)) drop-shadow(0 0 40px rgba(255, 0, 255, 0.4)) drop-shadow(0 0 60px rgba(255, 255, 0, 0.3));
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes iconRotate {
+
+    0%,
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    25% {
+        transform: rotate(5deg) scale(1.05);
+    }
+
+    50% {
+        transform: rotate(0deg) scale(1.1);
+    }
+
+    75% {
+        transform: rotate(-5deg) scale(1.05);
+    }
 }
 
 @keyframes iconPulse {
@@ -1175,12 +1270,16 @@
 .sign-in-title {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--studio-primary);
     margin: 0 0 1rem 0;
-    background: linear-gradient(135deg, var(--studio-primary), var(--studio-secondary));
+    background: linear-gradient(135deg, var(--studio-primary) 0%, var(--studio-secondary) 50%, var(--studio-accent) 100%);
+    background-size: 200% 200%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: gradientShift 3s ease infinite;
+    filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.5));
+    position: relative;
+    z-index: 1;
 }
 
 .sign-in-description {
@@ -1213,26 +1312,51 @@
 }
 
 .sign-in-btn.primary {
-    background: linear-gradient(135deg, var(--studio-primary), var(--studio-secondary));
+    background: linear-gradient(135deg, var(--studio-primary) 0%, var(--studio-secondary) 50%, var(--studio-accent) 100%);
+    background-size: 200% 200%;
     color: var(--studio-bg);
-    border: 2px solid var(--studio-primary);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    animation: gradientShift 3s ease infinite;
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.4), 0 0 50px rgba(255, 0, 255, 0.3);
+}
+
+.sign-in-btn.primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s ease;
+}
+
+.sign-in-btn.primary:hover::before {
+    left: 100%;
 }
 
 .sign-in-btn.primary:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 240, 255, 0.4);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 0 40px rgba(0, 240, 255, 0.6),
+        0 0 80px rgba(255, 0, 255, 0.4),
+        0 8px 30px rgba(0, 0, 0, 0.3);
+    border-color: var(--studio-primary);
 }
 
 .sign-in-btn.secondary {
-    background: transparent;
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.05) 0%, rgba(255, 0, 255, 0.05) 100%);
     color: var(--studio-text);
-    border: 2px solid var(--studio-border);
+    border: 2px solid var(--studio-primary);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
 }
 
 .sign-in-btn.secondary:hover {
-    border-color: var(--studio-primary);
-    background: rgba(0, 240, 255, 0.1);
+    border-color: var(--studio-secondary);
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.15) 0%, rgba(255, 0, 255, 0.15) 100%);
     transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.4), 0 0 50px rgba(255, 0, 255, 0.2);
 }
 
 .btn-icon {
@@ -1240,11 +1364,14 @@
 }
 
 .sign-in-benefits {
-    background: rgba(0, 240, 255, 0.05);
-    border: 1px solid var(--studio-border);
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.08) 0%, rgba(255, 0, 255, 0.08) 100%);
+    border: 2px solid var(--studio-primary);
     border-radius: 12px;
     padding: 1.5rem;
     text-align: left;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.05);
+    position: relative;
+    z-index: 1;
 }
 
 .sign-in-benefits h3 {

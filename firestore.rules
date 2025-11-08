@@ -44,6 +44,14 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Votes subcollection: one vote per user per widget
+      match /votes/{voteId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.auth.uid == voteId && request.resource.data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && request.auth.uid == voteId;
+        allow update: if false; // Votes are immutable once created
+      }
     }
     
     // Public bundles feed used by Explore/Explore Reels
@@ -51,7 +59,7 @@ service cloud.firestore {
       allow read: if true;
       // Allow clients to atomically update engagement counters only
       allow update: if isSignedIn() &&
-        request.resource.data.keys().hasOnly(['title','description','uploadId','storagePath','userId','createdAt','updatedAt','likes','views','shares','commentsCount']) &&
+        request.resource.data.keys().hasOnly(['title','description','uploadId','storagePath','userId','createdAt','updatedAt','likes','views','shares','commentsCount','votes']) &&
         request.resource.data.title == resource.data.title &&
         request.resource.data.uploadId == resource.data.uploadId &&
         request.resource.data.storagePath == resource.data.storagePath &&
@@ -61,8 +69,17 @@ service cloud.firestore {
         (request.resource.data.likes == resource.data.likes || request.resource.data.likes == resource.data.likes + 1 || request.resource.data.likes == resource.data.likes - 1) &&
         (request.resource.data.views == resource.data.views || request.resource.data.views == resource.data.views + 1 || request.resource.data.views == resource.data.views - 1) &&
         (request.resource.data.shares == resource.data.shares || request.resource.data.shares == resource.data.shares + 1 || request.resource.data.shares == resource.data.shares - 1) &&
-        (request.resource.data.commentsCount == resource.data.commentsCount || request.resource.data.commentsCount == resource.data.commentsCount + 1 || request.resource.data.commentsCount == resource.data.commentsCount - 1);
+        (request.resource.data.commentsCount == resource.data.commentsCount || request.resource.data.commentsCount == resource.data.commentsCount + 1 || request.resource.data.commentsCount == resource.data.commentsCount - 1) &&
+        (request.resource.data.votes == resource.data.votes || request.resource.data.votes == resource.data.votes + 1 || request.resource.data.votes == resource.data.votes - 1);
       allow create, delete: if false;
+      
+      // Votes subcollection: one vote per user per bundle
+      match /votes/{voteId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.auth.uid == voteId && request.resource.data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && request.auth.uid == voteId;
+        allow update: if false; // Votes are immutable once created
+      }
     }
     
     // Projects collection: global public projects feed

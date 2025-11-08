@@ -38,6 +38,13 @@
     overflow: hidden;
 }
 
+/* When a section is fullscreen, ensure the wrapper is above the overlay */
+.profile-hub-wrapper:has(.hub-collapsible[data-fullscreen="true"]),
+.profile-hub-wrapper[data-fullscreen-active="true"],
+.profile-hub-wrapper.profile-hub-wrapper--fullscreen-active {
+    z-index: 1401;
+}
+
 /* Ensure billboard variant buttons work properly */
 .profile-hub-wrapper[data-variant="billboard"] .hub-button,
 .profile-hub-wrapper[data-variant="billboard"] .hub-toggle,
@@ -663,16 +670,22 @@
 
 .hub-collapsible[data-fullscreen="true"] {
     position: fixed;
-    inset: clamp(24px, 6vh, 90px) clamp(20px, 5vw, 60px);
+    inset: clamp(16px, 4vh, 60px) clamp(16px, 4vw, 40px);
     margin: 0;
     width: auto;
-    max-width: min(960px, 100vw - 40px);
-    max-height: calc(100vh - clamp(80px, 20vh, 220px));
+    max-width: min(1600px, 98vw);
+    max-height: calc(100vh - clamp(32px, 8vh, 120px));
     z-index: 1400;
-    background: var(--hub-bg-secondary);
-    border: 1px solid rgba(0, 240, 255, 0.22);
-    border-radius: 18px;
-    box-shadow: 0 28px 80px rgba(2, 12, 24, 0.65);
+    background: linear-gradient(135deg, rgba(6, 10, 18, 0.99), rgba(13, 20, 32, 0.98)) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 2px solid rgba(0, 240, 255, 0.5);
+    border-radius: 24px;
+    box-shadow:
+        0 32px 100px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(0, 240, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 60px rgba(0, 240, 255, 0.15);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -686,25 +699,63 @@
     max-height: calc(100vh - clamp(160px, 30vh, 320px));
     overflow-y: auto;
     overflow-x: hidden;
+    background: linear-gradient(135deg, rgba(6, 10, 18, 0.99), rgba(13, 20, 32, 0.98)) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: none !important;
 }
 
 .hub-collapsible[data-fullscreen="true"] .hub-collapsible__main {
     max-height: calc(100vh - clamp(180px, 36vh, 340px));
     padding-right: 0;
     overflow-y: auto;
+    background: linear-gradient(135deg, rgba(6, 10, 18, 0.99), rgba(13, 20, 32, 0.98)) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 0 !important;
+}
+
+/* Fullscreen overlay backdrop */
+.hub-fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1399;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Ensure profile hub shell is above overlay when fullscreen section exists */
+.profile-hub-shell--expanded:has(.hub-collapsible[data-fullscreen="true"]),
+.profile-hub-wrapper[data-fullscreen-active="true"] .profile-hub-shell--expanded,
+.profile-hub-wrapper.profile-hub-wrapper--fullscreen-active .profile-hub-shell--expanded {
+    z-index: 1401;
+    position: relative;
+}
+
+/* Ensure profile-hub itself is above overlay when fullscreen section exists */
+.profile-hub-wrapper[data-fullscreen-active="true"] .profile-hub,
+.profile-hub-wrapper.profile-hub-wrapper--fullscreen-active .profile-hub {
+    z-index: 1402;
+    position: relative;
 }
 
 
 @media (max-width: 768px) {
     .hub-collapsible[data-fullscreen="true"] {
-        inset: 16px;
-        max-width: calc(100vw - 32px);
-        border-radius: 16px;
+        inset: 12px;
+        max-width: calc(100vw - 24px);
+        border-radius: 20px;
+        border-width: 2px;
     }
 
     .hub-collapsible[data-fullscreen="true"] .hub-collapsible__content {
-        padding: 20px;
-        max-height: calc(100vh - 140px);
+        padding: 24px 20px;
+        max-height: calc(100vh - 120px);
     }
 }
 
@@ -714,10 +765,14 @@
         border-radius: 0;
         max-width: 100vw;
         max-height: 100vh;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        border-bottom: 2px solid rgba(0, 240, 255, 0.5);
     }
 
     .hub-collapsible[data-fullscreen="true"] .hub-collapsible__content {
-        padding: 18px 16px 32px;
+        padding: 20px 16px 32px;
         max-height: 100vh;
     }
 }
@@ -1063,8 +1118,9 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: radial-gradient(circle at center, rgba(4, 8, 14, 0.95), rgba(2, 4, 8, 0.98));
-    /* backdrop-filter: blur(8px); */
+    background: radial-gradient(circle at center, rgba(4, 8, 14, 0.65), rgba(2, 4, 8, 0.75));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     z-index: 900;
     opacity: 0;
     pointer-events: none;
@@ -1078,21 +1134,50 @@
 
 /* Collapsible sections */
 .hub-collapsible {
-    background: var(--hub-bg-secondary);
-    border: 1px solid rgba(0, 240, 255, 0.12);
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(13, 20, 32, 0.85), rgba(6, 10, 18, 0.9));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(0, 240, 255, 0.2);
+    border-radius: 16px;
     overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(0, 240, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.hub-collapsible:hover {
+    border-color: rgba(0, 240, 255, 0.35);
+    box-shadow:
+        0 6px 24px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(0, 240, 255, 0.2),
+        0 0 20px rgba(0, 240, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.hub-collapsible[data-open="true"] {
+    background: linear-gradient(135deg, rgba(13, 20, 32, 0.92), rgba(6, 10, 18, 0.95));
+    border-color: rgba(0, 240, 255, 0.4);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(0, 240, 255, 0.25),
+        0 0 30px rgba(0, 240, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .hub-collapsible+.hub-collapsible {
-    margin-top: 12px;
+    margin-top: 16px;
 }
 
 /* Edit mode collapsible sections */
 .profile-hub[data-state="expanded"][data-customizing="true"] .hub-collapsible {
-    background: rgba(0, 240, 255, 0.08);
-    border: 1px solid rgba(0, 240, 255, 0.2);
+    background: linear-gradient(135deg, rgba(13, 20, 32, 0.9), rgba(6, 10, 18, 0.92));
+    border: 1.5px solid rgba(0, 240, 255, 0.3);
     margin-bottom: 16px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .profile-hub[data-state="expanded"][data-customizing="true"] .hub-collapsible:last-child {
@@ -1104,8 +1189,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0;
+    padding: 4px;
     gap: 12px;
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.05), rgba(0, 240, 255, 0.02));
+    border-radius: 12px 12px 0 0;
+    transition: all 0.3s ease;
+}
+
+.hub-collapsible[data-open="true"] .hub-collapsible__header {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(0, 240, 255, 0.05));
+    border-bottom: 1px solid rgba(0, 240, 255, 0.15);
 }
 
 .hub-collapsible__actions {
@@ -1118,20 +1211,29 @@
     width: 38px;
     height: 38px;
     border-radius: 10px;
-    border: 1px solid rgba(0, 240, 255, 0.25);
-    background: rgba(0, 240, 255, 0.08);
+    border: 1.5px solid rgba(0, 240, 255, 0.3);
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(0, 240, 255, 0.08));
     color: var(--hub-text-primary);
     font-size: 1rem;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s ease, border-color 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 2px 8px rgba(0, 240, 255, 0.1);
 }
 
 .hub-collapsible__fullscreen-btn:hover {
-    background: rgba(0, 240, 255, 0.12);
-    border-color: rgba(0, 240, 255, 0.35);
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 240, 255, 0.15));
+    border-color: rgba(0, 240, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.hub-collapsible__fullscreen-btn:active {
+    transform: scale(0.95);
 }
 
 .hub-collapsible__fullscreen-btn:focus-visible {
@@ -1144,13 +1246,29 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 14px 18px;
     color: var(--hub-text-primary);
     background: transparent;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
     user-select: none;
     flex: 1;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.hub-collapsible__summary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), transparent);
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.hub-collapsible__summary:hover::before {
+    opacity: 1;
 }
 
 /* Mobile Fullscreen Button in Header */
@@ -1200,11 +1318,13 @@
 }
 
 .hub-collapsible__summary:hover {
-    background: rgba(0, 0, 0, 0.22);
+    background: rgba(0, 240, 255, 0.1);
+    transform: translateX(2px);
 }
 
 .hub-collapsible[data-open="true"] .hub-collapsible__summary {
-    background: rgba(0, 0, 0, 0.22);
+    background: rgba(0, 240, 255, 0.08);
+    font-weight: 500;
 }
 
 .hub-collapsible__summary:focus-visible {
@@ -1218,25 +1338,71 @@
 }
 
 .hub-collapsible__caret {
-    transition: transform 0.2s ease;
-    font-size: 0.8rem;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
+    font-size: 0.9rem;
     color: var(--hub-text-secondary);
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: rgba(0, 240, 255, 0.05);
+}
+
+.hub-collapsible__summary:hover .hub-collapsible__caret {
+    color: var(--hub-primary);
+    background: rgba(0, 240, 255, 0.15);
+}
+
+.hub-collapsible[data-open="true"] .hub-collapsible__caret {
+    color: var(--hub-primary);
+    background: rgba(0, 240, 255, 0.2);
 }
 
 .hub-collapsible__title {
     text-transform: uppercase;
-    letter-spacing: 0.18em;
-    font-size: 0.82rem;
-    color: var(--hub-text-secondary);
-    font-weight: 500;
+    letter-spacing: 0.15em;
+    font-size: 0.85rem;
+    color: var(--hub-text-primary);
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    transition: all 0.2s ease;
+}
+
+.hub-collapsible[data-open="true"] .hub-collapsible__title {
+    color: var(--hub-primary);
+    text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+}
+
+.hub-collapsible__summary:hover .hub-collapsible__title {
+    color: var(--hub-primary);
+    text-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
 }
 
 .hub-collapsible__content {
-    padding: 12px 14px 16px;
-    border-top: 1px solid rgba(0, 240, 255, 0.08);
-    background-color: rgba(0, 0, 0, 0.1);
+    padding: 16px 18px 20px;
+    border-top: 1px solid rgba(0, 240, 255, 0.15);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
     overflow: visible;
     overscroll-behavior: contain;
+    animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .hub-collapsible__main {
@@ -1247,6 +1413,41 @@
     scroll-padding-bottom: 80px;
     scroll-behavior: smooth;
     max-height: none;
+}
+
+/* Quick Settings Modal Style - when NOT fullscreen */
+.hub-collapsible:not([data-fullscreen="true"]) .hub-collapsible__main {
+    background: linear-gradient(135deg, rgba(13, 20, 32, 0.96), rgba(6, 10, 18, 0.98));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1.5px solid rgba(0, 240, 255, 0.35);
+    border-radius: 18px;
+    padding: 24px 20px 32px;
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(0, 240, 255, 0.2),
+        0 0 40px rgba(0, 240, 255, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    margin-top: 12px;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hub-collapsible:not([data-fullscreen="true"])[data-open="true"] .hub-collapsible__main {
+    animation: quickModalAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes quickModalAppear {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @media (max-width: 768px) {
@@ -5161,27 +5362,31 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(0, 0, 0, 0.7);
     z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     animation: fadeIn 0.3s ease;
 }
 
 .fullscreen-modal-container {
-    width: 95vw;
-    height: 90vh;
-    max-width: 1400px;
-    max-height: 900px;
-    background: linear-gradient(135deg, rgba(6, 10, 18, 0.98), rgba(13, 20, 32, 0.95));
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    border-radius: 20px;
+    width: 96vw;
+    height: 92vh;
+    max-width: 1800px;
+    max-height: 95vh;
+    background: linear-gradient(135deg, rgba(6, 10, 18, 0.99), rgba(13, 20, 32, 0.98));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 2px solid rgba(0, 240, 255, 0.5);
+    border-radius: 24px;
     box-shadow:
-        0 25px 80px rgba(0, 240, 255, 0.25),
-        0 0 0 1px rgba(0, 240, 255, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        0 40px 120px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(0, 240, 255, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 0 80px rgba(0, 240, 255, 0.2);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -5242,7 +5447,6 @@
     height: 100%;
     max-height: none;
     border-radius: 0;
-    background: transparent;
     border: none;
     overflow: hidden;
     display: flex;

@@ -324,7 +324,9 @@
     font-family: "Orbitron", monospace;
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--neon-primary);
+    color: var(--neon-accent);
+    text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+    animation: voteGlow 2s ease-in-out infinite;
 }
 
 /* === LEADERBOARD === */
@@ -459,14 +461,28 @@
     color: var(--text-secondary);
 }
 
-.project-meta .project-stats .score {
+.project-meta .project-stats .vote-stat {
     font-family: "Orbitron", monospace;
-    font-weight: 600;
-    color: var(--neon-primary);
-    background: var(--bg-secondary);
+    font-weight: 700;
+    color: var(--neon-accent);
+    background: linear-gradient(135deg, rgba(255, 255, 0, 0.1) 0%, rgba(255, 215, 0, 0.15) 100%);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    border: 1px solid var(--neon-primary);
+    border: 1px solid var(--neon-accent);
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+    animation: voteGlow 2s ease-in-out infinite;
+}
+
+@keyframes voteGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(255, 255, 0, 0.5), 0 0 30px rgba(255, 215, 0, 0.3);
+    }
 }
 
 /* === EMPTY STATE === */

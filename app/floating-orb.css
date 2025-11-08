@@ -29,7 +29,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
+    /* Changed from 'hidden' to allow arrows to show */
     /* Prevent any scrolling */
     /* Orb container should not be scrollable */
     /* ADDED: Ensure no scrolling whatsoever */
@@ -121,11 +122,6 @@
     /* ADDED: Ensure stage cannot be scrolled */
     touch-action: none;
     user-select: none;
-}
-
-.floating-orb-wrapper.lock-snap {
-    transform: scale(1.04);
-    transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .floating-orb-wrapper.lock-snap .floating-orb {
@@ -676,26 +672,18 @@
     justify-content: center;
     z-index: 50;
     /* Increased from 10 to ensure visibility */
-    transition: all 0.3s ease;
     backdrop-filter: blur(8px);
     box-shadow: 0 0 12px rgba(0, 240, 255, 0.28);
     user-select: none;
     pointer-events: auto;
-    /* Ensure arrows stay with orb container */
-    position: absolute;
+    /* Prevent any transitions or animations that might cause movement */
+    transition: none !important;
+    animation: none !important;
+    /* Isolate from parent transforms */
+    transform-style: flat;
+    will-change: auto;
 }
 
-.orb-nav-arrow:hover {
-    background: rgba(0, 240, 255, 0.18);
-    border-color: rgba(0, 240, 255, 0.6);
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
-    transform: translateY(-50%) scale(1.1);
-}
-
-.orb-nav-arrow:active {
-    transform: translateY(-50%) scale(0.95);
-    box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
-}
 
 .orb-nav-arrow:focus-visible {
     outline: 2px solid var(--orb-primary);
@@ -704,10 +692,14 @@
 
 .orb-nav-arrow-left {
     left: -24px;
+    /* Ensure position is fixed and not animated */
+    transition: none !important;
 }
 
 .orb-nav-arrow-right {
     right: -24px;
+    /* Ensure position is fixed and not animated */
+    transition: none !important;
 }
 
 @media (max-width: 768px) {

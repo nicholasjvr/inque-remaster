@@ -210,7 +210,7 @@ html::-webkit-scrollbar,
 .customization-shop ::-webkit-scrollbar-thumb,
 .background-gallery ::-webkit-scrollbar-thumb,
 .hub-expanded-content ::-webkit-scrollbar-thumb {
-  background: rgba(0, 240, 255, 0.35);
+  background: rgb(33, 86, 167);
   border-radius: 6px;
 }
 
@@ -1023,9 +1023,11 @@ main.mx-auto {
     transform: scale(0);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.2);
   }
+
   100% {
     transform: scale(1);
     opacity: 1;

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProfileHub from '@/app/components/ProfileHub';
-import { Widget, useAllWidgets, useBundleSocial, toggleFollow } from '@/hooks/useFirestore';
+import { Widget, useAllWidgets, useBundleSocial, toggleFollow, useVoting } from '@/hooks/useFirestore';
 import BundleIframe from '@/app/components/BundleIframe';
 
 
@@ -76,6 +76,21 @@ export default function ExplorePage() {
 
       {/* Main Content */}
       <main className="explore-main">
+        {/* Voting Banner CTA */}
+        <div className="voting-banner">
+          <div className="voting-banner-content">
+            <div className="voting-banner-icon">⭐</div>
+            <div className="voting-banner-text">
+              <h2 className="voting-banner-title">Vote for the Best Demo</h2>
+              <p className="voting-banner-description">Help decide which projects deserve the spotlight! Your vote matters.</p>
+            </div>
+            <a href="/showcase" className="voting-banner-btn">
+              <span>🏆</span>
+              <span>View Showcase</span>
+            </a>
+          </div>
+        </div>
+
         {/* Controls Section */}
         <div className="explore-controls">
           <div className="search-container">
@@ -166,6 +181,7 @@ export default function ExplorePage() {
                   </div>
                 </div>
                 <SocialRow widget={widget} currentUserId={user?.uid} />
+                <VotingRow widget={widget} currentUserId={user?.uid} />
               </div>
             ))}
           </div>
@@ -223,6 +239,34 @@ function SocialRow({ widget, currentUserId }: { widget: Widget; currentUserId?: 
       <button className="explore-follow-btn" onClick={() => currentUserId && toggleFollow(currentUserId, widget.userId || '')}>+ Follow</button>
       <button className="explore-like-btn" onClick={() => social.toggleLike(widget)}>
         ❤️ {social.likedByMe ? 'Unlike' : 'Like'} {social.likes ? `(${social.likes})` : ''}
+      </button>
+    </div>
+  );
+}
+
+function VotingRow({ widget, currentUserId }: { widget: Widget; currentUserId?: string }) {
+  const voting = useVoting(widget?.id, currentUserId, 'widget');
+  const { user } = useAuth();
+
+  const handleVote = () => {
+    if (!user) {
+      // Could show sign-in prompt here
+      return;
+    }
+    voting.toggleVote(widget);
+  };
+
+  return (
+    <div className="explore-voting-row">
+      <button
+        className={`explore-vote-btn ${voting.votedByMe ? 'voted' : ''}`}
+        onClick={handleVote}
+        disabled={!user}
+        title={!user ? 'Sign in to vote' : voting.votedByMe ? 'Remove your vote' : 'Vote for this demo'}
+      >
+        <span className="vote-icon">⭐</span>
+        <span className="vote-text">{voting.votedByMe ? 'Voted' : 'Vote'}</span>
+        {voting.votes > 0 && <span className="vote-count">({voting.votes})</span>}
       </button>
     </div>
   );

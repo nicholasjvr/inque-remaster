@@ -931,6 +931,88 @@ export async function toggleFollow(followerId: string, followingId: string) {
   }
 }
 
+// ---------------------
+// Voting System for "Best Demo"
+// ---------------------
+export function useVoting(bundleId?: string, currentUserId?: string, targetType: 'bundle' | 'widget' = 'bundle') {
+  const [votes, setVotes] = useState<number>(0);
+  const [votedByMe, setVotedByMe] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(!!bundleId);
+
+  useEffect(() => {
+    if (!bundleId) { setLoading(false); return; }
+
+    if (!db) {
+      console.error('Firestore not initialized - useVoting will not attach listeners');
+      setLoading(false);
+      return;
+    }
+
+    const collectionName = targetType === 'widget' ? 'widgets' : 'bundles';
+    const targetRef = doc(db, collectionName, bundleId);
+    let unsubA: Unsubscribe | null = null;
+    let unsubB: Unsubscribe | null = null;
+
+    try {
+      // Subscribe to doc for vote counter
+      unsubA = onSnapshot(targetRef, (snap) => {
+        const d = snap.data() as any;
+        setVotes((d?.votes ?? 0) as number);
+      });
+
+      // Check if current user has voted (presence of vote doc in subcollection)
+      if (currentUserId) {
+        const voteDocId = currentUserId;
+        const voteRef = doc(db, collectionName, bundleId, 'votes', voteDocId);
+        unsubB = onSnapshot(voteRef, (snap) => {
+          setVotedByMe(snap.exists());
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Failed to attach voting listeners:', err);
+      setLoading(false);
+    }
+
+    return () => { 
+      if (unsubA) unsubA(); 
+      if (unsubB) unsubB(); 
+    };
+  }, [bundleId, currentUserId, targetType]);
+
+  const toggleVote = async (target: { id: string }) => {
+    if (!currentUserId || !target?.id) return;
+    const collectionName = targetType === 'widget' ? 'widgets' : 'bundles';
+    const targetRef = doc(db, collectionName, target.id);
+    const votesRef = collection(db, collectionName, target.id, 'votes');
+    const voteDocId = currentUserId; // Use userId as document ID for one vote per user
+    const voteRef = doc(votesRef, voteDocId);
+
+    await runTransaction(db, async (tx) => {
+      const voteSnap = await tx.get(voteRef);
+      const targetSnap = await tx.get(targetRef);
+      const prevVotes = (targetSnap.exists() ? ((targetSnap.data() as any).votes || 0) : 0) as number;
+      
+      if (voteSnap.exists()) {
+        // User has voted, remove vote
+        tx.delete(voteRef);
+        tx.update(targetRef, { votes: Math.max(0, prevVotes - 1), updatedAt: serverTimestamp() });
+      } else {
+        // User hasn't voted, add vote
+        tx.set(voteRef, { 
+          userId: currentUserId, 
+          createdAt: serverTimestamp() 
+        });
+        tx.update(targetRef, { votes: prevVotes + 1, updatedAt: serverTimestamp() });
+      }
+    });
+  };
+
+  return { votes, votedByMe, loading, toggleVote };
+}
+
 // Hook to use stats
 export function useUserStats(userId?: string) {
   const [stats, setStats] = useState<UserStats | null>(null);

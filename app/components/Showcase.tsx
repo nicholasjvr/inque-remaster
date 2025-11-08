@@ -18,6 +18,7 @@ interface Project {
     likes: number;
     shares: number;
     views: number;
+    votes: number;
     score: number;
   };
   createdAt: string;
@@ -50,11 +51,19 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
     { id: 'all', label: 'All Time' },
   ];
 
-  // Map widgets -> showcase projects ranked by likes
+  // Map widgets -> showcase projects ranked by votes (fallback to likes)
   const projects: Project[] = useMemo(() => {
-    // Sort widgets by likes
-    const sortedWidgets = [...widgets].sort((a, b) => ((b as any).likes || 0) - ((a as any).likes || 0));
-    
+    // Sort widgets by votes first, then by likes as tiebreaker
+    const sortedWidgets = [...widgets].sort((a, b) => {
+      const votesA = (a as any).votes || 0;
+      const votesB = (b as any).votes || 0;
+      if (votesB !== votesA) {
+        return votesB - votesA;
+      }
+      // Tiebreaker: use likes
+      return ((b as any).likes || 0) - ((a as any).likes || 0);
+    });
+
     return sortedWidgets.map((w, idx) => ({
       id: w.id,
       title: w.title || `Project ${idx + 1}`,
@@ -69,14 +78,15 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
         likes: (w as any).likes || 0,
         shares: (w as any).shares || 0,
         views: (w as any).views || 0,
-        score: (w as any).likes || 0,
+        votes: (w as any).votes || 0,
+        score: (w as any).votes || (w as any).likes || 0, // Use votes for score, fallback to likes
       },
       createdAt: (w as any).createdAt ? String((w as any).createdAt) : '',
       category: 'all',
     }));
   }, [widgets]);
 
-  const filteredProjects = projects.filter(project => 
+  const filteredProjects = projects.filter(project =>
     selectedCategory === 'all' || project.category === selectedCategory
   );
 
@@ -128,8 +138,8 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
         <div className="showcase-filters">
           <div className="filter-group">
             <label>Category</label>
-            <select 
-              value={selectedCategory} 
+            <select
+              value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="filter-select"
             >
@@ -142,8 +152,8 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
           </div>
           <div className="filter-group">
             <label>Timeframe</label>
-            <select 
-              value={timeframe} 
+            <select
+              value={timeframe}
               onChange={(e) => setTimeframe(e.target.value)}
               className="filter-select"
             >
@@ -172,6 +182,7 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
                     <img src={project.imageUrl} alt={project.title} />
                     <div className="project-overlay">
                       <div className="project-stats">
+                        <span>{project.stats.votes} ⭐</span>
                         <span>{project.stats.likes} ❤️</span>
                         <span>{project.stats.shares} 🔗</span>
                         <span>{project.stats.views} 👁️</span>
@@ -186,8 +197,8 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
                       <span>{project.author.name}</span>
                     </div>
                     <div className="project-score">
-                      <span className="score-label">Score</span>
-                      <span className="score-value">{project.stats.score}</span>
+                      <span className="score-label">Votes</span>
+                      <span className="score-value">{project.stats.votes}</span>
                     </div>
                   </div>
                 </div>
@@ -219,10 +230,10 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
                         <span>{project.author.name}</span>
                       </div>
                       <div className="project-stats">
+                        <span className="vote-stat">{project.stats.votes} ⭐</span>
                         <span>{project.stats.likes} ❤️</span>
                         <span>{project.stats.shares} 🔗</span>
                         <span>{project.stats.views} 👁️</span>
-                        <span className="score">{project.stats.score}</span>
                       </div>
                     </div>
                   </div>

@@ -630,9 +630,10 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
 
   const hubContent = (
     <div
-      className={`profile-hub-wrapper${isModalOpen && mode !== 'edit' ? ' profile-hub-wrapper--expanded' : ''}`}
+      className={`profile-hub-wrapper${isModalOpen && mode !== 'edit' ? ' profile-hub-wrapper--expanded' : ''}${fullscreenSection ? ' profile-hub-wrapper--fullscreen-active' : ''}`}
       data-variant={variant}
       data-expanded={isModalOpen && mode !== 'edit' ? 'true' : 'false'}
+      data-fullscreen-active={fullscreenSection ? 'true' : 'false'}
       aria-live="polite"
       style={variant === 'billboard' ? {
         position: 'relative',
@@ -1341,7 +1342,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
               zIndex: 999
             } as React.CSSProperties}
           />

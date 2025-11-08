@@ -82,7 +82,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
     try {
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
       const fileMap = await buildBundleFileMap(basePath);
-      
+
       const tree: FileNode[] = [];
       const pathMap = new Map<string, FileNode>();
 
@@ -136,7 +136,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
     setExpandedPaths(newExpanded);
   };
 
-  const renderFileTree = (nodes: FileNode[], level: number = 0): JSX.Element[] => {
+  const renderFileTree = (nodes: FileNode[], level: number = 0): React.ReactElement[] => {
     return nodes.map((node) => {
       const isExpanded = expandedPaths.has(node.path);
       const isSelected = selectedFile?.path === node.path;
