@@ -1273,14 +1273,25 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
               </header>
               <div className="hub-chat-body">
                 <div className="hub-chat-messages">
-                  {messages.map((message, index) => (
-                    <div key={`${message.sender}-${index}`} className="hub-chat-message">
-                      <span className="avatar" aria-hidden="true">
-                        {message.avatar}
-                      </span>
-                      <div className="bubble">{message.text}</div>
-                    </div>
-                  ))}
+                  {messages.map((message, index) => {
+                    const prevMessage = index > 0 ? messages[index - 1] : null;
+                    const isConsecutive = prevMessage?.sender === message.sender;
+                    const isUser = message.sender === 'me';
+                    return (
+                      <div
+                        key={`${message.sender}-${index}`}
+                        className={`hub-chat-message ${isUser ? 'hub-chat-message--user' : 'hub-chat-message--ai'} ${isConsecutive ? 'hub-chat-message--consecutive' : ''}`}
+                      >
+                        {!isConsecutive && (
+                          <span className="avatar" aria-hidden="true">
+                            {message.avatar}
+                          </span>
+                        )}
+                        {isConsecutive && <span className="avatar avatar--hidden" aria-hidden="true"></span>}
+                        <div className="bubble">{message.text}</div>
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="hub-chat-input">
                   <input
