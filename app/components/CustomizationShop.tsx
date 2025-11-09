@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useFirestore';
 import type { UserProfile } from '@/hooks/useFirestore';
 import BackgroundGallery from './BackgroundGallery';
+import { showToast } from '@/app/utils/toast';
 import './CustomizationShop.css';
 
 type CustomizationSection = 'avatar' | 'background';
@@ -134,9 +135,11 @@ export default function CustomizationShop({ profile, onSave, onReset }: Customiz
       }
 
       await onSave(updates);
-      console.log('Customization saved successfully!');
+      showToast('Customization saved successfully!', 'success');
     } catch (error) {
       console.error('Error saving customization:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save customization';
+      showToast(errorMessage, 'error');
     } finally {
       setIsSaving(false);
     }

@@ -3,17 +3,40 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProfileHub from '@/app/components/ProfileHub';
+import SignUpPrompt from '@/app/components/SignUpPrompt';
 import { Widget, useAllWidgets, useBundleSocial, toggleFollow, useVoting } from '@/hooks/useFirestore';
 import BundleIframe from '@/app/components/BundleIframe';
 
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: '🌟' },
+  { id: 'web', label: 'Web Apps', icon: '🌐' },
+  { id: 'mobile', label: 'Mobile', icon: '📱' },
+  { id: 'design', label: 'Design', icon: '🎨' },
+  { id: 'game', label: 'Games', icon: '🎮' },
+  { id: 'ai', label: 'AI/ML', icon: '🤖' },
+  { id: 'tool', label: 'Tools', icon: '🛠️' },
+  { id: 'creative', label: 'Creative', icon: '✨' },
+];
 
 export default function ExplorePage() {
   const { user } = useAuth();
   const { widgets, loading, error } = useAllWidgets({ limitCount: 100 });
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'name' | 'random'>('recent');
-  const [category, setCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [query, setQuery] = useState<string>('');
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null);
+
+  // Get all unique categories from widgets
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    widgets.forEach((w) => {
+      const tags = Array.isArray(w.tags)
+        ? w.tags
+        : `${w.tags || ''}`.split(',').map((t) => t.trim()).filter(Boolean);
+      tags.forEach((tag) => cats.add(tag.toLowerCase()));
+    });
+    return Array.from(cats);
+  }, [widgets]);
 
   const sorted = useMemo(() => {
     const arr = [...widgets];
@@ -25,185 +48,213 @@ export default function ExplorePage() {
       case 'random':
         return arr.sort(() => Math.random() - 0.5);
       default:
-        return arr;
+        return arr.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() || 0;
+          const bTime = b.createdAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
     }
   }, [widgets, sortBy]);
 
-  const filtered = useMemo(() => {
+  // Group widgets by category
+  const widgetsByCategory = useMemo(() => {
+    const grouped: Record<string, Widget[]> = {};
     const q = query.trim().toLowerCase();
-    return sorted.filter((w) => {
+
+    sorted.forEach((w) => {
       const tags = Array.isArray(w.tags)
         ? w.tags
-        : `${w.tags || ''}`.split(',').map((t) => t.trim());
-      const categoryOk = category === 'all' || tags.includes(category);
+        : `${w.tags || ''}`.split(',').map((t) => t.trim()).filter(Boolean);
+      
       const hay = `${w.title || ''} ${w.description || ''} ${tags.join(' ')} ${w.id || ''}`.toLowerCase();
       const queryOk = !q || hay.includes(q);
-      return categoryOk && queryOk;
+
+      if (!queryOk) return;
+
+      // Add to "all" category
+      if (!grouped['all']) grouped['all'] = [];
+      grouped['all'].push(w);
+
+      // Add to specific categories
+      tags.forEach((tag) => {
+        const cat = tag.toLowerCase();
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(w);
+      });
     });
-  }, [sorted, category, query]);
+
+    return grouped;
+  }, [sorted, query]);
+
+  // Featured/Popular widgets (top 6 by likes)
+  const featuredWidgets = useMemo(() => {
+    return sorted
+      .sort((a, b) => ((b as any).likes || 0) - ((a as any).likes || 0))
+      .slice(0, 6);
+  }, [sorted]);
 
   const openFullscreen = (w: Widget) => setFullscreenWidget(w);
   const closeFullscreen = () => setFullscreenWidget(null);
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
-      {/* Header */}
-      <header className="explore-header">
-        <div className="header-content">
-          <div className="header-title">
-            <span className="title-icon">🔍</span>
-            <h1>Explore Projects</h1>
+      {/* Seamless Header */}
+      <header className="explore-header-seamless">
+        <div className="header-gradient-overlay"></div>
+        <div className="header-content-seamless">
+          <div className="header-left">
+            <div className="header-title-seamless">
+              <span className="title-icon">🔍</span>
+              <h1>Explore</h1>
+            </div>
+            <nav className="header-nav">
+              <a href="/" className="nav-link">Home</a>
+              <a href="/showcase" className="nav-link">Showcase</a>
+              <a href="/users" className="nav-link">Creators</a>
+            </nav>
           </div>
-          <div className="header-actions">
-            <a href="/" className="action-btn">
-              <span>🏠</span>
-              <span className="btn-text">Home</span>
-            </a>
-            <a href="/showcase" className="action-btn">
-              <span>🏆</span>
-              <span className="btn-text">Showcase</span>
-            </a>
-            <a href="/users" className="action-btn">
-              <span>👥</span>
-              <span className="btn-text">Creators</span>
-            </a>
+          <div className="header-right">
+            <div className="search-bar-compact">
+              <input
+                type="text"
+                className="search-input-compact"
+                placeholder="Search..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <span className="search-icon-compact">🔍</span>
+            </div>
+            <div className="header-profile-compact">
+              <ProfileHub variant="billboard" />
+            </div>
           </div>
-        </div>
-        <div className="header-profile-hub">
-          <ProfileHub variant="billboard" />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="explore-main">
-        {/* Voting Banner CTA */}
-        <div className="voting-banner">
-          <div className="voting-banner-content">
-            <div className="voting-banner-icon">⭐</div>
-            <div className="voting-banner-text">
-              <h2 className="voting-banner-title">Vote for the Best Demo</h2>
-              <p className="voting-banner-description">Help decide which projects deserve the spotlight! Your vote matters.</p>
+      <main className="explore-main-seamless">
+        {/* Featured Hero Section */}
+        {featuredWidgets.length > 0 && !loading && (
+          <section className="featured-section">
+            <div className="featured-header">
+              <h2 className="section-title">🔥 Trending Now</h2>
+              <p className="section-subtitle">Most popular projects this week</p>
             </div>
-            <a href="/showcase" className="voting-banner-btn">
-              <span>🏆</span>
-              <span>View Showcase</span>
-            </a>
-          </div>
-        </div>
+            <div className="featured-grid">
+              {featuredWidgets.slice(0, 6).map((widget) => (
+                <FeaturedCard key={widget.id} widget={widget} onOpenFullscreen={openFullscreen} currentUserId={user?.uid} />
+              ))}
+            </div>
+          </section>
+        )}
 
-        {/* Controls Section */}
-        <div className="explore-controls">
-          <div className="search-container">
-            <input
-              type="text"
-              id="widgetSearch"
-              className="search-input"
-              placeholder="Search projects, creators, or tags..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <span className="search-icon">🔍</span>
-          </div>
-          <div className="filter-container">
-            <div className="filter-group">
-              <label htmlFor="sortSelect">Sort By</label>
-              <select id="sortSelect" className="filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
-                <option value="recent">Most Recent</option>
-                <option value="popular">Most Popular</option>
-                <option value="name">Name A-Z</option>
-                <option value="random">Random</option>
-              </select>
-            </div>
-            <div className="filter-group">
-              <label htmlFor="categorySelect">Category</label>
-              <select id="categorySelect" className="filter-select" value={category} onChange={(e) => setCategory(e.target.value)}>
-                <option value="all">All Categories</option>
-                <option value="web">Web Apps</option>
-                <option value="mobile">Mobile Apps</option>
-                <option value="design">Design</option>
-                <option value="game">Games</option>
-                <option value="ai">AI/ML</option>
-              </select>
-            </div>
-            <button id="refreshBtn" className="action-btn" onClick={() => window.location.reload()}>
-              <span>🔄</span>
-              <span className="btn-text">Refresh</span>
-            </button>
-            <button id="clearFiltersBtn" className="action-btn" onClick={() => { setQuery(''); setCategory('all'); setSortBy('recent'); }}>
-              <span>🗑️</span>
-              <span className="btn-text">Clear</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Widget Grid */}
-        <div className="explore-grid-container">
-          <div id="exploreWidgetList" className="explore-widget-grid">
-            {loading && (
-              <div className="loading-state">
-                <div className="loading-spinner"></div>
-                <div className="loading-text">Loading projects…</div>
-                <div className="loading-subtitle">Fetching live bundles from Firestore</div>
-              </div>
-            )}
-            {error && (
-              <div className="error-state" style={{ padding: 20, background: 'rgba(255,0,0,0.06)', borderRadius: 8 }}>
-                <h3 style={{ color: '#ffdddd' }}>Unable to load projects</h3>
-                <p style={{ color: '#ffdede' }}>{String(error)}</p>
-                <p style={{ color: '#e6e6e6' }}>Tip: check Firebase config (NEXT_PUBLIC_FIREBASE_*) and Firestore/Storage rules in the Firebase Console.</p>
-                <button className="empty-action-btn" onClick={() => window.location.reload()}>
-                  Retry
-                </button>
-              </div>
-            )}
-            {!loading && !error && filtered.length === 0 && (
-              <div id="emptyState" className="empty-state">
-                <div className="empty-icon">🔍</div>
-                <h3>No projects found</h3>
-                <p>Try adjusting your search filters or check back later for new projects.</p>
-                <button className="empty-action-btn" onClick={() => window.location.reload()}>
-                  Refresh Page
-                </button>
-              </div>
-            )}
-            {!loading && filtered.map((widget) => (
-              <div key={widget.id} className="explore-widget-card">
-                <div className="explore-widget-header">
-                  <h3 className="explore-widget-title">{widget.title || 'Untitled Project'}</h3>
-                  <div className="explore-widget-user">by {widget.userId?.slice(0, 6) || 'Unknown'}</div>
-                </div>
-                <div className="explore-widget-preview">
-                  <BundleIframe bundle={widget} height={200} />
-                  <div className="preview-overlay">
-                    <button className="fullscreen-demo-btn" onClick={() => openFullscreen(widget)}>
-                      ▶ Demo Fullscreen
-                    </button>
-                  </div>
-                </div>
-                <SocialRow widget={widget} currentUserId={user?.uid} />
-                <VotingRow widget={widget} currentUserId={user?.uid} />
-              </div>
+        {/* Category Pills */}
+        <section className="category-pills-section">
+          <div className="category-pills-container">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                className={`category-pill ${selectedCategory === cat.id ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                <span className="pill-icon">{cat.icon}</span>
+                <span className="pill-label">{cat.label}</span>
+                {widgetsByCategory[cat.id] && (
+                  <span className="pill-count">({widgetsByCategory[cat.id].length})</span>
+                )}
+              </button>
             ))}
           </div>
+        </section>
 
-          {/* Load More */}
-          <div id="loadMoreContainer" className="load-more-container" style={{ display: filtered.length >= 50 ? 'flex' : 'none' }}>
-            <button id="loadMoreBtn" className="load-more-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <span className="btn-icon">📄</span>
-              <span className="btn-text">Load More</span>
-            </button>
+        {/* Category Rows (Netflix-style) */}
+        {loading && (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">Loading projects…</div>
+            <div className="loading-subtitle">Fetching live bundles from Firestore</div>
           </div>
+        )}
 
-          {/* Empty State */}
-          <div id="emptyState" className="empty-state" style={{ display: 'none' }}>
-            <div className="empty-icon">🔍</div>
-            <h3>No projects found</h3>
-            <p>Try adjusting your search filters or check back later for new projects.</p>
+        {error && (
+          <div className="error-state" style={{ padding: 20, background: 'rgba(255,0,0,0.06)', borderRadius: 8 }}>
+            <h3 style={{ color: '#ffdddd' }}>Unable to load projects</h3>
+            <p style={{ color: '#ffdede' }}>{String(error)}</p>
+            <p style={{ color: '#e6e6e6' }}>Tip: check Firebase config (NEXT_PUBLIC_FIREBASE_*) and Firestore/Storage rules in the Firebase Console.</p>
             <button className="empty-action-btn" onClick={() => window.location.reload()}>
-              Refresh Page
+              Retry
             </button>
           </div>
-        </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            {/* Show selected category or all categories */}
+            {selectedCategory === 'all' ? (
+              // Show all categories as rows
+              Object.entries(widgetsByCategory)
+                .filter(([cat]) => cat !== 'all' && widgetsByCategory[cat].length > 0)
+                .map(([categoryId, categoryWidgets]) => {
+                  const categoryInfo = CATEGORIES.find(c => c.id === categoryId) || 
+                    { id: categoryId, label: categoryId.charAt(0).toUpperCase() + categoryId.slice(1), icon: '📦' };
+                  return (
+                    <CategoryRow
+                      key={categoryId}
+                      category={categoryInfo}
+                      widgets={categoryWidgets}
+                      onOpenFullscreen={openFullscreen}
+                      currentUserId={user?.uid}
+                    />
+                  );
+                })
+            ) : (
+              // Show selected category
+              widgetsByCategory[selectedCategory] && widgetsByCategory[selectedCategory].length > 0 ? (
+                <CategoryRow
+                  category={CATEGORIES.find(c => c.id === selectedCategory) || CATEGORIES[0]}
+                  widgets={widgetsByCategory[selectedCategory]}
+                  onOpenFullscreen={openFullscreen}
+                  currentUserId={user?.uid}
+                />
+              ) : (
+                <div className="empty-state">
+                  {!user ? (
+                    <SignUpPrompt 
+                      title="Sign in to Explore Projects"
+                      description="Discover amazing projects from creators around the world"
+                      showBenefits={true}
+                    />
+                  ) : (
+                    <>
+                      <div className="empty-icon">🔍</div>
+                      <h3>No projects found</h3>
+                      <p>Try selecting a different category or check back later for new projects.</p>
+                    </>
+                  )}
+                </div>
+              )
+            )}
+
+            {/* All Projects Grid View (fallback) */}
+            {selectedCategory === 'all' && Object.keys(widgetsByCategory).length === 0 && (
+              <div className="empty-state">
+                {!user ? (
+                  <SignUpPrompt 
+                    title="Join inQ to Share Your Projects"
+                    description="Create and share your interactive widgets with the community"
+                    showBenefits={true}
+                  />
+                ) : (
+                  <>
+                    <div className="empty-icon">🔍</div>
+                    <h3>No projects found</h3>
+                    <p>Try adjusting your search or check back later for new projects.</p>
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </main>
 
 
@@ -227,6 +278,106 @@ export default function ExplorePage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
       `}</style>
       <link rel="stylesheet" href="/explore.css" />
+    </div>
+  );
+}
+
+function CategoryRow({ 
+  category, 
+  widgets, 
+  onOpenFullscreen, 
+  currentUserId 
+}: { 
+  category: { id: string; label: string; icon: string }; 
+  widgets: Widget[]; 
+  onOpenFullscreen: (w: Widget) => void;
+  currentUserId?: string;
+}) {
+  return (
+    <section className="category-row">
+      <div className="category-row-header">
+        <h3 className="category-row-title">
+          <span className="category-icon">{category.icon}</span>
+          {category.label}
+        </h3>
+        <span className="category-count">{widgets.length} projects</span>
+      </div>
+      <div className="category-row-content">
+        <div className="category-row-scroll">
+          {widgets.map((widget) => (
+            <WidgetCard
+              key={widget.id}
+              widget={widget}
+              onOpenFullscreen={onOpenFullscreen}
+              currentUserId={currentUserId}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeaturedCard({ 
+  widget, 
+  onOpenFullscreen, 
+  currentUserId 
+}: { 
+  widget: Widget; 
+  onOpenFullscreen: (w: Widget) => void;
+  currentUserId?: string;
+}) {
+  const social = useBundleSocial(widget?.id, currentUserId, 'widget');
+  
+  return (
+    <div className="featured-card">
+      <div className="featured-card-preview">
+        <BundleIframe bundle={widget} height={240} />
+        <div className="preview-overlay">
+          <button className="fullscreen-demo-btn" onClick={() => onOpenFullscreen(widget)}>
+            ▶ Play Demo
+          </button>
+        </div>
+      </div>
+      <div className="featured-card-info">
+        <h4 className="featured-card-title">{widget.title || 'Untitled Project'}</h4>
+        <div className="featured-card-meta">
+          <span className="featured-card-user">by {widget.userId?.slice(0, 8) || 'Unknown'}</span>
+          <span className="featured-card-likes">❤️ {social.likes || 0}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WidgetCard({ 
+  widget, 
+  onOpenFullscreen, 
+  currentUserId 
+}: { 
+  widget: Widget; 
+  onOpenFullscreen: (w: Widget) => void;
+  currentUserId?: string;
+}) {
+  const social = useBundleSocial(widget?.id, currentUserId, 'widget');
+  
+  return (
+    <div className="category-widget-card">
+      <div className="category-widget-preview">
+        <BundleIframe bundle={widget} height={180} />
+        <div className="preview-overlay">
+          <button className="fullscreen-demo-btn-compact" onClick={() => onOpenFullscreen(widget)}>
+            ▶
+          </button>
+        </div>
+      </div>
+      <div className="category-widget-info">
+        <h4 className="category-widget-title">{widget.title || 'Untitled'}</h4>
+        <div className="category-widget-meta">
+          <span className="category-widget-user">{widget.userId?.slice(0, 6) || 'Unknown'}</span>
+          <span className="category-widget-likes">❤️ {social.likes || 0}</span>
+        </div>
+      </div>
     </div>
   );
 }

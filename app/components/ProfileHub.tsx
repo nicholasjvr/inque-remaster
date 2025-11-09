@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import type { PublicUser, UserProfile, RepRackItem } from '@/hooks/useFirestore';
-import { useUserProfile } from '@/hooks/useFirestore';
+import type { PublicUser, UserProfile, RepRackItem, Widget } from '@/hooks/useFirestore';
+import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
 import RepRackManager from './RepRackManager';
 import CustomizationShop from './CustomizationShop';
 import FullscreenWrapper from './FullscreenWrapper';
+import SignUpPrompt from './SignUpPrompt';
+import AIBot from './AIBot';
+import { useRouter } from 'next/navigation';
 
 // Interest and goal option mappings for display
 const INTEREST_OPTIONS = [
@@ -42,12 +45,6 @@ type NavigationItem = {
   href: string;
 };
 
-type ChatMessage = {
-  sender: 'ai' | 'me';
-  avatar: string;
-  text: string;
-};
-
 const NAV_ITEMS: NavigationItem[] = [
   { id: 'projects', label: 'Projects', icon: '📊', href: '/projects' },
   { id: 'studio', label: 'Widget Studio', icon: '🎨', href: '/studio' },
@@ -62,10 +59,18 @@ const QUICK_ACTIONS: NavigationItem[] = [
   { id: 'settings', label: 'Settings', icon: '⚙️', href: '/settings' },
 ];
 
-const DEFAULT_MESSAGE: ChatMessage = {
-  sender: 'ai',
-  avatar: '🤖',
-  text: "Hi there! I'm your ProfileHub assistant. I can help you navigate, customize, or share your space.",
+// Helper function to format time ago
+const getTimeAgo = (date: Date): string => {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)} weeks ago`;
+  if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)} months ago`;
+  return `${Math.floor(diffInSeconds / 31536000)} years ago`;
 };
 
 const THEME_MAP: Record<HubTheme, string> = {
@@ -237,11 +242,10 @@ type ProfileHubProps = {
 
 const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', variant, onStateChange }: ProfileHubProps) => {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const [state, setState] = useState<HubState>(initialState);
   const [isClosing, setIsClosing] = useState(false);
   const [theme, setTheme] = useState<HubTheme>(() => loadPreferences().theme);
-  const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_MESSAGE]);
-  const [messageDraft, setMessageDraft] = useState('');
   const isExpanded = state === 'expanded';
   const isChatbot = state === 'chatbot';
   const isDM = state === 'dm';
@@ -279,9 +283,21 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   // Load profile for target user (owner or public user)
   const targetUserId = profileUser?.id || user?.uid || null;
   const { profile, saveProfile } = useUserProfile(targetUserId || undefined);
+  const { widgets, loading: widgetsLoading } = useWidgets(targetUserId || undefined);
   const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
   const [showRepRackManager, setShowRepRackManager] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+
+  // Match repRack items to actual widgets
+  const repRackWidgets = useMemo(() => {
+    if (!localProfile?.repRack || !widgets) return [];
+    return localProfile.repRack
+      .map(rackItem => {
+        const widget = widgets.find(w => w.id === rackItem.refId);
+        return widget ? { ...rackItem, widget } : null;
+      })
+      .filter((item): item is RepRackItem & { widget: Widget } => item !== null);
+  }, [localProfile?.repRack, widgets]);
 
   useEffect(() => {
     setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
@@ -525,20 +541,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     return () => window.removeEventListener('keydown', handler);
   }, [isExpanded]);
 
-  const handleSendMessage = useCallback(() => {
-    const trimmed = messageDraft.trim();
-    if (!trimmed) return;
-    setMessages((prev): ChatMessage[] => [
-      ...prev,
-      { sender: 'me', avatar: '👤', text: trimmed },
-      {
-        sender: 'ai',
-        avatar: '🤖',
-        text: 'Thanks for your message! In a future update this will connect to the live assistant.',
-      },
-    ]);
-    setMessageDraft('');
-  }, [messageDraft]);
 
   const themeClass = useMemo(() => THEME_MAP[theme], [theme]);
   const socialLinks = useMemo(
@@ -714,7 +716,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
               <div className="public-profile-banner">
                 <div className="profile-stats-row">
                   <div className="profile-stat">
-                    <span className="stat-number">{localProfile?.repRack?.length || 0}</span>
+                    <span className="stat-number">{widgets.length || localProfile?.repRack?.length || 0}</span>
                     <span className="stat-label">Projects</span>
                   </div>
                   <div className="profile-stat">
@@ -843,23 +845,31 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     onEnterFullscreen={() => openFullscreen('customization')}
                     onExitFullscreen={closeFullscreen}
                   >
-                    <CustomizationShop
-                      profile={localProfile}
-                      onSave={async (updates) => {
-                        if (!user?.uid) return;
-                        try {
-                          await saveProfile(user.uid, updates);
-                          setLocalProfile(prev => ({ ...prev, ...updates }));
-                          console.log('Customization saved successfully!');
-                        } catch (error) {
-                          console.error('Error saving customization:', error);
-                        }
-                      }}
-                      onReset={() => {
-                        setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
-                        setTheme(profile?.theme?.mode || 'neo');
-                      }}
-                    />
+                    {!user ? (
+                      <SignUpPrompt
+                        title="Sign in to Customize Your Profile"
+                        description="Personalize your avatar, frames, and background"
+                        compact={true}
+                      />
+                    ) : (
+                      <CustomizationShop
+                        profile={localProfile}
+                        onSave={async (updates) => {
+                          if (!user?.uid) return;
+                          try {
+                            await saveProfile(user.uid, updates);
+                            setLocalProfile(prev => ({ ...prev, ...updates }));
+                            console.log('Customization saved successfully!');
+                          } catch (error) {
+                            console.error('Error saving customization:', error);
+                          }
+                        }}
+                        onReset={() => {
+                          setLocalProfile(profile || { repRack: [], theme: { mode: 'neo' } });
+                          setTheme(profile?.theme?.mode || 'neo');
+                        }}
+                      />
+                    )}
                   </CollapsibleSection>
                 )}
 
@@ -874,49 +884,125 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   isFullscreen={fullscreenSection === 'featured'}
                   onEnterFullscreen={() => openFullscreen('featured')}
                   onExitFullscreen={closeFullscreen}
-                  quickbar={(
+                  quickbar={user ? (
                     <div className="projects-toolbar">
-                      <button className="projects-btn create-btn">+ New Project</button>
-                      <button className="projects-btn manage-btn">Manage Projects</button>
+                      <button
+                        className="projects-btn create-btn"
+                        onClick={() => router.push('/studio')}
+                      >
+                        + New Project
+                      </button>
+                      <button
+                        className="projects-btn manage-btn"
+                        onClick={() => router.push('/projects')}
+                      >
+                        Manage Projects
+                      </button>
+                    </div>
+                  ) : null}
+                >
+                  {!user && !isPublicView ? (
+                    <SignUpPrompt
+                      title="Sign in to View Your Projects"
+                      description="Create and showcase your projects by signing in"
+                      compact={true}
+                    />
+                  ) : (
+                    <div className="featured-projects-enhanced">
+                      {widgetsLoading ? (
+                        <div className="projects-loading">
+                          <div className="loading-spinner">
+                            <div className="spinner"></div>
+                            <p>Loading projects...</p>
+                          </div>
+                        </div>
+                      ) : repRackWidgets.length === 0 && widgets.length === 0 ? (
+                        <div className="projects-empty">
+                          <div className="empty-icon">📁</div>
+                          <h4>No Projects Yet</h4>
+                          <p>Start creating by uploading your first widget in the Widget Studio.</p>
+                          {user && (
+                            <button
+                              className="projects-btn create-btn"
+                              onClick={() => router.push('/studio')}
+                            >
+                              Go to Widget Studio
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="featured-projects-grid">
+                            {(repRackWidgets.length > 0 ? repRackWidgets : widgets.slice(0, 12)).map((item, index) => {
+                              const widget = 'widget' in item ? item.widget : item;
+                              const rackItem = 'widget' in item ? item : null;
+                              return (
+                                <div key={widget.id || index} className="featured-project-card">
+                                  <div className="project-image-container">
+                                    {widget.thumbnailUrl || rackItem?.imageUrl ? (
+                                      <img
+                                        className="project-image"
+                                        src={widget.thumbnailUrl || rackItem?.imageUrl}
+                                        alt={widget.title || 'Project'}
+                                      />
+                                    ) : (
+                                      <div className="project-image-placeholder">
+                                        {widget.title?.charAt(0) || '🎨'}
+                                      </div>
+                                    )}
+                                    <div className="project-overlay">
+                                      <h4 className="project-title">{widget.title || `Project ${index + 1}`}</h4>
+                                      <div className="project-stats">
+                                        <span className="project-stat">❤️ {(widget as any).likes || 0}</span>
+                                        <span className="project-stat">👁️ {(widget as any).views || 0}</span>
+                                        <span className="project-stat">⭐ {(widget as any).shares || 0}</span>
+                                      </div>
+                                      <div className="project-actions">
+                                        <button
+                                          className="project-action-btn view-btn"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(`/projects?id=${widget.id}`);
+                                          }}
+                                        >
+                                          View
+                                        </button>
+                                        <button
+                                          className="project-action-btn edit-btn"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(`/projects?id=${widget.id}&edit=true`);
+                                          }}
+                                        >
+                                          Edit
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {user && (
+                            <div className="projects-toolbar">
+                              <button
+                                className="projects-btn create-btn"
+                                onClick={() => router.push('/studio')}
+                              >
+                                + New Project
+                              </button>
+                              <button
+                                className="projects-btn manage-btn"
+                                onClick={() => router.push('/projects')}
+                              >
+                                Manage Projects
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
-                >
-                  <div className="featured-projects-enhanced">
-                    <div className="featured-projects-grid">
-                      {Array.from({ length: 12 }, (_, index) => {
-                        const item = localProfile?.repRack?.[index % 3];
-                        return (
-                          <div key={index} className="featured-project-card">
-                            <div className="project-image-container">
-                              {item?.imageUrl ? (
-                                <img className="project-image" src={item.imageUrl} alt={item.title || 'Project'} />
-                              ) : (
-                                <div className="project-image-placeholder">
-                                  {item?.title?.charAt(0) || '🎨'}
-                                </div>
-                              )}
-                              <div className="project-overlay">
-                                <h4 className="project-title">{item?.title || `Project ${index + 1}`}</h4>
-                                <div className="project-stats">
-                                  <span className="project-stat">❤️ {Math.floor(Math.random() * 50)}</span>
-                                  <span className="project-stat">👁️ {Math.floor(Math.random() * 200)}</span>
-                                  <span className="project-stat">⭐ {Math.floor(Math.random() * 20)}</span>
-                                </div>
-                                <div className="project-actions">
-                                  <button className="project-action-btn view-btn">View</button>
-                                  <button className="project-action-btn edit-btn">Edit</button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="projects-toolbar">
-                      <button className="projects-btn create-btn">+ New Project</button>
-                      <button className="projects-btn manage-btn">Manage Projects</button>
-                    </div>
-                  </div>
                 </CollapsibleSection>
 
                 {/* Activity Timeline - Enhanced */}
@@ -946,45 +1032,50 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                     </div>
                   )}
                 >
-                  <div className="activity-enhanced">
-                    <div className="activity-timeline">
-                      {Array.from({ length: 15 }, (_, index) => {
-                        const activities = [
-                          { icon: '🎨', text: 'Created a new interactive widget', time: '2 hours ago' },
-                          { icon: '❤️', text: 'Received 5 likes on "Portfolio Showcase"', time: '5 hours ago' },
-                          { icon: '👥', text: 'New follower: @designguru', time: '1 day ago' },
-                          { icon: '🏆', text: 'Earned "Popular Creator" badge', time: '3 days ago' },
-                          { icon: '💬', text: 'Commented on "Data Visualization Tool"', time: '1 week ago' },
-                          { icon: '🚀', text: 'Published "React Dashboard"', time: '2 weeks ago' },
-                          { icon: '🎆', text: 'Featured on community showcase', time: '3 weeks ago' },
-                          { icon: '📊', text: 'Project reached 1000 views', time: '1 month ago' }
-                        ];
-                        const activity = activities[index % activities.length];
-                        return (
-                          <div key={index} className="activity-item">
-                            <div className="activity-icon">{activity.icon}</div>
-                            <div className="activity-content">
-                              <div className="activity-text">{activity.text}</div>
-                              <div className="activity-time">{activity.time}</div>
-                            </div>
+                  {!user && !isPublicView ? (
+                    <SignUpPrompt
+                      title="Sign in to View Activity"
+                      description="See your project activity, likes, and engagement by signing in"
+                      compact={true}
+                    />
+                  ) : (
+                    <div className="activity-enhanced">
+                      <div className="activity-timeline">
+                        {widgets.length > 0 ? (
+                          widgets.slice(0, 10).map((widget, index) => {
+                            const createdDate = widget.createdAt?.toDate ? widget.createdAt.toDate() : new Date(widget.createdAt || Date.now());
+                            const timeAgo = getTimeAgo(createdDate);
+                            return (
+                              <div key={widget.id || index} className="activity-item">
+                                <div className="activity-icon">🎨</div>
+                                <div className="activity-content">
+                                  <div className="activity-text">Created "{widget.title}"</div>
+                                  <div className="activity-time">{timeAgo}</div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="activity-empty">
+                            <p>No activity yet. Start creating projects to see your activity here!</p>
                           </div>
-                        );
-                      })}
-                    </div>
-                    <div className="activity-filters">
-                      <input
-                        type="text"
-                        placeholder="Search activity..."
-                        className="activity-search"
-                      />
-                      <div className="activity-filter-buttons">
-                        <button className="filter-btn active">All</button>
-                        <button className="filter-btn">Projects</button>
-                        <button className="filter-btn">Social</button>
-                        <button className="filter-btn">Achievements</button>
+                        )}
+                      </div>
+                      <div className="activity-filters">
+                        <input
+                          type="text"
+                          placeholder="Search activity..."
+                          className="activity-search"
+                        />
+                        <div className="activity-filter-buttons">
+                          <button className="filter-btn active">All</button>
+                          <button className="filter-btn">Projects</button>
+                          <button className="filter-btn">Social</button>
+                          <button className="filter-btn">Achievements</button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </CollapsibleSection>
 
                 {/* Social Connections - Only in public view */}
@@ -1135,39 +1226,47 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                       </div>
                     )}
                   >
-                    <div className="following-enhanced">
-                      <div className="following-grid">
-                        {Array.from({ length: 20 }, (_, index) => (
-                          <div key={index} className="following-item">
-                            <div className="following-avatar">
-                              <span role="img" aria-label="Following avatar">
-                                {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
-                              </span>
+                    {!user ? (
+                      <SignUpPrompt
+                        title="Sign in to Follow Creators"
+                        description="Connect with creators and see what they're building"
+                        compact={true}
+                      />
+                    ) : (
+                      <div className="following-enhanced">
+                        <div className="following-grid">
+                          {Array.from({ length: 20 }, (_, index) => (
+                            <div key={index} className="following-item">
+                              <div className="following-avatar">
+                                <span role="img" aria-label="Following avatar">
+                                  {['👨‍💻', '👩‍🎨', '🧑‍🔬', '👨‍🎨', '👩‍💻', '🧑‍🎨'][index % 6] || '👤'}
+                                </span>
+                              </div>
+                              <div className="following-info">
+                                <span className="following-name">Creator {index + 1}</span>
+                                <span className="following-handle">@creator{index + 1}</span>
+                                <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
+                              </div>
+                              <div className="following-actions">
+                                <button className="following-action">Unfollow</button>
+                              </div>
                             </div>
-                            <div className="following-info">
-                              <span className="following-name">Creator {index + 1}</span>
-                              <span className="following-handle">@creator{index + 1}</span>
-                              <span className="following-projects">{Math.floor(Math.random() * 20) + 1} projects</span>
-                            </div>
-                            <div className="following-actions">
-                              <button className="following-action">Unfollow</button>
-                            </div>
+                          ))}
+                        </div>
+                        <div className="following-controls">
+                          <input
+                            type="text"
+                            placeholder="Search following..."
+                            className="search-input"
+                          />
+                          <div className="following-filter-buttons">
+                            <button className="filter-btn active">All</button>
+                            <button className="filter-btn">Active</button>
+                            <button className="filter-btn">Recent</button>
                           </div>
-                        ))}
-                      </div>
-                      <div className="following-controls">
-                        <input
-                          type="text"
-                          placeholder="Search following..."
-                          className="search-input"
-                        />
-                        <div className="following-filter-buttons">
-                          <button className="filter-btn active">All</button>
-                          <button className="filter-btn">Active</button>
-                          <button className="filter-btn">Recent</button>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </CollapsibleSection>
                 )}
                 <CollapsibleSection
@@ -1265,52 +1364,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           )}
           {!isPublicView && isChatbot && (
             <div className="hub-chatbot" role="dialog" aria-label="Profile hub messenger">
-              <header className="hub-chat-header">
-                <span>AI Assistant</span>
-                <button type="button" className="hub-button" onClick={() => setState('minimized')}>
-                  ×
-                </button>
-              </header>
-              <div className="hub-chat-body">
-                <div className="hub-chat-messages">
-                  {messages.map((message, index) => {
-                    const prevMessage = index > 0 ? messages[index - 1] : null;
-                    const isConsecutive = prevMessage?.sender === message.sender;
-                    const isUser = message.sender === 'me';
-                    return (
-                      <div
-                        key={`${message.sender}-${index}`}
-                        className={`hub-chat-message ${isUser ? 'hub-chat-message--user' : 'hub-chat-message--ai'} ${isConsecutive ? 'hub-chat-message--consecutive' : ''}`}
-                      >
-                        {!isConsecutive && (
-                          <span className="avatar" aria-hidden="true">
-                            {message.avatar}
-                          </span>
-                        )}
-                        {isConsecutive && <span className="avatar avatar--hidden" aria-hidden="true"></span>}
-                        <div className="bubble">{message.text}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="hub-chat-input">
-                  <input
-                    type="text"
-                    value={messageDraft}
-                    placeholder="Ask me anything..."
-                    onChange={(event) => setMessageDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' && !event.shiftKey) {
-                        event.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                  />
-                  <button type="button" onClick={handleSendMessage}>
-                    Send
-                  </button>
-                </div>
-              </div>
+              <AIBot onClose={() => setState('minimized')} />
             </div>
           )}
           {!isPublicView && isDM && (

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAllWidgets } from '@/hooks/useFirestore';
+import SignUpPrompt from './SignUpPrompt';
 
 interface Project {
   id: string;
@@ -246,9 +247,19 @@ const Showcase = ({ className = '' }: ShowcaseProps) => {
 
       {filteredProjects.length === 0 && (
         <div className="showcase-empty">
-          <div className="empty-icon">🏆</div>
-          <h3>No projects found</h3>
-          <p>Try adjusting your filters or check back later for new submissions.</p>
+          {!user ? (
+            <SignUpPrompt 
+              title="Join inQ to See Top Projects"
+              description="Discover the most innovative projects and get your work featured"
+              showBenefits={true}
+            />
+          ) : (
+            <>
+              <div className="empty-icon">🏆</div>
+              <h3>No projects found</h3>
+              <p>Try adjusting your filters or check back later for new submissions.</p>
+            </>
+          )}
         </div>
       )}
     </div>
