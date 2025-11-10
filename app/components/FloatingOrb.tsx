@@ -187,9 +187,27 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       lockPoints: NAV_ITEMS.map((_, i) => i * ROTATION_STEP),
     };
 
+    // Track if user is actively scrolling to prevent scrollIntoView interference
+    let isUserScrolling = false;
+    let scrollTimeout: number | null = null;
+
+    const handleScroll = () => {
+      isUserScrolling = true;
+      if (scrollTimeout) window.clearTimeout(scrollTimeout);
+      scrollTimeout = window.setTimeout(() => {
+        isUserScrolling = false;
+      }, 150); // Reset flag 150ms after scroll ends
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('touchmove', handleScroll, { passive: true });
+
     const scrollNavItemIntoView = (btn: HTMLButtonElement) => {
       // Only on mobile, check if nav item is out of viewport
       if (window.innerWidth > 768) return;
+
+      // Don't interfere if user is actively scrolling
+      if (isUserScrolling) return;
 
       const rect = btn.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -202,16 +220,22 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         rect.right < 0 ||
         rect.left > viewportWidth;
 
-      if (isOutOfView) {
-        // Scroll the orb container into view, centered if possible
-        const orbShell = container.closest('.floating-orb-shell');
-        if (orbShell) {
-          orbShell.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'center'
-          });
-        }
+      // Only scroll if nav item is significantly out of view and user isn't scrolling
+      if (isOutOfView && !isUserScrolling) {
+        // Use a small delay to check if user started scrolling
+        requestAnimationFrame(() => {
+          if (!isUserScrolling) {
+            const orbShell = container.closest('.floating-orb-shell');
+            if (orbShell) {
+              // Use 'nearest' instead of 'center' to minimize viewport disruption
+              orbShell.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest'
+              });
+            }
+          }
+        });
       }
     };
 
@@ -386,6 +410,14 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
         (event.target as HTMLElement).closest('.floating-orb')) {
         return;
       }
+
+      // On mobile, don't capture pointer if user is scrolling vertically
+      // This allows vertical scrolling to work naturally
+      if (window.innerWidth <= 768) {
+        // Don't interfere with vertical scrolling - let it pass through
+        return;
+      }
+
       pointerActive = true;
       lastPointerX = event.clientX;
       container.setPointerCapture(event.pointerId);
@@ -524,7 +556,10 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       cancelAnimationFrame(animationFrame);
       if (hideRingTimeout) window.clearTimeout(hideRingTimeout);
       if (tooltipTimeout) window.clearTimeout(tooltipTimeout);
+      if (scrollTimeout) window.clearTimeout(scrollTimeout);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('touchmove', handleScroll);
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('pointerdown', handlePointerDown);
       container.removeEventListener('pointermove', handlePointerMove);

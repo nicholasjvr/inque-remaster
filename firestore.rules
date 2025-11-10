@@ -39,9 +39,9 @@ service cloud.firestore {
       }
     }
 
-    // Widgets collection: owner can CRUD their own widgets
+    // Widgets collection: public read for explore page, owner can CRUD their own widgets
     match /widgets/{widgetId} {
-      allow read: if isOwner(resource.data.userId);
+      allow read: if true; // Public read for explore page (similar to bundles)
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       

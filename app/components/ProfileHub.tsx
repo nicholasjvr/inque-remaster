@@ -9,6 +9,7 @@ import CustomizationShop from './CustomizationShop';
 import FullscreenWrapper from './FullscreenWrapper';
 import SignUpPrompt from './SignUpPrompt';
 import AIBot from './AIBot';
+import SettingsModal from './SettingsModal';
 import { useRouter } from 'next/navigation';
 
 // Interest and goal option mappings for display
@@ -255,11 +256,30 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   // Accordion: one open section at a time
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const isSectionActive = (id: string) => activeSection === id;
+
+  // Check if mobile device - use state to handle resize
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const handleSectionToggle = (id: string) => {
     setActiveSection(prev => {
       const next = prev === id ? null : id;
       if (next === null) {
+        // Closing section - exit fullscreen
         setFullscreenSection(current => (current === id ? null : current));
+      } else {
+        // Opening section - auto-fullscreen on mobile for better UX
+        if (isMobile) {
+          setFullscreenSection(next);
+        }
       }
       return next;
     });
@@ -287,6 +307,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
   const [showRepRackManager, setShowRepRackManager] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Match repRack items to actual widgets
   const repRackWidgets = useMemo(() => {
@@ -1371,10 +1392,25 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   <h3 id="hub-actions-title-floating">Quick Actions</h3>
                   <div className="hub-actions">
                     {QUICK_ACTIONS.map((action) => (
-                      <a key={action.id} className="hub-action-button" href={action.href} rel="noreferrer">
-                        <span aria-hidden="true">{action.icon}</span>
-                        <span>{action.label}</span>
-                      </a>
+                      action.id === 'settings' ? (
+                        <button
+                          key={action.id}
+                          className="hub-action-button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowSettingsModal(true);
+                          }}
+                          type="button"
+                        >
+                          <span aria-hidden="true">{action.icon}</span>
+                          <span>{action.label}</span>
+                        </button>
+                      ) : (
+                        <a key={action.id} className="hub-action-button" href={action.href} rel="noreferrer">
+                          <span aria-hidden="true">{action.icon}</span>
+                          <span>{action.label}</span>
+                        </a>
+                      )
                     ))}
                   </div>
                 </section>
@@ -1434,6 +1470,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
       {!isPublicView && showRepRackManager && (
         <RepRackManager onProjectSelect={(p) => handleRepRackSelect({ id: p.id, title: p.title, imageUrl: p.imageUrl })} onClose={() => setShowRepRackManager(false)} />
       )}
+      <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </div>
   );
 
