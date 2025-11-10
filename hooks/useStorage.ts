@@ -314,17 +314,38 @@ export const validateWidgetFiles = (files: File[]): { valid: boolean; errors: st
     'text/css',
     'application/javascript',
     'application/json',
-    'image/png',
-    'image/jpeg',
-    'image/gif',
-    'image/svg+xml',
     'text/javascript',
     'application/x-javascript',
-    'image/webp',
     'text/plain',
     'text/markdown',
     'application/zip',
     'application/x-zip-compressed',
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/svg+xml',
+    'image/webp',
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/wave',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/aac',
+    'audio/x-aac',
+    'audio/ogg',
+    'audio/webm',
+    'audio/flac',
+    'audio/mp4',
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/x-matroska',
+    'video/ogg',
+    'application/pdf',
+    'application/postscript',
+    'application/vnd.adobe.photoshop',
+    'application/vnd.adobe.illustrator',
   ];
 
   const allowedExtensions = [
@@ -341,14 +362,77 @@ export const validateWidgetFiles = (files: File[]): { valid: boolean; errors: st
     '.txt',
     '.md',
     '.zip',
+    '.mp3',
+    '.wav',
+    '.flac',
+    '.aac',
+    '.m4a',
+    '.oga',
+    '.ogg',
+    '.mp4',
+    '.mov',
+    '.webm',
+    '.avi',
+    '.mkv',
+    '.pdf',
+    '.psd',
+    '.ai',
+    '.eps',
   ];
 
-  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  const blockedExtensions = [
+    '.exe',
+    '.bat',
+    '.cmd',
+    '.sh',
+    '.bash',
+    '.msi',
+    '.apk',
+    '.com',
+    '.scr',
+    '.dll',
+    '.vbs',
+    '.ps1',
+    '.php',
+    '.py',
+    '.pl',
+    '.rb',
+    '.jar',
+  ];
+
+  const videoExtensions = ['.mp4', '.mov', '.webm', '.avi', '.mkv'];
+  const audioExtensions = ['.mp3', '.wav', '.flac', '.aac', '.m4a', '.oga', '.ogg'];
+
+  const maxGeneralSize = 20 * 1024 * 1024; // 20MB for docs/images/code
+  const maxAudioSize = 80 * 1024 * 1024; // 80MB for audio assets
+  const maxVideoSize = 200 * 1024 * 1024; // 200MB for video assets
   const maxZipSize = 50 * 1024 * 1024; // 50MB for ZIP files
   const errors: string[] = [];
 
   for (const file of files) {
-    const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+    if (!file.name.includes('.')) {
+      errors.push(`File ${file.name} is missing an extension. Add an appropriate extension before uploading.`);
+      continue;
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const extension = lowerName.slice(lowerName.lastIndexOf('.'));
+
+    if (blockedExtensions.some((ext) => lowerName.endsWith(ext))) {
+      errors.push(`File ${file.name} uses a blocked extension (${extension}).`);
+      continue;
+    }
+
+    const nameSegments = lowerName.split('.');
+    if (nameSegments.length > 2) {
+      const suspiciousSegment = nameSegments
+        .slice(1, -1)
+        .some((segment) => blockedExtensions.includes(`.${segment}`));
+      if (suspiciousSegment) {
+        errors.push(`File ${file.name} contains a blocked secondary extension.`);
+        continue;
+      }
+    }
     
     if (!allowedExtensions.includes(extension)) {
       errors.push(`File ${file.name} has an unsupported extension: ${extension}`);
@@ -359,7 +443,15 @@ export const validateWidgetFiles = (files: File[]): { valid: boolean; errors: st
     }
     
     // Different size limits for ZIP vs regular files
-    const maxSize = extension === '.zip' ? maxZipSize : maxFileSize;
+    let maxSize = maxGeneralSize;
+    if (extension === '.zip') {
+      maxSize = maxZipSize;
+    } else if (videoExtensions.includes(extension)) {
+      maxSize = maxVideoSize;
+    } else if (audioExtensions.includes(extension)) {
+      maxSize = maxAudioSize;
+    }
+
     if (file.size > maxSize) {
       const maxSizeMB = (maxSize / 1024 / 1024).toFixed(0);
       errors.push(`File ${file.name} is too large: ${(file.size / 1024 / 1024).toFixed(2)}MB (max ${maxSizeMB}MB)`);

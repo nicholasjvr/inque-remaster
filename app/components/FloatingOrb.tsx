@@ -79,9 +79,11 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     const previewEl = container.querySelector<HTMLDivElement>(
       '.orb-center-preview',
     );
-    const labelEl = container.querySelector<HTMLDivElement>(
-      '.orb-center-label',
-    );
+
+    // Create label element for active item display
+    const labelEl = document.createElement('div');
+    labelEl.className = 'orb-active-label';
+    labelEl.setAttribute('aria-hidden', 'true');
 
     const wrapper = document.createElement('div');
     wrapper.className = 'floating-orb-wrapper';
@@ -105,24 +107,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     orbButton.setAttribute('aria-label', NAV_ITEMS[0].label);
     orbButton.setAttribute('tabindex', '0');
 
-    // Swipe indicator (mobile UX)
-    const swipeIndicator = document.createElement('div');
-    swipeIndicator.className = 'orb-swipe-indicator';
-    swipeIndicator.innerHTML = `
-      <span class="swipe-arrow left" aria-hidden="true"></span>
-      <span class="swipe-text">Swipe</span>
-      <span class="swipe-arrow right" aria-hidden="true"></span>
-    `;
-
-    // Tooltip (desktop UX)
-    const tooltip = document.createElement('div');
-    tooltip.className = 'orb-tooltip';
-    tooltip.innerHTML = `
-      <span class="tooltip-arrow" aria-hidden="true"></span>
-      <span class="tooltip-text">Drag to navigate • Click to select</span>
-    `;
-
-    stage.append(webglLayer, scrollLine, navContainer, orbButton, swipeIndicator, tooltip);
+    stage.append(webglLayer, scrollLine, navContainer, orbButton);
     wrapper.append(stage);
 
     console.log('🏗️ DOM structure created:', {
@@ -135,6 +120,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
 
     // Actually append the wrapper to the container
     container.appendChild(wrapper);
+    container.appendChild(labelEl);
 
     console.log('🔗 Wrapper appended to container');
     console.log('🔍 Container children after append:', container.children.length);
@@ -232,15 +218,12 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     const updateCenterPreview = () => {
       const item = NAV_ITEMS[activeIndex];
       if (previewEl) previewEl.textContent = item.icon;
+
+      // Update label display
       if (labelEl) {
-        // Add fade animation when label changes
-        labelEl.style.opacity = '0';
-        requestAnimationFrame(() => {
-          labelEl.textContent = item.label;
-          labelEl.style.opacity = '1';
-        });
+        labelEl.innerHTML = `<span class="orb-label-icon">${item.icon}</span><span class="orb-label-text">${item.label}</span>`;
+        labelEl.classList.add('active');
       }
-      orbButton.setAttribute('aria-label', item.label);
 
       navButtons.forEach((btn, idx) => {
         if (idx === activeIndex) {
@@ -253,7 +236,6 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
           btn.classList.remove('in-front');
         }
       });
-
       notifyActiveChange();
     };
 
@@ -322,15 +304,18 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       // Only update animations if orb is in viewport
       if (isOrbInViewport) {
         // Idle auto-rotation when user is not interacting
-        if (!prefersReducedMotion() && !pointerActive && now - lastInteractionAt > AUTO_ROTATE_DELAY_MS) {
+        // Only auto-rotate if not dragging orb and no recent interaction
+        if (!prefersReducedMotion() && !pointerActive && !orbDragActive && now - lastInteractionAt > AUTO_ROTATE_DELAY_MS) {
           scrollState.targetRotation -= AUTO_ROTATE_DEG_PER_SEC * dt;
         }
 
         const diff = scrollState.targetRotation - scrollState.currentRotation;
-        const damping = prefersReducedMotion() ? 1 : 0.12;
-        if (Math.abs(diff) > 0.05) {
+        const damping = prefersReducedMotion() ? 1 : 0.15;
+        // Increased threshold to prevent micro-movements that cause twitching
+        if (Math.abs(diff) > 0.1) {
           scrollState.currentRotation += diff * damping;
         } else {
+          // Snap to target when very close to prevent oscillation
           scrollState.currentRotation = scrollState.targetRotation;
         }
 
@@ -509,33 +494,6 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     updateCenterPreview();
     animate();
 
-    try {
-      const isMobile = window.innerWidth <= 768;
-      const swipeSeen = localStorage.getItem('orb-swipe-seen');
-      if (isMobile && !swipeSeen) {
-        swipeIndicator.classList.add('visible');
-      }
-
-      if (!localStorage.getItem('orb-tooltip-seen')) {
-        tooltip.classList.add('show');
-        tooltipTimeout = window.setTimeout(() => {
-          tooltip.classList.remove('show');
-          localStorage.setItem('orb-tooltip-seen', '1');
-        }, 3200);
-      }
-    } catch (error) {
-      console.warn('Orb tooltip storage unavailable', error);
-    }
-
-    const hideSwipe = () => {
-      swipeIndicator.classList.remove('visible');
-      try { localStorage.setItem('orb-swipe-seen', '1'); } catch { }
-    };
-
-    // Hide swipe hint after first interaction
-    container.addEventListener('pointerdown', hideSwipe, { once: true });
-    container.addEventListener('wheel', hideSwipe, { once: true, passive: true });
-
     const handleResize = () => {
       updateOrbitPositions();
     };
@@ -573,6 +531,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('pointercancel', handlePointerUp);
       intersectionObserver.disconnect(); // Clean up intersection observer
+      labelEl.remove();
       wrapper.remove();
     };
   }, []);
@@ -581,14 +540,7 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
     <div className="floating-orb-shell">
       <div id="orb-container">
         <div className="orb-center-preview" aria-hidden="true" />
-        <div className="orb-center-label" aria-live="polite" />
       </div>
-      <button className="orb-nav-arrow orb-nav-arrow-left" aria-label="Previous navigation item">
-        ←
-      </button>
-      <button className="orb-nav-arrow orb-nav-arrow-right" aria-label="Next navigation item">
-        →
-      </button>
     </div>
   );
 };

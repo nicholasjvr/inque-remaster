@@ -352,8 +352,11 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Never lock scroll for billboard variant - it's embedded in page flow
+    if (variant === 'billboard') return;
+
     const isMobile = window.innerWidth <= 768;
-    // Only lock body scroll for chatbot and dm states, never for expanded state in billboard variant
+    // Only lock body scroll for chatbot and dm states, never for expanded state
     const shouldLock = (isChatbot || isDM) && isMobile && !fullscreenSection;
 
     if (!shouldLock) return;
@@ -491,19 +494,35 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     const shouldShow = isModalOpen;
     overlay.classList.toggle('active', shouldShow);
 
-    // When expanding, focus the hub but only scroll if user hasn't scrolled down
-    if (state === 'expanded') {
+    // When expanding, focus the hub and ensure it's visible in viewport
+    if (state === 'expanded' || state === 'chatbot' || state === 'dm') {
       const hubEl = document.querySelector('.profile-hub') as HTMLElement | null;
-      if (hubEl) {
-        hubEl.setAttribute('tabindex', '-1');
-        hubEl.focus({ preventScroll: true });
-        // Only scroll if user is near the top of the page - don't interrupt their scroll position
-        if (typeof window !== 'undefined' && window.scrollY < 200) {
-          hubEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      const hubSection = variant === 'billboard'
+        ? document.getElementById('hub-extended-section')
+        : hubEl;
+
+      if (hubSection) {
+        hubSection.setAttribute('tabindex', '-1');
+        hubSection.focus({ preventScroll: true });
+
+        // For billboard variant, always scroll into view when expanding
+        if (variant === 'billboard') {
+          requestAnimationFrame(() => {
+            hubSection.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start',
+              inline: 'nearest'
+            });
+          });
+        } else {
+          // For other variants, only scroll if user is near the top
+          if (typeof window !== 'undefined' && window.scrollY < 200) {
+            hubEl?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+          }
         }
       }
     }
-  }, [state]);
+  }, [state, variant]);
 
   // Enhanced keyboard navigation and focus management
   useEffect(() => {

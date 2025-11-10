@@ -25,21 +25,21 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
   const handleFileSelect = async (files: FileList | null) => {
     if (files) {
       const fileArray = Array.from(files);
-      
+
       // Check if any files are ZIP files
       const zipFiles = fileArray.filter(file => file.name.toLowerCase().endsWith('.zip'));
       const regularFiles = fileArray.filter(file => !file.name.toLowerCase().endsWith('.zip'));
-      
+
       if (zipFiles.length > 0) {
         setIsExtractingZip(true);
         try {
           const extractedFiles: File[] = [];
-          
+
           for (const zipFile of zipFiles) {
             const extracted = await extractZipFile(zipFile);
             extractedFiles.push(...extracted);
           }
-          
+
           setSelectedFiles([...regularFiles, ...extractedFiles]);
         } catch (error) {
           console.error('Error extracting ZIP files:', error);
@@ -91,8 +91,25 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
       gif: '🖼️',
       svg: '🖼️',
       webp: '🖼️',
+      mp3: '🎵',
+      wav: '🎵',
+      flac: '🎵',
+      aac: '🎵',
+      m4a: '🎵',
+      ogg: '🎵',
+      oga: '🎵',
+      mp4: '🎬',
+      mov: '🎬',
+      webm: '🎬',
+      avi: '🎬',
+      mkv: '🎬',
       txt: '📄',
       md: '📝',
+      pdf: '📄',
+      psd: '🖌️',
+      ai: '🖌️',
+      eps: '🖌️',
+      zip: '🗜️',
     };
     return icons[ext || ''] || '📁';
   };
@@ -120,19 +137,19 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
 
     try {
       setUploadingToSlot(slot);
-      
+
       // Get form data
       const titleInput = document.getElementById(`title${slot}`) as HTMLInputElement;
       const descriptionInput = document.getElementById(`description${slot}`) as HTMLTextAreaElement;
       const tagsInput = document.getElementById(`tags${slot}`) as HTMLInputElement;
-      
+
       const title = titleInput?.value || `Widget ${slot}`;
       const description = descriptionInput?.value || 'No description provided';
       const tags = tagsInput?.value ? tagsInput.value.split(',').map(t => t.trim()) : [];
 
-              // Upload files to Firebase Storage
-              const basePath = `uploads/upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              const uploadedFiles = await uploadMultipleFiles(selectedFiles, basePath);
+      // Upload files to Firebase Storage
+      const basePath = `uploads/upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const uploadedFiles = await uploadMultipleFiles(selectedFiles, basePath);
 
       // Determine entry file from selected files
       const names = selectedFiles.map(f => f.name);
@@ -188,16 +205,16 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
   return (
     <div className="upload-workspace">
       {showOnboarding && (
-        <WidgetOnboarding 
+        <WidgetOnboarding
           onComplete={() => setShowOnboarding(false)}
           onSkip={() => setShowOnboarding(false)}
         />
       )}
-      
+
       <div className="workspace-header">
         <h3>Upload Your Widget</h3>
         <p>Select a slot and upload your project files.</p>
-        <button 
+        <button
           className="onboarding-trigger-btn"
           onClick={() => setShowOnboarding(true)}
         >
@@ -205,7 +222,7 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
           Show Tutorial
         </button>
       </div>
-      
+
       <div className="widget-slots-grid">
         {/* Slot 1 */}
         <div className={`widget-slot ${currentSlot === 1 ? 'active' : ''}`} data-slot="1">
@@ -215,7 +232,7 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
           </div>
 
           <div className="slot-content">
-            <div 
+            <div
               className={`file-upload-area ${isDragging ? 'dragover' : ''} ${selectedFiles.length > 0 ? 'has-files' : ''}`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -227,7 +244,7 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                 type="file"
                 className="file-input"
                 multiple
-                accept=".html,.js,.css,.png,.jpg,.jpeg,.gif,.svg,.json,.webp,.txt,.md,.zip"
+                accept=".html,.htm,.js,.css,.png,.jpg,.jpeg,.gif,.svg,.json,.webp,.txt,.md,.pdf,.mp3,.wav,.flac,.aac,.m4a,.oga,.ogg,.mp4,.mov,.webm,.avi,.mkv,.psd,.ai,.eps,.zip"
                 onChange={handleFileInputChange}
                 style={{ display: 'none' }}
               />
@@ -235,7 +252,7 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                 <span className="upload-icon">📦</span>
                 <p>Drop your project files here or click to upload</p>
                 <span className="upload-hint">
-                  Upload HTML, CSS, JS, and asset files for your widget
+                  Upload HTML, CSS, JS, images, audio, video, PDFs, and ZIP bundles for your widget
                 </span>
               </div>
             </div>
@@ -251,8 +268,8 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                         <span className="file-name">{file.name}</span>
                         <span className="file-size">{formatFileSize(file.size)}</span>
                       </div>
-                      <button 
-                        className="remove-file" 
+                      <button
+                        className="remove-file"
                         onClick={() => removeFile(index)}
                       >
                         ×
@@ -260,8 +277,8 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                     </div>
                   ))}
                 </div>
-                <button 
-                  className="clear-files-btn" 
+                <button
+                  className="clear-files-btn"
                   onClick={() => setSelectedFiles([])}
                 >
                   Clear All Files
@@ -304,8 +321,8 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                 <span>👁️</span>
                 Preview
               </button>
-              <button 
-                className="upload-btn" 
+              <button
+                className="upload-btn"
                 onClick={() => handleUpload(1)}
                 disabled={uploading || uploadingToSlot === 1}
               >
@@ -329,7 +346,7 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                 <span className="upload-icon">📦</span>
                 <p>Drop your project files here or click to upload</p>
                 <span className="upload-hint">
-                  Upload HTML, CSS, JS, and asset files for your widget
+                  Upload HTML, CSS, JS, images, audio, video, PDFs, and ZIP bundles for your widget
                 </span>
               </div>
             </div>
@@ -369,8 +386,8 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                 <span>👁️</span>
                 Preview
               </button>
-              <button 
-                className="upload-btn" 
+              <button
+                className="upload-btn"
                 onClick={() => handleUpload(2)}
                 disabled={uploading || uploadingToSlot === 2}
               >
@@ -394,7 +411,7 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                 <span className="upload-icon">📦</span>
                 <p>Drop your project files here or click to upload</p>
                 <span className="upload-hint">
-                  Upload HTML, CSS, JS, and asset files for your widget
+                  Upload HTML, CSS, JS, images, audio, video, PDFs, and ZIP bundles for your widget
                 </span>
               </div>
             </div>
@@ -434,8 +451,8 @@ export default function UploadWorkspace({ currentSlot, onSlotChange }: UploadWor
                 <span>👁️</span>
                 Preview
               </button>
-              <button 
-                className="upload-btn" 
+              <button
+                className="upload-btn"
                 onClick={() => handleUpload(3)}
                 disabled={uploading || uploadingToSlot === 3}
               >

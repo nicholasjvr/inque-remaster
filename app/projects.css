@@ -110,7 +110,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-icon {
@@ -1110,3 +1112,151 @@
   }
 }
 
+/* Sign In Prompt Styles - Simplified */
+.sign-in-prompt {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: 2rem;
+}
+
+.sign-in-prompt-content {
+  background: rgba(26, 26, 26, 0.95);
+  border: 2px solid var(--projects-primary);
+  border-radius: 16px;
+  padding: 2.5rem;
+  text-align: center;
+  max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0, 240, 255, 0.2);
+  animation: promptSlideIn 0.4s ease-out;
+}
+
+@keyframes promptSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sign-in-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.sign-in-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem 0;
+  color: var(--projects-primary);
+}
+
+.sign-in-description {
+  font-size: 1rem;
+  color: var(--projects-text-secondary);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.6;
+}
+
+.sign-in-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.sign-in-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sign-in-btn.primary {
+  background: linear-gradient(135deg, var(--projects-primary), var(--projects-secondary));
+  color: var(--projects-bg);
+}
+
+.sign-in-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 240, 255, 0.4);
+}
+
+.sign-in-btn.secondary {
+  background: transparent;
+  color: var(--projects-text);
+  border: 1px solid var(--projects-primary);
+}
+
+.sign-in-btn.secondary:hover {
+  background: rgba(0, 240, 255, 0.1);
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+.sign-in-benefits {
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 8px;
+  padding: 1.25rem;
+  text-align: left;
+}
+
+.sign-in-benefits h3 {
+  color: var(--projects-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem 0;
+  text-align: center;
+}
+
+.sign-in-benefits ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sign-in-benefits li {
+  color: var(--projects-text);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.sign-in-benefits li:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .sign-in-prompt-content {
+    padding: 2rem 1.5rem;
+    margin: 1rem;
+  }
+
+  .sign-in-title {
+    font-size: 1.5rem;
+  }
+
+  .sign-in-description {
+    font-size: 0.95rem;
+  }
+
+  .sign-in-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}

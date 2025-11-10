@@ -180,40 +180,40 @@ export default function UsersPage() {
                 </div>
               </div>
             ))}
-              <div className="user-card-actions">
-                <button className="chat-btn">
-                  <span className="btn-icon">💬</span>
-                  <span className="btn-text">Chat</span>
-                </button>
-                <a href="/u/sample" className="view-profile-btn">
-                  <span className="btn-icon">👤</span>
-                  <span className="btn-text">Profile</span>
-                </a>
-                <button className="follow-btn">
-                  <span className="btn-icon">➕</span>
-                  <span className="btn-text">Follow</span>
-                </button>
-              </div>
+            <div className="user-card-actions">
+              <button className="chat-btn">
+                <span className="btn-icon">💬</span>
+                <span className="btn-text">Chat</span>
+              </button>
+              <a href="/u/sample" className="view-profile-btn">
+                <span className="btn-icon">👤</span>
+                <span className="btn-text">Profile</span>
+              </a>
+              <button className="follow-btn">
+                <span className="btn-icon">➕</span>
+                <span className="btn-text">Follow</span>
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Load More */}
-          <div id="loadMoreContainer" className="load-more-container" style={{ display: filtered.length >= 100 ? 'flex' : 'none' }}>
-            <button id="loadMoreBtn" className="load-more-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <span className="btn-icon">📄</span>
-              <span className="btn-text">Load More</span>
-            </button>
-          </div>
+        {/* Load More */}
+        <div id="loadMoreContainer" className="load-more-container" style={{ display: filtered.length >= 100 ? 'flex' : 'none' }}>
+          <button id="loadMoreBtn" className="load-more-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <span className="btn-icon">📄</span>
+            <span className="btn-text">Load More</span>
+          </button>
+        </div>
 
-          {/* Empty State */}
-          <div id="emptyState" className="empty-state" style={{ display: 'none' }}>
-            <div className="empty-icon">👥</div>
-            <h3>No creators found</h3>
-            <p>Try adjusting your search filters or check back later for new creators.</p>
-            <button className="empty-action-btn" onClick={() => window.location.reload()}>
-              Refresh Page
-            </button>
-          </div>
+        {/* Empty State */}
+        <div id="emptyState" className="empty-state" style={{ display: 'none' }}>
+          <div className="empty-icon">👥</div>
+          <h3>No creators found</h3>
+          <p>Try adjusting your search filters or check back later for new creators.</p>
+          <button className="empty-action-btn" onClick={() => window.location.reload()}>
+            Refresh Page
+          </button>
+        </div>
       </main>
 
 

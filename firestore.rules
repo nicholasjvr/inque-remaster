@@ -12,8 +12,8 @@ service cloud.firestore {
 
     // Users collection - public profiles with stats
     match /users/{userId} {
-      // Anyone can read public user profiles
-      allow read: if true;
+      // Users must be authenticated to read profile documents
+      allow read: if isSignedIn();
       
       // Users can create their own profile during onboarding
       allow create: if isOwner(userId);
@@ -26,7 +26,7 @@ service cloud.firestore {
 
       // Subcollection: User's projects
       match /projects/{projectId} {
-        allow read: if true; // Public read
+        allow read: if isSignedIn();
         allow create: if isOwner(userId);
         allow update, delete: if isOwner(userId);
       }
@@ -41,13 +41,13 @@ service cloud.firestore {
 
     // Widgets collection: owner can CRUD their own widgets
     match /widgets/{widgetId} {
-      allow read: if true;
+      allow read: if isOwner(resource.data.userId);
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       
       // Votes subcollection: one vote per user per widget
       match /votes/{voteId} {
-        allow read: if true;
+        allow read: if isSignedIn();
         allow create: if isSignedIn() && request.auth.uid == voteId && request.resource.data.userId == request.auth.uid;
         allow delete: if isSignedIn() && request.auth.uid == voteId;
         allow update: if false; // Votes are immutable once created
@@ -75,7 +75,7 @@ service cloud.firestore {
       
       // Votes subcollection: one vote per user per bundle
       match /votes/{voteId} {
-        allow read: if true;
+        allow read: if isSignedIn();
         allow create: if isSignedIn() && request.auth.uid == voteId && request.resource.data.userId == request.auth.uid;
         allow delete: if isSignedIn() && request.auth.uid == voteId;
         allow update: if false; // Votes are immutable once created
@@ -91,7 +91,7 @@ service cloud.firestore {
     
     // Engagement collection: likes, views, shares tracking
     match /engagement/{engagementId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if false; // Don't delete engagement data
@@ -99,7 +99,7 @@ service cloud.firestore {
     
     // Simple like documents: {targetType, targetId, userId, createdAt}
     match /likes/{likeId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       // Only the authenticated user can create/delete their own like document
       allow create, delete: if isSignedIn() && request.auth.uid == (request.resource.data.userId ?? resource.data.userId);
       allow update: if false; // Likes are immutable once created
@@ -107,21 +107,21 @@ service cloud.firestore {
     
     // Comments collection for projects/widgets
     match /comments/{commentId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
     
     // Followers: {followerId, followingId, createdAt}
     match /follows/{followId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create, delete: if isSignedIn() && request.auth.uid == (request.resource.data.followerId ?? resource.data.followerId);
       allow update: if false;
     }
     
     // Achievements collection: platform achievements/badges
     match /achievements/{achievementId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if false; // Only backend can create achievements
     }
   }

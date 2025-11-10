@@ -120,7 +120,7 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
       }
 
       setSubmitStatus('success');
-      
+
       // Reset form after a delay
       setTimeout(() => {
         setFormData({
@@ -160,14 +160,14 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className={`contact-us-modal-overlay ${isClosing ? 'closing' : ''}`}
       onClick={handleClose}
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      <div 
-        className="contact-us-modal" 
+      <div
+        className="contact-us-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -176,14 +176,14 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
         <div className="contact-us-modal-header">
           <div>
             <h2 id="contact-us-title" className="contact-us-title">
-              Let's Build Something Amazing Together
+              Let's Connect
             </h2>
             <p className="contact-us-subtitle">
-              Transform your vision into a powerful custom web application
+              Have questions about Inqu or want to know more about my work? I'd love to hear from you!
             </p>
           </div>
-          <button 
-            className="contact-us-close-btn" 
+          <button
+            className="contact-us-close-btn"
             onClick={handleClose}
             aria-label="Close modal"
           >
@@ -194,11 +194,11 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
         {submitStatus === 'success' ? (
           <div className="contact-us-success">
             <div className="contact-us-success-icon">✓</div>
-            <h3 className="contact-us-success-title">Thank You!</h3>
+            <h3 className="contact-us-success-title">Thanks for Reaching Out!</h3>
             <p className="contact-us-success-message">
-              We've received your inquiry and will get back to you within 24 hours.
+              I've received your message and will get back to you soon.
               <br />
-              Let's make your web application vision a reality!
+              Looking forward to connecting with you!
             </p>
           </div>
         ) : submitStatus === 'error' ? (
@@ -217,15 +217,14 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
             <div className="contact-us-form-content">
               {/* Value Proposition Section */}
               <div className="contact-us-value-prop">
-                <div className="contact-us-value-icon">🚀</div>
-                <h3 className="contact-us-value-title">Why Choose Us?</h3>
+                <div className="contact-us-value-icon">💬</div>
+                <h3 className="contact-us-value-title">What You Can Reach Out About</h3>
                 <ul className="contact-us-value-list">
-                  <li>⚡ Lightning-fast development with modern tech stack</li>
-                  <li>🎨 Custom UI/UX designed specifically for your brand</li>
-                  <li>💎 Scalable architecture that grows with your business</li>
-                  <li>🔒 Secure & reliable infrastructure</li>
-                  <li>📱 Fully responsive across all devices</li>
-                  <li>🎯 Built to convert and engage your users</li>
+                  <li>💡 Questions about Inqu and how it works</li>
+                  <li>🤝 Collaboration opportunities</li>
+                  <li>💭 Ideas or feedback you'd like to share</li>
+                  <li>🎨 Interest in my projects and work</li>
+                  <li>📚 General inquiries or just saying hello</li>
                 </ul>
               </div>
 
@@ -243,7 +242,7 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                       value={formData.name}
                       onChange={handleChange}
                       className={`contact-us-input ${errors.name ? 'contact-us-input-error' : ''}`}
-                      placeholder="John Doe"
+                      placeholder="Your name"
                       required
                     />
                     {errors.name && <span className="contact-us-error-text">{errors.name}</span>}
@@ -260,7 +259,7 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                       value={formData.email}
                       onChange={handleChange}
                       className={`contact-us-input ${errors.email ? 'contact-us-input-error' : ''}`}
-                      placeholder="john@company.com"
+                      placeholder="your.email@example.com"
                       required
                     />
                     {errors.email && <span className="contact-us-error-text">{errors.email}</span>}
@@ -270,7 +269,7 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                 <div className="contact-us-form-row">
                   <div className="contact-us-form-group">
                     <label htmlFor="company" className="contact-us-label">
-                      Company Name
+                      Where You're From (Optional)
                     </label>
                     <input
                       type="text"
@@ -279,13 +278,13 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                       value={formData.company}
                       onChange={handleChange}
                       className="contact-us-input"
-                      placeholder="Your Company Inc."
+                      placeholder="City, Country, or Organization"
                     />
                   </div>
 
                   <div className="contact-us-form-group">
                     <label htmlFor="projectType" className="contact-us-label">
-                      Project Type
+                      Topic
                     </label>
                     <select
                       id="projectType"
@@ -294,20 +293,20 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                       onChange={handleChange}
                       className="contact-us-select"
                     >
-                      <option value="">Select a type</option>
-                      <option value="web-app">Custom Web Application</option>
-                      <option value="dashboard">Analytics Dashboard</option>
-                      <option value="ecommerce">E-commerce Platform</option>
-                      <option value="saas">SaaS Product</option>
-                      <option value="portal">Client Portal</option>
-                      <option value="other">Other</option>
+                      <option value="">Select a topic</option>
+                      <option value="inqu">Question about Inqu</option>
+                      <option value="collaboration">Collaboration Opportunity</option>
+                      <option value="feedback">Feedback or Ideas</option>
+                      <option value="work">Interest in My Work</option>
+                      <option value="general">General Inquiry</option>
+                      <option value="other">Just Saying Hello</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="contact-us-form-group">
                   <label htmlFor="projectDetails" className="contact-us-label">
-                    Tell Us About Your Project <span className="contact-us-required">*</span>
+                    Your Message <span className="contact-us-required">*</span>
                   </label>
                   <textarea
                     id="projectDetails"
@@ -315,7 +314,7 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                     value={formData.projectDetails}
                     onChange={handleChange}
                     className={`contact-us-textarea ${errors.projectDetails ? 'contact-us-input-error' : ''}`}
-                    placeholder="Describe your vision, goals, target audience, and any specific features you need..."
+                    placeholder="Tell me what's on your mind... What would you like to know or discuss?"
                     rows={5}
                     required
                   />
@@ -327,7 +326,7 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                 <div className="contact-us-form-row">
                   <div className="contact-us-form-group">
                     <label htmlFor="budget" className="contact-us-label">
-                      Budget Range
+                      How Did You Find Me? (Optional)
                     </label>
                     <select
                       id="budget"
@@ -336,18 +335,18 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                       onChange={handleChange}
                       className="contact-us-select"
                     >
-                      <option value="">Select range</option>
-                      <option value="under-10k">Under $10,000</option>
-                      <option value="10k-25k">$10,000 - $25,000</option>
-                      <option value="25k-50k">$25,000 - $50,000</option>
-                      <option value="50k-100k">$50,000 - $100,000</option>
-                      <option value="100k-plus">$100,000+</option>
+                      <option value="">Select an option</option>
+                      <option value="social">Social Media</option>
+                      <option value="friend">Friend or Colleague</option>
+                      <option value="search">Search Engine</option>
+                      <option value="platform">Through Inqu Platform</option>
+                      <option value="other">Other</option>
                     </select>
                   </div>
 
                   <div className="contact-us-form-group">
                     <label htmlFor="timeline" className="contact-us-label">
-                      Timeline
+                      Best Time to Reach You (Optional)
                     </label>
                     <select
                       id="timeline"
@@ -356,12 +355,11 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
                       onChange={handleChange}
                       className="contact-us-select"
                     >
-                      <option value="">Select timeline</option>
-                      <option value="asap">As soon as possible</option>
-                      <option value="1-3months">1-3 months</option>
-                      <option value="3-6months">3-6 months</option>
-                      <option value="6-12months">6-12 months</option>
-                      <option value="exploring">Just exploring options</option>
+                      <option value="">Select preference</option>
+                      <option value="morning">Morning</option>
+                      <option value="afternoon">Afternoon</option>
+                      <option value="evening">Evening</option>
+                      <option value="anytime">Anytime</option>
                     </select>
                   </div>
                 </div>
@@ -369,20 +367,20 @@ export default function ContactUsModal({ isOpen, onClose }: ContactUsModalProps)
             </div>
 
             <div className="contact-us-modal-footer">
-              <button 
+              <button
                 type="button"
-                className="contact-us-btn contact-us-btn-secondary" 
+                className="contact-us-btn contact-us-btn-secondary"
                 onClick={handleClose}
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="submit"
-                className="contact-us-btn contact-us-btn-primary" 
+                className="contact-us-btn contact-us-btn-primary"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Submitting...' : 'Send Inquiry →'}
+                {isSubmitting ? 'Sending...' : 'Send Message →'}
               </button>
             </div>
           </form>

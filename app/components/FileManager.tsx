@@ -27,7 +27,7 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
 
     const fileArray = Array.from(files);
     const validation = validateWidgetFiles(fileArray);
-    
+
     if (!validation.valid) {
       alert(`Invalid files:\n${validation.errors.join('\n')}`);
       return;
@@ -37,12 +37,12 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
       const uploadPromises = fileArray.map(file => addFileToWidget(basePath, file));
       const uploadedFiles = await Promise.all(uploadPromises);
-      
+
       // Update widget files array in Firestore
       const updatedFiles = [...(widget.files || []), ...uploadedFiles];
       const updatedWidget = { ...widget, files: updatedFiles };
       await updateWidget(widget.id, { files: updatedFiles });
-      
+
       if (onWidgetUpdated) {
         onWidgetUpdated(updatedWidget);
       }
@@ -64,18 +64,18 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
       const oldPath = `${basePath}/${renamingFile.fileName}`;
       const newPath = `${basePath}/${newFileName.trim()}`;
-      
+
       const newDownloadURL = await renameFile(oldPath, newPath);
-      
+
       // Update widget files array
       const updatedFiles = widget.files?.map((f) =>
         f.fileName === renamingFile.fileName
           ? { ...f, fileName: newFileName.trim(), downloadURL: newDownloadURL }
           : f
       ) || [];
-      
+
       await updateWidget(widget.id, { files: updatedFiles });
-      
+
       setShowRename(false);
       setRenamingFile(null);
       setNewFileName('');
@@ -92,13 +92,13 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
     try {
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
       const filePath = `${basePath}/${fileName}`;
-      
+
       await removeFileFromWidget(filePath);
-      
+
       // Update widget files array
       const updatedFiles = widget.files?.filter((f) => f.fileName !== fileName) || [];
       await updateWidget(widget.id, { files: updatedFiles });
-      
+
       setDeletingFile(null);
       onFilesUpdated();
     } catch (error) {
@@ -138,7 +138,7 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".html,.js,.css,.png,.jpg,.jpeg,.gif,.svg,.json,.webp,.txt,.md"
+              accept=".html,.htm,.js,.css,.png,.jpg,.jpeg,.gif,.svg,.json,.webp,.txt,.md,.pdf,.mp3,.wav,.flac,.aac,.m4a,.oga,.ogg,.mp4,.mov,.webm,.avi,.mkv,.psd,.ai,.eps,.zip"
               onChange={(e) => handleFileSelect(e.target.files)}
               style={{ display: 'none' }}
             />

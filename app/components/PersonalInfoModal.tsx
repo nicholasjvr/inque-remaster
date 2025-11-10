@@ -39,14 +39,14 @@ export default function PersonalInfoModal({ isOpen, onClose, onContactClick }: P
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className={`personal-info-modal-overlay ${isClosing ? 'closing' : ''}`}
       onClick={handleClose}
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      <div 
-        className="personal-info-modal" 
+      <div
+        className="personal-info-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -54,10 +54,10 @@ export default function PersonalInfoModal({ isOpen, onClose, onContactClick }: P
       >
         <div className="personal-info-modal-header">
           <h2 id="personal-info-title" className="personal-info-title">
-            Custom Web App Development
+            About Nicholas Jansen van Rensburg
           </h2>
-          <button 
-            className="personal-info-close-btn" 
+          <button
+            className="personal-info-close-btn"
             onClick={handleClose}
             aria-label="Close modal"
           >
@@ -67,56 +67,59 @@ export default function PersonalInfoModal({ isOpen, onClose, onContactClick }: P
 
         <div className="personal-info-modal-content">
           <div className="personal-info-section">
-            <div className="personal-info-icon">💻</div>
-            <h3 className="personal-info-section-title">Services</h3>
+            <div className="personal-info-icon">👋</div>
+            <h3 className="personal-info-section-title">Welcome to Inqu</h3>
             <p className="personal-info-text">
-              I specialize in creating custom web applications tailored to your business needs. 
-              From interactive dashboards to modern user interfaces, I bring your vision to life 
-              with cutting-edge technology and thoughtful design.
+              Hi! I'm Nicholas Jansen van Rensburg, the creator behind Inqu. This platform
+              is my passion project—a space where creativity meets technology. Whether you're
+              curious about my work, want to collaborate, or just want to connect, I'd love
+              to hear from you.
             </p>
           </div>
 
           <div className="personal-info-section">
             <div className="personal-info-icon">🎨</div>
-            <h3 className="personal-info-section-title">Expertise</h3>
+            <h3 className="personal-info-section-title">What I Do</h3>
             <ul className="personal-info-list">
-              <li>React & Next.js Development</li>
-              <li>Custom UI/UX Design</li>
-              <li>Interactive Web Experiences</li>
-              <li>Real-time Applications</li>
-              <li>Firebase & Supabase Integration</li>
-              <li>Responsive Design</li>
+              <li>Building innovative web experiences</li>
+              <li>Creating interactive platforms like Inqu</li>
+              <li>Designing modern UI/UX interfaces</li>
+              <li>Developing with React & Next.js</li>
+              <li>Working with Firebase & Supabase</li>
+              <li>Crafting responsive, user-friendly designs</li>
             </ul>
           </div>
 
           <div className="personal-info-section">
-            <div className="personal-info-icon">🚀</div>
-            <h3 className="personal-info-section-title">Let's Collaborate</h3>
+            <div className="personal-info-icon">💬</div>
+            <h3 className="personal-info-section-title">Let's Connect</h3>
             <p className="personal-info-text">
-              Looking for a custom web application? I'd love to discuss your project and help 
-              bring your ideas to life. Let's create something amazing together.
+              Interested in learning more about Inqu or my work? Have questions, ideas, or
+              just want to say hello? I'm always open to conversations and new connections.
+              Feel free to reach out!
             </p>
             <div className="personal-info-contact">
               <p className="personal-info-contact-text">
-                Ready to start your project? Reach out through the platform or connect via your preferred method.
+                Want to know more? Drop me a message through the contact form or connect
+                through your preferred method.
               </p>
             </div>
           </div>
         </div>
 
         <div className="personal-info-modal-footer">
-          <button 
-            className="personal-info-btn personal-info-btn-contact" 
+          <button
+            className="personal-info-btn personal-info-btn-contact"
             onClick={() => {
               if (onContactClick) {
                 onContactClick();
               }
             }}
           >
-            Get Started →
+            Get in Touch →
           </button>
-          <button 
-            className="personal-info-btn personal-info-btn-secondary" 
+          <button
+            className="personal-info-btn personal-info-btn-secondary"
             onClick={handleClose}
           >
             Close

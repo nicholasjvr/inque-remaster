@@ -1,3 +1,70 @@
+/* Social Media Icons */
+.social-media-icons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(20px, 4vw, 32px);
+    margin-top: clamp(16px, 3vw, 24px);
+    margin-bottom: clamp(16px, 3vw, 24px);
+    position: relative;
+    z-index: 20;
+    pointer-events: auto;
+}
+
+.social-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(44px, 6vw, 56px);
+    height: clamp(44px, 6vw, 56px);
+    color: #b7f7ff;
+    background: rgba(10, 20, 28, 0.65);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    border-radius: 50%;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 6px rgba(0, 240, 255, 0.15);
+    transition: background 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+    z-index: 20;
+    pointer-events: auto;
+}
+
+.social-icon:hover,
+.social-icon:focus-visible {
+    color: #00e5ff;
+    background: rgba(0, 240, 255, 0.15);
+    border-color: rgba(0, 240, 255, 0.5);
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+}
+
+.social-icon:focus-visible {
+    outline: 2px solid rgba(0, 240, 255, 0.8);
+    outline-offset: 4px;
+}
+
+.social-icon svg {
+    width: 100%;
+    height: 100%;
+    padding: clamp(10px, 2vw, 14px);
+}
+
+@media (max-width: 480px) {
+    .social-media-icons {
+        gap: 16px;
+    }
+
+    .social-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .social-icon svg {
+        padding: 8px;
+    }
+}
+
 /* Hero Profile Integration */
 .hero-profile-integration {
     display: flex;
@@ -51,12 +118,13 @@
     isolation: isolate;
     /* Allow scrolling - don't use overflow hidden */
     overflow: visible;
-    /* Ensure it's in page flow */
-    position: relative;
-    /* Ensure section is scrollable */
-    scroll-margin-top: 20px;
+    /* Ensure section is scrollable and visible */
+    scroll-margin-top: 80px;
+    scroll-margin-bottom: 40px;
     /* Ensure child hub can receive clicks */
     pointer-events: auto;
+    /* Ensure it's always in viewport when expanded */
+    min-height: fit-content;
 }
 
 .hero-profile-extended * {

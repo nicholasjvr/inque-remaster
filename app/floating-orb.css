@@ -1,6 +1,6 @@
 :root {
-    --orb-size: 180px;
-    --orbit-size: 350px;
+    --orb-size: 190px;
+    --orbit-size: 380px;
     --orb-primary: #00e5ff;
     --orb-secondary: #b400ff;
     --orb-glow: rgba(0, 229, 255, 0.4);
@@ -11,8 +11,8 @@
 
 @media (max-width: 768px) {
     :root {
-        --orb-size: 150px;
-        --orbit-size: 290px;
+        --orb-size: 180px;
+        --orbit-size: 390px;
     }
 }
 
@@ -30,30 +30,25 @@
     align-items: center;
     justify-content: center;
     overflow: visible;
-    /* Changed from 'hidden' to allow arrows to show */
-    /* Prevent any scrolling */
-    /* Orb container should not be scrollable */
-    /* ADDED: Ensure no scrolling whatsoever */
     touch-action: pan-x;
-    /* Allow horizontal pan only for orb rotation */
     overscroll-behavior: none;
+    contain: layout style;
+    transform: translateZ(0);
+    isolation: isolate;
+    margin-top: clamp(-120px, -20vw, -24px);
 }
 
 #orb-container {
     position: relative;
-    width: var(--orbit-size);
-    height: var(--orbit-size);
+    width: calc(var(--orbit-size) + 120px);
+    height: calc(var(--orbit-size) + 120px);
     display: block;
     margin: 0 auto;
-    /* Prevent any scrolling on orb container */
-    overflow: hidden;
+    overflow: visible;
     overscroll-behavior: none;
-    /* Ensure orb container is not scrollable */
-    /* ADDED: More aggressive scroll prevention */
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
-    /* ADDED: CSS containment to prevent layout thrashing */
     contain: layout style paint;
 }
 
@@ -61,16 +56,16 @@
     position: absolute;
     inset: 0;
     margin: auto;
-    width: var(--orbit-size);
-    height: var(--orbit-size);
+    width: calc(var(--orbit-size) + 120px);
+    height: calc(var(--orbit-size) + 120px);
     pointer-events: none;
     perspective: 700px;
     transform-style: preserve-3d;
     z-index: 8;
     display: block;
     border-radius: 100%;
-    /* ADDED: Prevent any accidental scrolling */
-    overflow: hidden;
+    /* Changed: Allow nav items to extend beyond wrapper */
+    overflow: visible;
     touch-action: none;
     /* ADDED: Optimize rendering performance */
     will-change: transform;
@@ -113,8 +108,9 @@
     height: var(--orbit-size);
     transform: translate(-50%, -50%);
     pointer-events: none;
-    overflow: hidden;
-    background: radial-gradient(circle at 50% 40%, rgba(12, 20, 30, 0.9) 0%, rgba(4, 6, 13, 0.85) 55%, rgba(3, 6, 10, 0.8) 100%);
+    overflow: visible;
+    /* Removed visible background to create floating effect */
+    background: transparent;
     border-radius: 100%;
     /* Allow page scrolling, stage is visual only */
     opacity: 1 !important;
@@ -197,8 +193,13 @@
 
 .orb-nav-container {
     position: absolute;
-    inset: 0;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--orbit-size) + 120px);
+    height: calc(var(--orbit-size) + 120px);
+    transform: translate(-50%, -50%);
     pointer-events: none;
+    overflow: visible;
 }
 
 .orb-nav-item {
@@ -219,8 +220,7 @@
     text-decoration: none;
     background: rgba(10, 20, 28, 0.65);
     border: 1px solid rgba(0, 240, 255, 0.35);
-    box-shadow: 0 0 12px rgba(0, 240, 255, 0.28);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease,
+    transition: transform 0.2s ease, background 0.2s ease,
         opacity 0.2s ease, filter 0.2s ease;
     backdrop-filter: blur(6px);
     font-size: 24px;
@@ -234,7 +234,6 @@
 .orb-nav-item:focus-visible {
     transform: translate(-50%, -50%) translate(calc(var(--x) + 6px), var(--y));
     background: rgba(0, 240, 255, 0.18);
-    box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
     outline: none;
 }
 
@@ -358,84 +357,78 @@
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.orb-center-label {
+
+.orb-active-label {
     position: absolute;
-    top: calc(100% + 20px);
+    top: calc(50% + var(--orb-size) / 2 + 30px);
     left: 50%;
-    transform: translateX(-50%);
-    font-size: clamp(14px, 2vw, 18px);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: #66faff;
-    pointer-events: none;
-    user-select: none;
-    text-shadow:
-        0 0 8px rgba(102, 250, 255, 0.6),
-        0 0 16px rgba(0, 240, 255, 0.4);
-    z-index: 100;
-    /* Increased from 15 to ensure visibility */
-    opacity: 1;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    white-space: nowrap;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 8px 16px;
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(102, 250, 255, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.2);
-    min-height: 36px;
+    transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
-    justify-content: center;
-    /* Ensure label is always visible and positioned relative to orb */
-    position: absolute;
-    visibility: visible;
-    /* Add isolation to create new stacking context */
-    isolation: isolate;
+    gap: 12px;
+    padding: 12px 24px;
+    background: rgba(10, 20, 28, 0.85);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+    pointer-events: none;
+    user-select: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    white-space: nowrap;
+}
+
+.orb-active-label.active {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.orb-label-icon {
+    font-size: 24px;
+    display: inline-block;
+    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
+}
+
+.orb-label-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #b7f7ff;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
 }
 
 @media (max-width: 768px) {
-    .orb-center-label {
-        font-size: clamp(12px, 1.8vw, 16px);
-        padding: 6px 12px;
-        top: calc(100% + 16px);
+    .orb-active-label {
+        top: calc(50% + var(--orb-size) / 2 + 20px);
+        padding: 10px 20px;
+        gap: 10px;
+    }
+
+    .orb-label-icon {
+        font-size: 20px;
+    }
+
+    .orb-label-text {
+        font-size: 14px;
     }
 }
 
 @media (max-width: 480px) {
-    .orb-center-label {
-        font-size: clamp(11px, 1.5vw, 14px);
-        padding: 5px 10px;
-        top: calc(100% + 14px);
-        letter-spacing: 0.1em;
+    .orb-active-label {
+        top: calc(50% + var(--orb-size) / 2 + 15px);
+        padding: 8px 16px;
+        gap: 8px;
     }
-}
 
-.orb-usage-tooltip {
-    position: absolute;
-    top: calc(100% + 18px);
-    left: 50%;
-    transform: translate(-50%, -10px);
-    background: rgba(7, 16, 24, 0.82);
-    color: #bdefff;
-    border: 1px solid rgba(0, 240, 255, 0.25);
-    border-radius: 12px;
-    padding: 8px 14px;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.25s ease, transform 0.25s ease;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
-    white-space: nowrap;
-    z-index: 5;
-}
+    .orb-label-icon {
+        font-size: 18px;
+    }
 
-.orb-usage-tooltip.show {
-    opacity: 1;
-    transform: translate(-50%, 0);
+    .orb-label-text {
+        font-size: 13px;
+    }
 }
 
 .floating-orb-wrapper[data-debug="true"]::after {
@@ -452,56 +445,6 @@
     text-transform: uppercase;
 }
 
-.floating-orb-wrapper[data-active="true"] .floating-orb {
-    filter: brightness(1.15) saturate(1.1);
-}
-
-.floating-orb-wrapper[data-typing="true"] .floating-orb::after {
-    content: "";
-    position: absolute;
-    inset: 18%;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%,
-            rgba(255, 255, 255, 0) 70%);
-    animation: typing-ping 1.8s ease-in-out infinite;
-    pointer-events: none;
-}
-
-@keyframes typing-ping {
-    0% {
-        opacity: 0.6;
-        transform: scale(0.92);
-    }
-
-    50% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-
-    100% {
-        opacity: 0.4;
-        transform: scale(0.92);
-    }
-}
-
-.floating-orb-wrapper.fade-out {
-    opacity: 0;
-    transition: none;
-}
-
-
-.floating-orb-shell::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: calc(var(--orbit-size) + 320px);
-    height: calc(var(--orbit-size) + 320px);
-    transform: translate(-50%, -50%);
-    z-index: 0;
-    background: radial-gradient(circle, rgba(0, 185, 255, 0.12), rgba(0, 185, 255, 0) 70%);
-}
-
 
 @keyframes particle-drift {
     0% {
@@ -514,222 +457,5 @@
 
     100% {
         transform: translateY(0) translateX(0);
-    }
-}
-
-/* Swipe indicator for mobile */
-.orb-swipe-indicator {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.35s ease, transform 0.35s ease;
-    z-index: 6;
-}
-
-.orb-swipe-indicator .swipe-text {
-    color: #bdefff;
-    font-size: 12px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
-}
-
-.orb-swipe-indicator .swipe-arrow {
-    width: var(--swipe-indicator-size);
-    height: 2px;
-    background: linear-gradient(90deg, rgba(0, 240, 255, 0.0), rgba(0, 240, 255, 0.9));
-    position: relative;
-}
-
-.orb-swipe-indicator .swipe-arrow::after {
-    content: "";
-    position: absolute;
-    right: -2px;
-    top: -3px;
-    width: 0;
-    height: 0;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    border-left: 6px solid rgba(0, 240, 255, 0.95);
-}
-
-.orb-swipe-indicator .swipe-arrow.left {
-    transform: scaleX(-1);
-}
-
-@keyframes swipe-wiggle {
-    0% {
-        transform: translateX(0);
-        opacity: 0.9;
-    }
-
-    50% {
-        transform: translateX(10px);
-        opacity: 1;
-    }
-
-    100% {
-        transform: translateX(0);
-        opacity: 0.9;
-    }
-}
-
-.orb-swipe-indicator.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-@media (min-width: 769px) {
-    .orb-swipe-indicator {
-        display: none;
-    }
-}
-
-/* Tooltip styles */
-.orb-tooltip {
-    position: absolute;
-    bottom: calc(100% + 16px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: #ffffff;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
-    transition: opacity 0.35s ease, transform 0.35s ease;
-    z-index: 6;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 240, 255, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.orb-tooltip.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-}
-
-.orb-tooltip .tooltip-arrow {
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.9);
-}
-
-.orb-tooltip .tooltip-arrow::after {
-    content: "";
-    position: absolute;
-    top: -7px;
-    left: -5px;
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid rgba(0, 240, 255, 0.2);
-}
-
-.orb-tooltip .tooltip-text {
-    color: #bdefff;
-    text-shadow: 0 0 4px rgba(0, 240, 255, 0.3);
-}
-
-@media (max-width: 768px) {
-    .orb-tooltip {
-        display: none;
-    }
-}
-
-/* Arrow Navigation Buttons */
-.orb-nav-arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 48px;
-    height: 48px;
-    background: rgba(10, 20, 28, 0.75);
-    border: 1px solid rgba(0, 240, 255, 0.35);
-    border-radius: 50%;
-    color: #b7f7ff;
-    font-size: 24px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
-    /* Increased from 10 to ensure visibility */
-    backdrop-filter: blur(8px);
-    box-shadow: 0 0 12px rgba(0, 240, 255, 0.28);
-    user-select: none;
-    pointer-events: auto;
-    /* Prevent any transitions or animations that might cause movement */
-    transition: none !important;
-    animation: none !important;
-    /* Isolate from parent transforms */
-    transform-style: flat;
-    will-change: auto;
-}
-
-
-.orb-nav-arrow:focus-visible {
-    outline: 2px solid var(--orb-primary);
-    outline-offset: 4px;
-}
-
-.orb-nav-arrow-left {
-    left: -24px;
-    /* Ensure position is fixed and not animated */
-    transition: none !important;
-}
-
-.orb-nav-arrow-right {
-    right: -24px;
-    /* Ensure position is fixed and not animated */
-    transition: none !important;
-}
-
-@media (max-width: 768px) {
-    .orb-nav-arrow {
-        width: 44px;
-        height: 44px;
-        font-size: 20px;
-    }
-
-    .orb-nav-arrow-left {
-        left: -22px;
-    }
-
-    .orb-nav-arrow-right {
-        right: -22px;
-    }
-}
-
-@media (max-width: 480px) {
-    .orb-nav-arrow {
-        width: 40px;
-        height: 40px;
-        font-size: 18px;
-    }
-
-    .orb-nav-arrow-left {
-        left: -20px;
-    }
-
-    .orb-nav-arrow-right {
-        right: -20px;
     }
 }
