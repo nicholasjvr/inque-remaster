@@ -449,6 +449,12 @@
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.file-tree-container.drag-over {
+  background: rgba(0, 240, 255, 0.05);
+  border: 2px dashed var(--projects-primary);
 }
 
 .file-tree-item {
@@ -1089,6 +1095,356 @@
 
 .remove-thumbnail-btn:hover {
   background: rgba(255, 71, 71, 0.2);
+}
+
+.file-tree-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-tree-item.hovered {
+  background: var(--projects-surface-light);
+}
+
+.file-tree-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+.file-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid var(--projects-primary);
+  border-radius: 4px;
+  color: var(--projects-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-action-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.file-action-btn.delete-btn {
+  background: rgba(255, 71, 71, 0.1);
+  border-color: var(--projects-error);
+  color: var(--projects-error);
+}
+
+.file-action-btn.delete-btn:hover {
+  background: rgba(255, 71, 71, 0.2);
+}
+
+.file-action-btn.download-btn {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: var(--projects-success);
+  color: var(--projects-success);
+}
+
+.file-action-btn.download-btn:hover {
+  background: rgba(74, 222, 128, 0.2);
+}
+
+/* Context Menu */
+.file-context-menu {
+  background: var(--projects-surface);
+  border: 1px solid var(--projects-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 180px;
+  overflow: hidden;
+  padding: 0.5rem 0;
+}
+
+.file-context-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  color: var(--projects-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.file-context-menu button:hover {
+  background: var(--projects-surface-light);
+}
+
+.file-context-menu button.delete-action {
+  color: var(--projects-error);
+}
+
+.file-context-menu button.delete-action:hover {
+  background: rgba(255, 71, 71, 0.1);
+}
+
+/* File Edit Textarea */
+.file-edit-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background: var(--projects-surface);
+  border: 1px solid var(--projects-primary);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--projects-text);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.file-edit-textarea:focus {
+  outline: none;
+  border-color: var(--projects-primary);
+  box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.2);
+}
+
+/* Preview Action Buttons */
+.preview-action-btn.edit-btn {
+  background: rgba(255, 255, 0, 0.1);
+  border-color: var(--projects-accent);
+  color: var(--projects-accent);
+}
+
+.preview-action-btn.edit-btn:hover {
+  background: rgba(255, 255, 0, 0.2);
+}
+
+.preview-action-btn.save-btn {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: var(--projects-success);
+  color: var(--projects-success);
+}
+
+.preview-action-btn.save-btn:hover {
+  background: rgba(74, 222, 128, 0.2);
+}
+
+.preview-action-btn.save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-action-btn.download-btn {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: var(--projects-success);
+  color: var(--projects-success);
+}
+
+.preview-action-btn.download-btn:hover {
+  background: rgba(74, 222, 128, 0.2);
+}
+
+/* Delete Project Button */
+.delete-project-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 71, 71, 0.1);
+  border: 1px solid var(--projects-error);
+  border-radius: 6px;
+  color: var(--projects-error);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+}
+
+.delete-project-btn:hover {
+  background: rgba(255, 71, 71, 0.2);
+}
+
+/* Delete Project Modal */
+.delete-project-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.delete-modal-content {
+  background: var(--projects-surface);
+  border: 1px solid var(--projects-border);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+}
+
+.delete-modal-content h3 {
+  margin: 0 0 1rem 0;
+  color: var(--projects-error);
+  font-size: 1.5rem;
+}
+
+.delete-modal-content p {
+  margin: 0.75rem 0;
+  color: var(--projects-text-secondary);
+  line-height: 1.6;
+}
+
+.delete-modal-content strong {
+  color: var(--projects-text);
+}
+
+.delete-project-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--projects-surface-light);
+  border: 1px solid var(--projects-border);
+  border-radius: 6px;
+  color: var(--projects-text);
+  font-size: 1rem;
+  margin: 1rem 0;
+}
+
+.delete-project-input:focus {
+  outline: none;
+  border-color: var(--projects-error);
+  box-shadow: 0 0 0 2px rgba(255, 71, 71, 0.2);
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.confirm-delete-btn {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 71, 71, 0.1);
+  border: 1px solid var(--projects-error);
+  border-radius: 6px;
+  color: var(--projects-error);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirm-delete-btn:hover:not(:disabled) {
+  background: rgba(255, 71, 71, 0.2);
+}
+
+.confirm-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancel-delete-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--projects-surface-light);
+  border: 1px solid var(--projects-border);
+  border-radius: 6px;
+  color: var(--projects-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-delete-btn:hover:not(:disabled) {
+  background: var(--projects-surface);
+}
+
+.cancel-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Toast Container */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast-notification {
+  padding: 1rem 1.5rem;
+  background: var(--projects-surface);
+  border: 1px solid var(--projects-border);
+  border-radius: 8px;
+  color: var(--projects-text);
+  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: toastSlideIn 0.3s ease-out;
+  min-width: 250px;
+  max-width: 400px;
+}
+
+.toast-notification.success {
+  border-color: var(--projects-success);
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--projects-success);
+}
+
+.toast-notification.error {
+  border-color: var(--projects-error);
+  background: rgba(255, 71, 71, 0.1);
+  color: var(--projects-error);
+}
+
+.toast-notification.warning {
+  border-color: var(--projects-warning);
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--projects-warning);
+}
+
+.toast-notification.info {
+  border-color: var(--projects-primary);
+  background: rgba(0, 240, 255, 0.1);
+  color: var(--projects-primary);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.upload-drop-zone.dragging {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: var(--projects-primary);
+  transform: scale(1.02);
+}
+
+.file-upload-modal.dragging .upload-drop-zone {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: var(--projects-primary);
+  transform: scale(1.02);
 }
 
 /* Responsive */

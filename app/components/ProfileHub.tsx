@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PublicUser, UserProfile, RepRackItem, Widget } from '@/hooks/useFirestore';
 import { useUserProfile, useWidgets } from '@/hooks/useFirestore';
@@ -90,11 +91,8 @@ type StoredPreferences = {
 type CollapsibleSectionProps = {
   id: string;
   title: string;
-  defaultOpen?: boolean; // used only when uncontrolled
   children: React.ReactNode;
   sectionId?: string;
-  open?: boolean; // controlled open state (preferred)
-  onToggle?: () => void; // controlled toggle
   quickbar?: React.ReactNode; // optional sidebar rendered when open
   isFullscreen?: boolean;
   onEnterFullscreen?: () => void;
@@ -104,41 +102,28 @@ type CollapsibleSectionProps = {
 const CollapsibleSection = ({
   id,
   title,
-  defaultOpen,
   children,
   sectionId,
-  open,
-  onToggle,
   quickbar,
   isFullscreen = false,
   onEnterFullscreen,
   onExitFullscreen
 }: CollapsibleSectionProps) => {
-  // Uncontrolled fallback for cases where parent doesn't manage open state
-  const [uncontrolledOpen, setUncontrolledOpen] = useState<boolean>(() => defaultOpen ?? false);
-  const isOpen = open ?? uncontrolledOpen;
-
-  const handleClick = (e: React.MouseEvent) => {
+  const handleHeaderClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (onToggle) {
-      onToggle();
-    } else {
-      setUncontrolledOpen(prev => !prev);
+    if (!isFullscreen && onEnterFullscreen) {
+      onEnterFullscreen();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (onToggle) {
-        onToggle();
-      } else {
-        setUncontrolledOpen(prev => !prev);
+      if (!isFullscreen && onEnterFullscreen) {
+        onEnterFullscreen();
       }
     }
   };
-
-  const showFullscreenToggle = Boolean(onEnterFullscreen || onExitFullscreen);
 
   const handleFullscreenClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -150,44 +135,29 @@ const CollapsibleSection = ({
     }
   };
 
-  return (
-    <div
-      className={`hub-collapsible${isFullscreen ? ' hub-collapsible--fullscreen' : ''}`}
-      data-open={isOpen}
-      data-section={sectionId}
-      data-fullscreen={isFullscreen ? 'true' : 'false'}
-    >
-      <div className="hub-collapsible__header">
-        <div
-          className="hub-collapsible__summary"
-          aria-controls={id}
-          aria-expanded={isOpen}
-          onClick={handleClick}
-          onKeyDown={handleKeyDown}
-          role="button"
-          tabIndex={0}
-        >
-          <span className="hub-collapsible__caret" aria-hidden="true">▸</span>
-          <span className="hub-collapsible__title">{title}</span>
+  // Render fullscreen modal using portal at body level
+  const fullscreenModal = isFullscreen && (typeof window !== 'undefined') ? (
+    createPortal(
+      <div
+        className="hub-fullscreen-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+      >
+        <div className="hub-fullscreen-modal__header">
+          <h2 id={`${id}-title`} className="hub-fullscreen-modal__title">{title}</h2>
+          <button
+            type="button"
+            className="hub-fullscreen-modal__close"
+            onClick={handleFullscreenClick}
+            aria-label="Close fullscreen"
+          >
+            ×
+          </button>
         </div>
-        {showFullscreenToggle ? (
-          <div className="hub-collapsible__actions">
-            <button
-              type="button"
-              className="hub-collapsible__fullscreen-btn"
-              aria-pressed={isFullscreen}
-              aria-label={isFullscreen ? 'Exit fullscreen' : 'Open fullscreen'}
-              onClick={handleFullscreenClick}
-            >
-              {isFullscreen ? '⤺' : '⤢'}
-            </button>
-          </div>
-        ) : null}
-      </div>
-      {isOpen && (
         <div
           id={id}
-          className="hub-collapsible__content"
+          className="hub-collapsible__content hub-fullscreen-modal__content"
           style={{
             display: 'grid',
             gridTemplateColumns: quickbar ? 'minmax(0, 1fr) 220px' : '1fr',
@@ -204,8 +174,50 @@ const CollapsibleSection = ({
             </aside>
           ) : null}
         </div>
-      )}
-    </div>
+      </div>,
+      document.body
+    )
+  ) : null;
+
+  return (
+    <>
+      {/* Header bar - always visible */}
+      <div
+        className={`hub-collapsible${isFullscreen ? ' hub-collapsible--fullscreen' : ''}`}
+        data-section={sectionId}
+        data-fullscreen={isFullscreen ? 'true' : 'false'}
+      >
+        <div className="hub-collapsible__header">
+          <div
+            className="hub-collapsible__summary"
+            aria-controls={id}
+            onClick={handleHeaderClick}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open ${title} in fullscreen`}
+          >
+            <span className="hub-collapsible__title">{title}</span>
+          </div>
+          {onEnterFullscreen || onExitFullscreen ? (
+            <div className="hub-collapsible__actions">
+              <button
+                type="button"
+                className="hub-collapsible__fullscreen-btn"
+                aria-pressed={isFullscreen}
+                aria-label={isFullscreen ? 'Exit fullscreen' : 'Open fullscreen'}
+                onClick={handleFullscreenClick}
+              >
+                {isFullscreen ? '⤺' : '⤢'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Content - only shown in fullscreen modal (rendered via portal) */}
+      {fullscreenModal}
+    </>
   );
 };
 
@@ -253,10 +265,6 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
   const isModalOpen = isExpanded || isChatbot || isDM;
   const isPublicView = mode === 'public';
 
-  // Accordion: one open section at a time
-  const [activeSection, setActiveSection] = useState<string | null>(null);
-  const isSectionActive = (id: string) => activeSection === id;
-
   // Check if mobile device - use state to handle resize
   const [isMobile, setIsMobile] = useState(false);
 
@@ -269,24 +277,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleSectionToggle = (id: string) => {
-    setActiveSection(prev => {
-      const next = prev === id ? null : id;
-      if (next === null) {
-        // Closing section - exit fullscreen
-        setFullscreenSection(current => (current === id ? null : current));
-      } else {
-        // Opening section - auto-fullscreen on mobile for better UX
-        if (isMobile) {
-          setFullscreenSection(next);
-        }
-      }
-      return next;
-    });
-  };
-
   const openFullscreen = useCallback((id: string) => {
-    setActiveSection(id);
     setFullscreenSection(id);
   }, []);
 
@@ -367,68 +358,44 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     }
   }, [isModalOpen, isExpanded, variant]);
 
-  // Enhanced scroll lock for modal and fullscreen sections
-  // Only locks body scroll for non-billboard variants (modal overlays)
-  // Billboard variant should allow normal page scrolling since it's embedded in page flow
+  // Lock body scroll when fullscreen modal is open
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Never lock scroll for billboard variant - it's embedded in page flow
-    if (variant === 'billboard') return;
+    if (fullscreenSection) {
+      const bodyElement = document.body;
+      const htmlElement = document.documentElement;
+      const scrollPosition = window.scrollY;
 
-    const isMobile = window.innerWidth <= 768;
-    // Only lock body scroll for chatbot and dm states, never for expanded state
-    const shouldLock = (isChatbot || isDM) && isMobile && !fullscreenSection;
+      // Lock body scroll
+      bodyElement.style.position = 'fixed';
+      bodyElement.style.width = '100%';
+      bodyElement.style.overflow = 'hidden';
+      bodyElement.style.top = `-${scrollPosition}px`;
+      htmlElement.style.overflow = 'hidden';
+      bodyElement.dataset.scrollPosition = scrollPosition.toString();
 
-    if (!shouldLock) return;
+      return () => {
+        const hadScrollPosition = bodyElement.dataset.scrollPosition !== undefined;
+        const savedScrollPosition = parseInt(bodyElement.dataset.scrollPosition || '0', 10);
 
-    // Cache DOM elements for better performance
-    const bodyElement = document.body;
-    const htmlElement = document.documentElement;
-    const scrollPosition = window.scrollY;
+        // Reset body styles
+        bodyElement.style.position = '';
+        bodyElement.style.width = '';
+        bodyElement.style.overflow = '';
+        bodyElement.style.top = '';
+        htmlElement.style.overflow = '';
+        delete bodyElement.dataset.scrollPosition;
 
-    // Lock body scroll
-    bodyElement.style.position = 'fixed';
-    bodyElement.style.width = '100%';
-    bodyElement.style.overflow = 'hidden';
-    bodyElement.style.top = `-${scrollPosition}px`;
-    htmlElement.style.overflow = 'hidden';
-    bodyElement.dataset.scrollPosition = scrollPosition.toString();
-
-    // Ensure hub content can scroll independently
-    const hubContent = document.querySelector('.hub-expanded-content') as HTMLElement;
-    if (hubContent) {
-      hubContent.style.touchAction = 'pan-y';
-      hubContent.style.overflowY = 'auto';
+        // Restore scroll position
+        if (hadScrollPosition && savedScrollPosition > 0) {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: savedScrollPosition, behavior: 'instant' });
+          });
+        }
+      };
     }
-
-    // Cleanup function - only runs when scroll was actually locked
-    return () => {
-      const hadScrollPosition = bodyElement.dataset.scrollPosition !== undefined;
-      const savedScrollPosition = parseInt(bodyElement.dataset.scrollPosition || '0', 10);
-
-      // Reset body styles
-      bodyElement.style.position = '';
-      bodyElement.style.width = '';
-      bodyElement.style.overflow = '';
-      bodyElement.style.top = '';
-      htmlElement.style.overflow = '';
-      delete bodyElement.dataset.scrollPosition;
-
-      // Reset hub content styles
-      if (hubContent) {
-        hubContent.style.touchAction = '';
-        hubContent.style.overflowY = '';
-      }
-
-      // Restore scroll position - only if we actually locked scroll and position was saved
-      if (hadScrollPosition && savedScrollPosition > 0) {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: savedScrollPosition, behavior: 'instant' });
-        });
-      }
-    };
-  }, [isModalOpen, variant, isChatbot, isDM, fullscreenSection]);
+  }, [fullscreenSection]);
 
 
   const handleLogout = useCallback(async () => {
@@ -550,36 +517,20 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     const handler = (event: KeyboardEvent) => {
       // ESC key handling
       if (event.key === 'Escape') {
-        if (isExpanded) {
+        if (fullscreenSection) {
+          closeFullscreen();
+        } else if (isExpanded) {
           handleCloseModal();
         } else {
           setState('minimized');
         }
         return;
       }
-
-      // Tab navigation between sections when hub is expanded
-      if (isExpanded) {
-        const sections = document.querySelectorAll('.hub-collapsible[data-open="true"]');
-        const currentIndex = Array.from(sections).findIndex(section =>
-          section.contains(document.activeElement)
-        );
-
-        if (event.key === 'ArrowDown' && currentIndex < sections.length - 1) {
-          event.preventDefault();
-          const nextSection = sections[currentIndex + 1];
-          (nextSection.querySelector('.hub-collapsible__summary') as HTMLElement)?.focus();
-        } else if (event.key === 'ArrowUp' && currentIndex > 0) {
-          event.preventDefault();
-          const prevSection = sections[currentIndex - 1];
-          (prevSection.querySelector('.hub-collapsible__summary') as HTMLElement)?.focus();
-        }
-      }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isExpanded]);
+  }, [isExpanded, fullscreenSection, closeFullscreen, handleCloseModal]);
 
 
   const themeClass = useMemo(() => THEME_MAP[theme], [theme]);
@@ -877,10 +828,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   <CollapsibleSection
                     id="customization-shop"
                     title="🛍️ Customization Shop"
-                    defaultOpen={false}
                     sectionId="customization"
-                    open={isSectionActive('customization')}
-                    onToggle={() => handleSectionToggle('customization')}
                     isFullscreen={fullscreenSection === 'customization'}
                     onEnterFullscreen={() => openFullscreen('customization')}
                     onExitFullscreen={closeFullscreen}
@@ -917,10 +865,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 <CollapsibleSection
                   id="featured"
                   title="🏆 Featured Projects"
-                  defaultOpen={false}
                   sectionId="featured"
-                  open={isSectionActive('featured')}
-                  onToggle={() => handleSectionToggle('featured')}
                   isFullscreen={fullscreenSection === 'featured'}
                   onEnterFullscreen={() => openFullscreen('featured')}
                   onExitFullscreen={closeFullscreen}
@@ -1049,10 +994,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 <CollapsibleSection
                   id="activity"
                   title="📅 Recent Activity"
-                  defaultOpen={false}
                   sectionId="activity"
-                  open={isSectionActive('activity')}
-                  onToggle={() => handleSectionToggle('activity')}
                   isFullscreen={fullscreenSection === 'activity'}
                   onEnterFullscreen={() => openFullscreen('activity')}
                   onExitFullscreen={closeFullscreen}
@@ -1123,10 +1065,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   <CollapsibleSection
                     id="social"
                     title="🌐 Social Connections"
-                    defaultOpen={false}
                     sectionId="social"
-                    open={isSectionActive('social')}
-                    onToggle={() => handleSectionToggle('social')}
                     isFullscreen={fullscreenSection === 'social'}
                     onEnterFullscreen={() => openFullscreen('social')}
                     onExitFullscreen={closeFullscreen}
@@ -1194,10 +1133,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   <CollapsibleSection
                     id="followers"
                     title="👥 Recent Followers"
-                    defaultOpen={false}
                     sectionId="followers"
-                    open={isSectionActive('followers')}
-                    onToggle={() => handleSectionToggle('followers')}
                     isFullscreen={fullscreenSection === 'followers'}
                     onEnterFullscreen={() => openFullscreen('followers')}
                     onExitFullscreen={closeFullscreen}
@@ -1244,10 +1180,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   <CollapsibleSection
                     id="following"
                     title="👥 Following"
-                    defaultOpen={false}
                     sectionId="following"
-                    open={isSectionActive('following')}
-                    onToggle={() => handleSectionToggle('following')}
                     isFullscreen={fullscreenSection === 'following'}
                     onEnterFullscreen={() => openFullscreen('following')}
                     onExitFullscreen={closeFullscreen}
@@ -1312,10 +1245,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                 <CollapsibleSection
                   id="quicknav"
                   title="🧰 Quick Navigation"
-                  defaultOpen={false}
                   sectionId="navigation"
-                  open={isSectionActive('navigation')}
-                  onToggle={() => handleSectionToggle('navigation')}
                   isFullscreen={fullscreenSection === 'navigation'}
                   onEnterFullscreen={() => openFullscreen('navigation')}
                   onExitFullscreen={closeFullscreen}
@@ -1442,12 +1372,15 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           )}
         </div>
       </div>
-      {fullscreenSection ? (
-        <div
-          role="presentation"
-          className="hub-fullscreen-overlay"
-          onClick={closeFullscreen}
-        />
+      {fullscreenSection && typeof window !== 'undefined' ? (
+        createPortal(
+          <div
+            role="presentation"
+            className="hub-fullscreen-overlay"
+            onClick={closeFullscreen}
+          />,
+          document.body
+        )
       ) : null}
       {/* Only show overlay when expanded/chatbot AND not billboard AND not edit mode */}
       {

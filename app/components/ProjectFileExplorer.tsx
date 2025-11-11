@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Widget } from '@/hooks/useFirestore';
 import { useStorage } from '@/hooks/useStorage';
 import { useWidgets } from '@/hooks/useFirestore';
@@ -8,6 +8,7 @@ import FileManager from './FileManager';
 import EntryPointSelector from './EntryPointSelector';
 import ThumbnailManager from './ThumbnailManager';
 import BundleIframe from './BundleIframe';
+import { showToast } from '@/app/utils/toast';
 
 interface ProjectFileExplorerProps {
   widget: Widget;
@@ -33,8 +34,18 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
   const [description, setDescription] = useState(widget.description);
   const [fileContent, setFileContent] = useState<string>('');
   const [loadingContent, setLoadingContent] = useState(false);
-  const { buildBundleFileMap } = useStorage();
-  const { updateWidget } = useWidgets(widget.userId);
+  const [editingFile, setEditingFile] = useState(false);
+  const [editedContent, setEditedContent] = useState<string>('');
+  const [savingFile, setSavingFile] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: FileNode } | null>(null);
+  const [hoveredFile, setHoveredFile] = useState<string | null>(null);
+  const [showDeleteProject, setShowDeleteProject] = useState(false);
+  const [deleteProjectName, setDeleteProjectName] = useState('');
+  const [deletingProject, setDeletingProject] = useState(false);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const fileTreeContainerRef = useRef<HTMLDivElement>(null);
+  const { buildBundleFileMap, uploadFile, removeFileFromWidget } = useStorage();
+  const { updateWidget, deleteWidget } = useWidgets(widget.userId);
 
   useEffect(() => {
     buildFileTree();
@@ -43,12 +54,39 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
   }, [widget]);
 
   useEffect(() => {
-    if (selectedFile && selectedFile.downloadURL && selectedFile.name.match(/\.(css|js|json|txt|md)$/i)) {
+    if (selectedFile && selectedFile.downloadURL && selectedFile.name.match(/\.(css|js|json|txt|md|html)$/i)) {
       loadFileContent(selectedFile.downloadURL);
     } else {
       setFileContent('');
     }
+    setEditingFile(false);
   }, [selectedFile]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setContextMenu(null);
+        setEditingFile(false);
+      }
+    };
+
+    if (contextMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [contextMenu]);
 
   const loadFileContent = async (url: string) => {
     try {
@@ -64,18 +102,178 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
     }
   };
 
+
+  const handleDescriptionSave = async () => {
+    if (description !== widget.description) {
+      try {
+        await updateWidget(widget.id, { description });
+        showToast('Description updated successfully', 'success');
+      } catch (error) {
+        showToast('Failed to update description', 'error');
+      }
+    }
+    setEditingDescription(false);
+  };
+
   const handleTitleSave = async () => {
     if (title !== widget.title) {
-      await updateWidget(widget.id, { title });
+      try {
+        await updateWidget(widget.id, { title });
+        showToast('Title updated successfully', 'success');
+      } catch (error) {
+        showToast('Failed to update title', 'error');
+      }
     }
     setEditingTitle(false);
   };
 
-  const handleDescriptionSave = async () => {
-    if (description !== widget.description) {
-      await updateWidget(widget.id, { description });
+  const handleContextMenu = (e: React.MouseEvent, file: FileNode) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, file });
+  };
+
+  const handleRenameFile = (file: FileNode) => {
+    setContextMenu(null);
+    // Find the file in widget.files to get the full fileName
+    const widgetFile = widget.files?.find(f => f.fileName.includes(file.name));
+    if (widgetFile) {
+      // Trigger rename through FileManager
+      const event = new CustomEvent('file-rename', { detail: { fileName: widgetFile.fileName, path: file.path } });
+      window.dispatchEvent(event);
     }
-    setEditingDescription(false);
+  };
+
+  const handleDeleteFile = async (file: FileNode) => {
+    setContextMenu(null);
+    const widgetFile = widget.files?.find(f => f.fileName.includes(file.name));
+    if (!widgetFile) return;
+
+    if (!confirm(`Are you sure you want to delete "${file.name}"?`)) return;
+
+    try {
+      const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
+      const filePath = `${basePath}/${widgetFile.fileName}`;
+      
+      await removeFileFromWidget(filePath);
+      
+      const updatedFiles = widget.files?.filter((f) => f.fileName !== widgetFile.fileName) || [];
+      await updateWidget(widget.id, { files: updatedFiles });
+      
+      if (selectedFile?.path === file.path) {
+        setSelectedFile(null);
+      }
+      
+      buildFileTree();
+      showToast('File deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      showToast('Failed to delete file', 'error');
+    }
+  };
+
+  const handleDownloadFile = (file: FileNode) => {
+    setContextMenu(null);
+    if (file.downloadURL) {
+      const link = document.createElement('a');
+      link.href = file.downloadURL;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('File download started', 'success');
+    }
+  };
+
+  const handleStartEdit = () => {
+    if (selectedFile && isEditableFile(selectedFile.name)) {
+      setEditedContent(fileContent);
+      setEditingFile(true);
+    }
+  };
+
+  const handleSaveFile = async () => {
+    if (!selectedFile || !selectedFile.downloadURL) return;
+
+    try {
+      setSavingFile(true);
+      const widgetFile = widget.files?.find(f => f.fileName.includes(selectedFile.name));
+      if (!widgetFile) {
+        throw new Error('File not found in widget');
+      }
+
+      const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
+      const filePath = `${basePath}/${widgetFile.fileName}`;
+      
+      // Create a blob from the edited content
+      const blob = new Blob([editedContent], { type: 'text/plain' });
+      const file = new File([blob], selectedFile.name, { type: blob.type });
+      
+      // Upload the new content (this will overwrite the existing file)
+      const newDownloadURL = await uploadFile(file, filePath);
+      
+      // Update widget files array
+      const updatedFiles = widget.files?.map((f) =>
+        f.fileName === widgetFile.fileName
+          ? { ...f, downloadURL: newDownloadURL }
+          : f
+      ) || [];
+      
+      await updateWidget(widget.id, { files: updatedFiles });
+      
+      setFileContent(editedContent);
+      setEditingFile(false);
+      showToast('File saved successfully', 'success');
+    } catch (error) {
+      console.error('Error saving file:', error);
+      showToast('Failed to save file', 'error');
+    } finally {
+      setSavingFile(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingFile(false);
+    setEditedContent('');
+  };
+
+  const handleDeleteProject = async () => {
+    if (deleteProjectName !== widget.title) {
+      showToast('Project name does not match', 'error');
+      return;
+    }
+
+    try {
+      setDeletingProject(true);
+      
+      // Delete all files in storage
+      const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
+      if (widget.files && widget.files.length > 0) {
+        const deletePromises = widget.files.map(file => {
+          const filePath = `${basePath}/${file.fileName}`;
+          return removeFileFromWidget(filePath).catch(err => {
+            console.error(`Error deleting file ${file.fileName}:`, err);
+          });
+        });
+        await Promise.all(deletePromises);
+      }
+      
+      // Delete widget document
+      await deleteWidget(widget.id);
+      
+      showToast('Project deleted successfully', 'success');
+      setTimeout(() => {
+        onClose();
+      }, 500);
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      showToast('Failed to delete project', 'error');
+      setDeletingProject(false);
+    }
+  };
+
+  const isEditableFile = (fileName: string): boolean => {
+    return /\.(js|css|html|htm|json|txt|md)$/i.test(fileName);
   };
 
   const buildFileTree = async () => {
@@ -141,11 +339,12 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
       const isExpanded = expandedPaths.has(node.path);
       const isSelected = selectedFile?.path === node.path;
       const isFolder = node.type === 'folder';
+      const isHovered = hoveredFile === node.path;
 
       return (
         <div key={node.path}>
           <div
-            className={`file-tree-item ${isSelected ? 'selected' : ''}`}
+            className={`file-tree-item ${isSelected ? 'selected' : ''} ${isHovered ? 'hovered' : ''}`}
             style={{ paddingLeft: `${level * 20 + 10}px` }}
             onClick={() => {
               if (isFolder) {
@@ -154,6 +353,21 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
                 setSelectedFile(node);
               }
             }}
+            onContextMenu={(e) => {
+              if (!isFolder) {
+                handleContextMenu(e, node);
+              }
+            }}
+            onMouseEnter={() => setHoveredFile(node.path)}
+            onMouseLeave={() => setHoveredFile(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Delete' && !isFolder && isSelected) {
+                handleDeleteFile(node);
+              } else if (e.key === 'F2' && !isFolder && isSelected) {
+                handleRenameFile(node);
+              }
+            }}
+            tabIndex={0}
           >
             <span className="file-tree-icon">
               {isFolder ? (isExpanded ? '📂' : '📁') : getFileIcon(node.name)}
@@ -161,6 +375,33 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
             <span className="file-tree-name">{node.name}</span>
             {node.size && (
               <span className="file-tree-size">{formatFileSize(node.size)}</span>
+            )}
+            {!isFolder && isHovered && (
+              <div className="file-tree-actions" onClick={(e) => e.stopPropagation()}>
+                <button
+                  className="file-action-btn rename-btn"
+                  onClick={() => handleRenameFile(node)}
+                  title="Rename (F2)"
+                >
+                  ✏️
+                </button>
+                <button
+                  className="file-action-btn delete-btn"
+                  onClick={() => handleDeleteFile(node)}
+                  title="Delete (Del)"
+                >
+                  🗑️
+                </button>
+                {node.downloadURL && (
+                  <button
+                    className="file-action-btn download-btn"
+                    onClick={() => handleDownloadFile(node)}
+                    title="Download"
+                  >
+                    ⬇️
+                  </button>
+                )}
+              </div>
             )}
           </div>
           {isFolder && isExpanded && node.children && (
@@ -239,6 +480,14 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
         <div className="explorer-actions">
           <EntryPointSelector widget={widget} />
           <ThumbnailManager widget={widget} />
+          <button 
+            className="delete-project-btn" 
+            onClick={() => setShowDeleteProject(true)}
+            title="Delete Project"
+          >
+            <span>🗑️</span>
+            Delete Project
+          </button>
           <button className="close-explorer-btn" onClick={onClose}>
             <span>✕</span>
             Close
@@ -254,7 +503,21 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
             <h3>📁 Files</h3>
             <FileManager widget={widget} onFilesUpdated={buildFileTree} />
           </div>
-          <div className="file-tree-container">
+          <div className="file-tree-container" ref={fileTreeContainerRef}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const files = e.dataTransfer.files;
+              if (files && files.length > 0) {
+                const event = new CustomEvent('file-drop', { detail: { files } });
+                window.dispatchEvent(event);
+              }
+            }}
+          >
             {fileTree.length > 0 ? (
               renderFileTree(fileTree)
             ) : (
@@ -272,16 +535,55 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
               <div className="file-preview-header">
                 <h3>{selectedFile.name}</h3>
                 <div className="file-preview-actions">
+                  {isEditableFile(selectedFile.name) && !editingFile && (
+                    <button
+                      className="preview-action-btn edit-btn"
+                      onClick={handleStartEdit}
+                    >
+                      <span>✏️</span>
+                      Edit
+                    </button>
+                  )}
+                  {editingFile && (
+                    <>
+                      <button
+                        className="preview-action-btn save-btn"
+                        onClick={handleSaveFile}
+                        disabled={savingFile}
+                      >
+                        <span>{savingFile ? '⏳' : '💾'}</span>
+                        {savingFile ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        className="preview-action-btn cancel-btn"
+                        onClick={handleCancelEdit}
+                        disabled={savingFile}
+                      >
+                        <span>✕</span>
+                        Cancel
+                      </button>
+                    </>
+                  )}
                   {selectedFile.downloadURL && (
                     <a
                       href={selectedFile.downloadURL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="preview-action-btn"
+                      onClick={() => showToast('Opening file in new tab', 'info')}
                     >
                       <span>🔗</span>
                       Open URL
                     </a>
+                  )}
+                  {selectedFile.downloadURL && (
+                    <button
+                      className="preview-action-btn download-btn"
+                      onClick={() => handleDownloadFile(selectedFile)}
+                    >
+                      <span>⬇️</span>
+                      Download
+                    </button>
                   )}
                 </div>
               </div>
@@ -298,10 +600,17 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
                   <div className="image-preview">
                     <img src={selectedFile.downloadURL} alt={selectedFile.name} />
                   </div>
-                ) : selectedFile.name.match(/\.(css|js|json|txt|md)$/i) ? (
+                ) : selectedFile.name.match(/\.(css|js|json|txt|md|html)$/i) ? (
                   <div className="code-preview">
                     {loadingContent ? (
                       <div className="loading-content">Loading...</div>
+                    ) : editingFile ? (
+                      <textarea
+                        className="file-edit-textarea"
+                        value={editedContent}
+                        onChange={(e) => setEditedContent(e.target.value)}
+                        spellCheck={false}
+                      />
                     ) : (
                       <pre>
                         <code>{fileContent}</code>
@@ -340,6 +649,70 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
           )}
         </div>
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="file-context-menu"
+          style={{
+            position: 'fixed',
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            zIndex: 3000,
+          }}
+        >
+          <button onClick={() => handleRenameFile(contextMenu.file)}>
+            <span>✏️</span> Rename
+          </button>
+          {contextMenu.file.downloadURL && (
+            <button onClick={() => handleDownloadFile(contextMenu.file)}>
+              <span>⬇️</span> Download
+            </button>
+          )}
+          <button onClick={() => handleDeleteFile(contextMenu.file)} className="delete-action">
+            <span>🗑️</span> Delete
+          </button>
+        </div>
+      )}
+
+      {/* Delete Project Modal */}
+      {showDeleteProject && (
+        <div className="delete-project-modal">
+          <div className="delete-modal-content">
+            <h3>Delete Project</h3>
+            <p>This action cannot be undone. All files and data will be permanently deleted.</p>
+            <p>Type the project name <strong>{widget.title}</strong> to confirm:</p>
+            <input
+              type="text"
+              value={deleteProjectName}
+              onChange={(e) => setDeleteProjectName(e.target.value)}
+              placeholder={widget.title}
+              className="delete-project-input"
+              autoFocus
+            />
+            <div className="delete-modal-actions">
+              <button
+                onClick={handleDeleteProject}
+                disabled={deleteProjectName !== widget.title || deletingProject}
+                className="confirm-delete-btn"
+              >
+                {deletingProject ? 'Deleting...' : 'Delete Project'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteProject(false);
+                  setDeleteProjectName('');
+                }}
+                disabled={deletingProject}
+                className="cancel-delete-btn"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

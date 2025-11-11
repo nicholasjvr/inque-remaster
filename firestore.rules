@@ -101,7 +101,8 @@ service cloud.firestore {
     match /likes/{likeId} {
       allow read: if isSignedIn();
       // Only the authenticated user can create/delete their own like document
-      allow create, delete: if isSignedIn() && request.auth.uid == (request.resource.data.userId ?? resource.data.userId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
       allow update: if false; // Likes are immutable once created
     }
     
@@ -115,7 +116,8 @@ service cloud.firestore {
     // Followers: {followerId, followingId, createdAt}
     match /follows/{followId} {
       allow read: if isSignedIn();
-      allow create, delete: if isSignedIn() && request.auth.uid == (request.resource.data.followerId ?? resource.data.followerId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.followerId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.followerId;
       allow update: if false;
     }
     
@@ -123,6 +125,32 @@ service cloud.firestore {
     match /achievements/{achievementId} {
       allow read: if isSignedIn();
       allow write: if false; // Only backend can create achievements
+    }
+    
+    // Knowledge Board: Threads collection
+    match /threads/{threadId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid || // Owner can update
+        // Allow view count increments
+        (request.resource.data.keys().hasOnly(['views', 'updatedAt']) && 
+         request.resource.data.views == resource.data.views + 1) ||
+        // Allow post count and lastPostAt updates (when posts are added/deleted)
+        (request.resource.data.keys().hasOnly(['postsCount', 'lastPostAt', 'updatedAt']) &&
+         request.resource.data.postsCount == resource.data.postsCount + 1) ||
+        (request.resource.data.keys().hasOnly(['postsCount', 'updatedAt']) &&
+         request.resource.data.postsCount == resource.data.postsCount - 1)
+      );
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      
+      // Posts subcollection: replies to threads
+      match /posts/{postId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+        allow update: if isSignedIn() && resource.data.authorId == request.auth.uid;
+        allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      }
     }
   }
 }

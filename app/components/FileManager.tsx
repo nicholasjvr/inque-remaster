@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Widget } from '@/hooks/useFirestore';
 import { useStorage } from '@/hooks/useStorage';
 import { useWidgets } from '@/hooks/useFirestore';
 import { validateWidgetFiles } from '@/hooks/useStorage';
+import { showToast } from '@/app/utils/toast';
 
 interface FileManagerProps {
   widget: Widget;
@@ -18,11 +19,18 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
   const [renamingFile, setRenamingFile] = useState<{ fileName: string; path: string } | null>(null);
   const [newFileName, setNewFileName] = useState('');
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadMultipleFiles, addFileToWidget, removeFileFromWidget, renameFile } = useStorage();
   const { updateWidget } = useWidgets(widget.userId);
 
-  const handleFileSelect = async (files: FileList | null) => {
+  const startRename = useCallback((fileName: string, path: string) => {
+    setRenamingFile({ fileName, path });
+    setNewFileName(fileName.split('/').pop() || fileName);
+    setShowRename(true);
+  }, []);
+
+  const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const fileArray = Array.from(files);
@@ -51,9 +59,57 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      showToast(`Successfully uploaded ${fileArray.length} file(s)`, 'success');
     } catch (error) {
       console.error('Error uploading file:', error);
-      alert(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showToast(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  }, [widget, addFileToWidget, updateWidget, onWidgetUpdated, onFilesUpdated]);
+
+  // Listen for rename events from ProjectFileExplorer
+  useEffect(() => {
+    const handleRenameEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        startRename(customEvent.detail.fileName, customEvent.detail.path);
+      }
+    };
+
+    const handleFileDropEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.files) {
+        handleFileSelect(customEvent.detail.files);
+      }
+    };
+
+    window.addEventListener('file-rename', handleRenameEvent);
+    window.addEventListener('file-drop', handleFileDropEvent);
+    return () => {
+      window.removeEventListener('file-rename', handleRenameEvent);
+      window.removeEventListener('file-drop', handleFileDropEvent);
+    };
+  }, [handleFileSelect, startRename]);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await handleFileSelect(files);
     }
   };
 
@@ -80,9 +136,10 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
       setRenamingFile(null);
       setNewFileName('');
       onFilesUpdated();
+      showToast('File renamed successfully', 'success');
     } catch (error) {
       console.error('Error renaming file:', error);
-      alert(`Failed to rename file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showToast(`Failed to rename file: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -101,16 +158,11 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
 
       setDeletingFile(null);
       onFilesUpdated();
+      showToast('File deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting file:', error);
-      alert(`Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showToast(`Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
-  };
-
-  const startRename = (fileName: string, path: string) => {
-    setRenamingFile({ fileName, path });
-    setNewFileName(fileName.split('/').pop() || fileName);
-    setShowRename(true);
   };
 
   return (
@@ -131,7 +183,12 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
       </div>
 
       {showUpload && (
-        <div className="file-upload-modal">
+        <div 
+          className={`file-upload-modal ${isDragging ? 'dragging' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <div className="upload-modal-content">
             <h3>Upload File</h3>
             <input
@@ -143,7 +200,7 @@ export default function FileManager({ widget, onFilesUpdated, onWidgetUpdated }:
               style={{ display: 'none' }}
             />
             <div className="upload-drop-zone">
-              <p>Drop files here or click to select</p>
+              <p>{isDragging ? 'Drop files here' : 'Drop files here or click to select'}</p>
               <button onClick={() => fileInputRef.current?.click()}>
                 Choose Files
               </button>

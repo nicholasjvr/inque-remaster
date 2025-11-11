@@ -1051,3 +1051,338 @@ export function useUserStats(userId?: string) {
 
   return { stats, loading };
 }
+
+// ---------------------
+// Knowledge Board: Threads and Posts
+// ---------------------
+
+export type Thread = {
+  id: string;
+  authorId: string;
+  title: string;
+  content: string;
+  projectId?: string; // Optional link to uploaded project
+  type: 'discussion' | 'game';
+  tags?: string[];
+  
+  // Stats
+  postsCount: number;
+  views: number;
+  
+  // Metadata
+  createdAt: any;
+  updatedAt: any;
+  lastPostAt?: any;
+};
+
+export type Post = {
+  id: string;
+  threadId: string;
+  authorId: string;
+  content: string;
+  parentPostId?: string; // For nested replies
+  createdAt: any;
+  updatedAt?: any;
+};
+
+// Hook for getting all threads
+export function useThreads({ 
+  limitCount = 50,
+  orderByField = 'lastPostAt' as 'createdAt' | 'lastPostAt' | 'postsCount'
+} = {}) {
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!db) {
+      console.error('Firestore not initialized - useThreads will not attach listeners');
+      setError('Firestore not initialized');
+      setThreads([]);
+      setLoading(false);
+      return;
+    }
+
+    const threadsRef = collection(db, 'threads');
+    let q = query(threadsRef);
+    
+    if (orderByField === 'lastPostAt') {
+      q = query(threadsRef, orderBy('lastPostAt', 'desc'));
+    } else if (orderByField === 'postsCount') {
+      q = query(threadsRef, orderBy('postsCount', 'desc'));
+    } else {
+      q = query(threadsRef, orderBy('createdAt', 'desc'));
+    }
+    
+    if (limitCount) {
+      q = query(q, limit(limitCount));
+    }
+
+    try {
+      const unsubscribe = onSnapshot(q,
+        (snapshot: QuerySnapshot<DocumentData>) => {
+          const threadsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Thread[];
+          setThreads(threadsData);
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          console.error('Error fetching threads:', err);
+          setError(err?.message || String(err));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach threads listener:', err);
+      setError(err?.message || String(err));
+      setLoading(false);
+    }
+  }, [limitCount, orderByField]);
+
+  const createThread = async (threadData: Omit<Thread, 'id' | 'createdAt' | 'updatedAt' | 'postsCount' | 'views' | 'lastPostAt'>) => {
+    try {
+      const docRef = await addDoc(collection(db, 'threads'), {
+        ...threadData,
+        postsCount: 0,
+        views: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastPostAt: serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating thread:', error);
+      throw error;
+    }
+  };
+
+  const updateThread = async (threadId: string, updates: Partial<Thread>) => {
+    try {
+      const threadRef = doc(db, 'threads', threadId);
+      await updateDoc(threadRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error updating thread:', error);
+      throw error;
+    }
+  };
+
+  const deleteThread = async (threadId: string) => {
+    try {
+      await deleteDoc(doc(db, 'threads', threadId));
+    } catch (error) {
+      console.error('Error deleting thread:', error);
+      throw error;
+    }
+  };
+
+  return {
+    threads,
+    loading,
+    error,
+    createThread,
+    updateThread,
+    deleteThread,
+  };
+}
+
+// Hook for getting a single thread
+export function useThread(threadId?: string) {
+  const [thread, setThread] = useState<Thread | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!threadId) {
+      setThread(null);
+      setLoading(false);
+      return;
+    }
+
+    if (!db) {
+      console.error('Firestore not initialized - useThread will not attach listeners');
+      setError('Firestore not initialized');
+      setThread(null);
+      setLoading(false);
+      return;
+    }
+
+    const threadRef = doc(db, 'threads', threadId);
+    try {
+      const unsubscribe = onSnapshot(threadRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            setThread({ id: docSnap.id, ...(docSnap.data() as any) } as Thread);
+          } else {
+            setThread(null);
+          }
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          console.error('Error fetching thread:', err);
+          setError(err?.message || String(err));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach thread listener:', err);
+      setError(err?.message || String(err));
+      setLoading(false);
+    }
+  }, [threadId]);
+
+  // Increment view count
+  const incrementViews = async () => {
+    if (!threadId || !thread) return;
+    try {
+      const threadRef = doc(db, 'threads', threadId);
+      await updateDoc(threadRef, {
+        views: (thread.views || 0) + 1,
+      });
+    } catch (error) {
+      console.error('Error incrementing views:', error);
+    }
+  };
+
+  return { thread, loading, error, incrementViews };
+}
+
+// Hook for getting posts in a thread
+export function useThreadPosts(threadId?: string) {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!threadId) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    if (!db) {
+      console.error('Firestore not initialized - useThreadPosts will not attach listeners');
+      setError('Firestore not initialized');
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    const postsRef = collection(db, 'threads', threadId, 'posts');
+    const q = query(postsRef, orderBy('createdAt', 'asc'));
+
+    try {
+      const unsubscribe = onSnapshot(q,
+        (snapshot: QuerySnapshot<DocumentData>) => {
+          const postsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Post[];
+          setPosts(postsData);
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          console.error('Error fetching posts:', err);
+          setError(err?.message || String(err));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to attach posts listener:', err);
+      setError(err?.message || String(err));
+      setLoading(false);
+    }
+  }, [threadId]);
+
+  const addPost = async (postData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!threadId) return;
+    try {
+      const postsRef = collection(db, 'threads', threadId, 'posts');
+      const threadRef = doc(db, 'threads', threadId);
+      
+      // Use transaction to add post and update thread stats
+      await runTransaction(db, async (tx) => {
+        const threadSnap = await tx.get(threadRef);
+        if (!threadSnap.exists()) {
+          throw new Error('Thread does not exist');
+        }
+        
+        const postRef = doc(postsRef);
+        tx.set(postRef, {
+          ...postData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        
+        // Update thread stats
+        const currentPostsCount = (threadSnap.data()?.postsCount || 0) as number;
+        tx.update(threadRef, {
+          postsCount: currentPostsCount + 1,
+          lastPostAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      });
+    } catch (error) {
+      console.error('Error adding post:', error);
+      throw error;
+    }
+  };
+
+  const updatePost = async (postId: string, updates: Partial<Post>) => {
+    if (!threadId) return;
+    try {
+      const postRef = doc(db, 'threads', threadId, 'posts', postId);
+      await updateDoc(postRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error updating post:', error);
+      throw error;
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    if (!threadId) return;
+    try {
+      const postRef = doc(db, 'threads', threadId, 'posts', postId);
+      const threadRef = doc(db, 'threads', threadId);
+      
+      // Use transaction to delete post and update thread stats
+      await runTransaction(db, async (tx) => {
+        tx.delete(postRef);
+        
+        const threadSnap = await tx.get(threadRef);
+        if (threadSnap.exists()) {
+          const currentPostsCount = (threadSnap.data()?.postsCount || 0) as number;
+          tx.update(threadRef, {
+            postsCount: Math.max(0, currentPostsCount - 1),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      throw error;
+    }
+  };
+
+  return {
+    posts,
+    loading,
+    error,
+    addPost,
+    updatePost,
+    deletePost,
+  };
+}
