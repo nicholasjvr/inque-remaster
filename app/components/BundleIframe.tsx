@@ -56,7 +56,10 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
         // Fallback: read manifest.json for custom entry
         if (!entry && fileMap['manifest.json']) {
           try {
-            const res = await fetch(fileMap['manifest.json']);
+            const res = await fetch(fileMap['manifest.json'], {
+              mode: 'cors',
+              cache: 'no-cache',
+            });
             if (res.ok) {
               const manifest = await res.json();
               const candidate: string | undefined = manifest.entry || manifest.index || manifest.main;
@@ -75,7 +78,19 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
           return;
         }
 
-        const res = await fetch(fileMap[entry]);
+        // Debug logging
+        console.log('Fetching entry file:', entry, 'from URL:', fileMap[entry]);
+
+        if (!fileMap[entry]) {
+          console.error('Entry file URL not found in fileMap:', entry);
+          showError(iframe, `Entry file "${entry}" not found in bundle. Available files: ${Object.keys(fileMap).join(', ')}`);
+          return;
+        }
+
+        const res = await fetch(fileMap[entry], {
+          mode: 'cors',
+          cache: 'no-cache',
+        });
         if (!res.ok) {
           showError(iframe, `Failed to fetch HTML file: ${res.status} ${res.statusText}`);
           return;
@@ -103,11 +118,19 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
         iframe.src = URL.createObjectURL(blob);
       } catch (err) {
         console.error('Bundle iframe load error:', err);
-        const errorMessage = err instanceof Error
-          ? (err.message.includes('Failed to fetch')
-            ? 'Network error: Unable to load bundle files. Check if files exist in storage and URLs are valid.'
-            : err.message)
-          : 'Unknown error while loading bundle';
+        let errorMessage = 'Unknown error while loading bundle';
+
+        if (err instanceof Error) {
+          if (err.message.includes('Failed to fetch')) {
+            errorMessage = 'Network error: Unable to load bundle files. Check if files exist in storage and URLs are valid.';
+            console.error('Fetch failed. This may be a CORS issue or network connectivity problem.');
+          } else if (err.message.includes('CORS')) {
+            errorMessage = 'CORS error: Unable to fetch files. Check Firebase Storage CORS configuration.';
+          } else {
+            errorMessage = err.message;
+          }
+        }
+
         showError(iframe, errorMessage);
       }
     };

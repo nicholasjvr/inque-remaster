@@ -217,7 +217,7 @@ export default function Home() {
           </div>
           <div className="social-media-icons">
             <a
-              href="https://instagram.com"
+              href="https://www.instagram.com/inqu_studio/"
               target="_blank"
               rel="noopener noreferrer"
               className="social-icon group"
@@ -233,7 +233,7 @@ export default function Home() {
               </svg>
             </a>
             <a
-              href="https://youtube.com"
+              href="https://www.youtube.com/@inqustudio"
               target="_blank"
               rel="noopener noreferrer"
               className="social-icon group"
@@ -249,7 +249,7 @@ export default function Home() {
               </svg>
             </a>
             <a
-              href="https://github.com"
+              href="https://github.com/nicholasjvr"
               target="_blank"
               rel="noopener noreferrer"
               className="social-icon group"
