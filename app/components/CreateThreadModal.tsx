@@ -22,7 +22,7 @@ export default function CreateThreadModal({ onClose, onSuccess }: CreateThreadMo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       setError('You must be signed in to create a thread');
       return;
@@ -57,7 +57,8 @@ export default function CreateThreadModal({ onClose, onSuccess }: CreateThreadMo
       setTags('');
       setProjectId('');
       setType('discussion');
-      
+      setLoading(false);
+
       onSuccess();
     } catch (err: any) {
       console.error('Error creating thread:', err);
