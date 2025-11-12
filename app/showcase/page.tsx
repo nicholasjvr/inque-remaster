@@ -12,44 +12,49 @@ export default function ShowcasePage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen w-full bg-[#04060d] text-white">
-        {/* Header */}
-        <header className="showcase-header">
-          <div className="header-content">
-            <div className="header-title">
-              <span className="title-icon">🏆</span>
-              <h1>Project Showcase</h1>
+        {/* Seamless Header */}
+        <header className="explore-header-seamless">
+          <div className="header-gradient-overlay"></div>
+          <div className="header-content-seamless">
+            <div className="header-left">
+              <div className="header-title-seamless">
+                <span className="title-icon">🏆</span>
+                <h1>Showcase</h1>
+              </div>
+              <nav className="header-nav">
+                <a href="/" className="nav-link">Home</a>
+                <a href="/explore" className="nav-link">Explore</a>
+                <a href="/users" className="nav-link">Creators</a>
+              </nav>
             </div>
-            <div className="header-actions">
-              <a href="/" className="action-btn">
-                <span>🏠</span>
-                <span className="btn-text">Home</span>
-              </a>
-              <a href="/explore" className="action-btn">
-                <span>🔍</span>
-                <span className="btn-text">Explore</span>
-              </a>
-              <a href="/users" className="action-btn">
-                <span>👥</span>
-                <span className="btn-text">Creators</span>
-              </a>
+            <div className="header-right">
+              <div className="search-bar-compact header-search-hidden">
+                <input
+                  type="text"
+                  className="search-input-compact"
+                  placeholder="Search..."
+                  value=""
+                  readOnly
+                />
+                <span className="search-icon-compact">🔍</span>
+              </div>
+              <div className="header-profile-compact">
+                <ProfileHub variant="billboard" />
+              </div>
             </div>
-          </div>
-          <div className="header-profile-hub">
-            <ProfileHub variant="billboard" />
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="showcase-main">
+        <main className="explore-main-seamless">
           <Showcase />
         </main>
 
-
-        {/* Import showcase styles */}
+        {/* Import explore styles */}
         <style jsx global>{`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
         `}</style>
-        <link rel="stylesheet" href="/showcase.css" />
+        <link rel="stylesheet" href="/explore.css" />
       </div>
     </ProtectedRoute>
   );

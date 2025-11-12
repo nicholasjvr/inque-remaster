@@ -180,3 +180,17 @@
         height: clamp(36px, 6vw, 56px);
     }
 }
+
+/* Prevent layout shifts from typing animation */
+.text-animation-container {
+    contain: layout style;
+    min-height: inherit;
+}
+
+.text-content {
+    display: inline-block;
+    min-width: 1ch;
+    contain: layout style;
+    will-change: contents;
+    vertical-align: baseline;
+}

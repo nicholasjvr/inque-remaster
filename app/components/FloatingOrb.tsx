@@ -209,25 +209,30 @@ const FloatingOrb = ({ onActiveChange }: FloatingOrbProps) => {
       // Don't interfere if user is actively scrolling
       if (isUserScrolling) return;
 
+      // Don't scroll if user has scrolled away from top (preserve their position)
+      if (window.scrollY > 200) return;
+
       const rect = btn.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
 
-      // Check if nav item is outside viewport
+      // Check if nav item is significantly outside viewport (more tolerance)
+      const tolerance = 100; // Only scroll if significantly out of view
       const isOutOfView =
-        rect.bottom < 0 ||
-        rect.top > viewportHeight ||
-        rect.right < 0 ||
-        rect.left > viewportWidth;
+        rect.bottom < -tolerance ||
+        rect.top > viewportHeight + tolerance ||
+        rect.right < -tolerance ||
+        rect.left > viewportWidth + tolerance;
 
       // Only scroll if nav item is significantly out of view and user isn't scrolling
-      if (isOutOfView && !isUserScrolling) {
+      if (isOutOfView && !isUserScrolling && window.scrollY <= 200) {
         // Use a small delay to check if user started scrolling
         requestAnimationFrame(() => {
-          if (!isUserScrolling) {
+          if (!isUserScrolling && window.scrollY <= 200) {
             const orbShell = container.closest('.floating-orb-shell');
             if (orbShell) {
               // Use 'nearest' instead of 'center' to minimize viewport disruption
+              // Only scroll if we're near the top of the page
               orbShell.scrollIntoView({
                 behavior: 'smooth',
                 block: 'nearest',

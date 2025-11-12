@@ -200,11 +200,17 @@ export default function Home() {
           </h1>
           <div className="text-animation-container max-w-xl">
             <p className="text-balance text-base text-[#bdefff]/80 sm:text-lg min-h-[3.5rem] sm:min-h-[4rem] flex items-center justify-center">
-              <span className="text-content">
+              <span className="text-content" style={{
+                display: 'inline-block',
+                minWidth: '1ch',
+                contain: 'layout style',
+                willChange: 'contents'
+              }}>
                 {displayedText}
                 <span
                   className={`ml-1 inline-block h-5 w-0.5 bg-[#4ff1ff] ${!isUserScrolled && isTyping && currentCharIndex === SLOGANS[currentSloganIndex].length ? 'animate-pulse' : ''
                     }`}
+                  style={{ verticalAlign: 'baseline' }}
                 />
               </span>
             </p>

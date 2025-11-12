@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Thread, useThread, useThreadPosts, Post, usePublicUserById } from '@/hooks/useFirestore';
 
@@ -16,15 +16,20 @@ export default function ThreadDetailView({ thread: initialThread, onBack }: Thre
   const [replyContent, setReplyContent] = useState('');
   const [replyingTo, setReplyingTo] = useState<Post | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const hasIncrementedViews = useRef(false);
 
-  // Increment views when component mounts
+  // Increment views when thread is loaded (only once)
   useEffect(() => {
-    incrementViews();
-  }, []);
+    // Only increment if thread is loaded and we haven't incremented yet
+    if (!threadLoading && thread && !hasIncrementedViews.current) {
+      hasIncrementedViews.current = true;
+      incrementViews();
+    }
+  }, [thread, threadLoading, incrementViews]);
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user || !replyContent.trim()) return;
 
     setSubmitting(true);

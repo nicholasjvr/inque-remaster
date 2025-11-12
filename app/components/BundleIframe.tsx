@@ -37,8 +37,8 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
           });
         } else {
           // WidgetBundle type - build file map from storage path
-          const basePath = (bundle as WidgetBundle).storagePath || 
-                          (bundle.uploadId ? `uploads/${bundle.uploadId}` : `uploads/${bundle.id}`);
+          const basePath = (bundle as WidgetBundle).storagePath ||
+            (bundle.uploadId ? `uploads/${bundle.uploadId}` : `uploads/${bundle.id}`);
           fileMap = await buildBundleFileMap(basePath);
         }
 
@@ -63,7 +63,10 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
               const norm = candidate ? candidate.replace(/^\.\//, '').replace(/^\//, '') : '';
               if (norm && fileMap[norm]) entry = norm;
             }
-          } catch {/* ignore */}
+          } catch (err) {
+            console.warn('Failed to fetch manifest.json:', err);
+            // Continue without manifest - will show error below if no entry found
+          }
         }
 
         if (!entry) {
@@ -100,7 +103,12 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
         iframe.src = URL.createObjectURL(blob);
       } catch (err) {
         console.error('Bundle iframe load error:', err);
-        showError(iframe, err instanceof Error ? err.message : 'Unknown error while loading bundle');
+        const errorMessage = err instanceof Error
+          ? (err.message.includes('Failed to fetch')
+            ? 'Network error: Unable to load bundle files. Check if files exist in storage and URLs are valid.'
+            : err.message)
+          : 'Unknown error while loading bundle';
+        showError(iframe, errorMessage);
       }
     };
 

@@ -1145,14 +1145,28 @@ export function useThreads({
 
   const createThread = async (threadData: Omit<Thread, 'id' | 'createdAt' | 'updatedAt' | 'postsCount' | 'views' | 'lastPostAt'>) => {
     try {
-      const docRef = await addDoc(collection(db, 'threads'), {
-        ...threadData,
+      // Filter out undefined values (Firestore doesn't allow undefined)
+      const cleanData: any = {
+        authorId: threadData.authorId,
+        title: threadData.title,
+        content: threadData.content,
+        type: threadData.type,
         postsCount: 0,
         views: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         lastPostAt: serverTimestamp(),
-      });
+      };
+      
+      // Only include optional fields if they have values
+      if (threadData.tags && threadData.tags.length > 0) {
+        cleanData.tags = threadData.tags;
+      }
+      if (threadData.projectId) {
+        cleanData.projectId = threadData.projectId;
+      }
+      
+      const docRef = await addDoc(collection(db, 'threads'), cleanData);
       return docRef.id;
     } catch (error) {
       console.error('Error creating thread:', error);

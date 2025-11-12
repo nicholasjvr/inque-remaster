@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Widget } from '@/hooks/useFirestore';
 import { useStorage } from '@/hooks/useStorage';
 import { useWidgets } from '@/hooks/useFirestore';
@@ -26,6 +26,7 @@ interface FileNode {
 
 export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExplorerProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
+  const [fileMap, setFileMap] = useState<Record<string, string>>({});
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [editingTitle, setEditingTitle] = useState(false);
@@ -53,14 +54,55 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
     setDescription(widget.description);
   }, [widget]);
 
+  const loadFileContent = useCallback(async (url: string) => {
+    try {
+      setLoadingContent(true);
+
+      // Check if URL is valid
+      if (!url || !url.startsWith('http')) {
+        throw new Error('Invalid file URL');
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/plain, text/html, text/css, application/javascript, application/json, */*',
+        },
+        mode: 'cors',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      setFileContent(text);
+    } catch (error) {
+      console.error('Error loading file content:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setFileContent(`Error loading file content: ${errorMessage}\n\nURL: ${url}`);
+      showToast(`Failed to load file: ${errorMessage}`, 'error');
+    } finally {
+      setLoadingContent(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (selectedFile && selectedFile.downloadURL && selectedFile.name.match(/\.(css|js|json|txt|md|html)$/i)) {
+    if (selectedFile && selectedFile.downloadURL && selectedFile.name.match(/\.(css|js|json|txt|md|html|htm)$/i)) {
       loadFileContent(selectedFile.downloadURL);
+    } else if (selectedFile && !selectedFile.downloadURL) {
+      // Try to get URL from fileMap as fallback
+      const urlFromMap = fileMap[selectedFile.path] || fileMap[selectedFile.name];
+      if (urlFromMap && selectedFile.name.match(/\.(css|js|json|txt|md|html|htm)$/i)) {
+        loadFileContent(urlFromMap);
+      } else {
+        setFileContent('');
+      }
     } else {
       setFileContent('');
     }
     setEditingFile(false);
-  }, [selectedFile]);
+  }, [selectedFile, fileMap, loadFileContent]);
 
   // Close context menu when clicking outside
   useEffect(() => {
@@ -87,21 +129,6 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
       document.removeEventListener('keydown', handleEscape);
     };
   }, [contextMenu]);
-
-  const loadFileContent = async (url: string) => {
-    try {
-      setLoadingContent(true);
-      const response = await fetch(url);
-      const text = await response.text();
-      setFileContent(text);
-    } catch (error) {
-      console.error('Error loading file content:', error);
-      setFileContent('Error loading file content');
-    } finally {
-      setLoadingContent(false);
-    }
-  };
-
 
   const handleDescriptionSave = async () => {
     if (description !== widget.description) {
@@ -154,16 +181,16 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
     try {
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
       const filePath = `${basePath}/${widgetFile.fileName}`;
-      
+
       await removeFileFromWidget(filePath);
-      
+
       const updatedFiles = widget.files?.filter((f) => f.fileName !== widgetFile.fileName) || [];
       await updateWidget(widget.id, { files: updatedFiles });
-      
+
       if (selectedFile?.path === file.path) {
         setSelectedFile(null);
       }
-      
+
       buildFileTree();
       showToast('File deleted successfully', 'success');
     } catch (error) {
@@ -204,23 +231,23 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
 
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
       const filePath = `${basePath}/${widgetFile.fileName}`;
-      
+
       // Create a blob from the edited content
       const blob = new Blob([editedContent], { type: 'text/plain' });
       const file = new File([blob], selectedFile.name, { type: blob.type });
-      
+
       // Upload the new content (this will overwrite the existing file)
       const newDownloadURL = await uploadFile(file, filePath);
-      
+
       // Update widget files array
       const updatedFiles = widget.files?.map((f) =>
         f.fileName === widgetFile.fileName
           ? { ...f, downloadURL: newDownloadURL }
           : f
       ) || [];
-      
+
       await updateWidget(widget.id, { files: updatedFiles });
-      
+
       setFileContent(editedContent);
       setEditingFile(false);
       showToast('File saved successfully', 'success');
@@ -245,7 +272,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
 
     try {
       setDeletingProject(true);
-      
+
       // Delete all files in storage
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
       if (widget.files && widget.files.length > 0) {
@@ -257,10 +284,10 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
         });
         await Promise.all(deletePromises);
       }
-      
+
       // Delete widget document
       await deleteWidget(widget.id);
-      
+
       showToast('Project deleted successfully', 'success');
       setTimeout(() => {
         onClose();
@@ -279,7 +306,8 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
   const buildFileTree = async () => {
     try {
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
-      const fileMap = await buildBundleFileMap(basePath);
+      const map = await buildBundleFileMap(basePath);
+      setFileMap(map);
 
       const tree: FileNode[] = [];
       const pathMap = new Map<string, FileNode>();
@@ -295,12 +323,17 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
           const isFile = index === parts.length - 1;
 
           if (!pathMap.has(currentPath)) {
+            // Try to get downloadURL from fileMap first, then fall back to widget.files
+            const downloadURL = isFile
+              ? (map[currentPath] || map[file.fileName] || file.downloadURL)
+              : undefined;
+
             const node: FileNode = {
               name: part,
               path: currentPath,
               type: isFile ? 'file' : 'folder',
               size: isFile ? file.size : undefined,
-              downloadURL: isFile ? file.downloadURL : undefined,
+              downloadURL: downloadURL,
               children: isFile ? undefined : [],
             };
 
@@ -321,6 +354,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
       setFileTree(tree);
     } catch (error) {
       console.error('Error building file tree:', error);
+      showToast('Failed to load file tree', 'error');
     }
   };
 
@@ -480,8 +514,8 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
         <div className="explorer-actions">
           <EntryPointSelector widget={widget} />
           <ThumbnailManager widget={widget} />
-          <button 
-            className="delete-project-btn" 
+          <button
+            className="delete-project-btn"
             onClick={() => setShowDeleteProject(true)}
             title="Delete Project"
           >

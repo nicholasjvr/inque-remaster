@@ -65,7 +65,7 @@ export default function ExplorePage() {
       const tags = Array.isArray(w.tags)
         ? w.tags
         : `${w.tags || ''}`.split(',').map((t) => t.trim()).filter(Boolean);
-      
+
       const hay = `${w.title || ''} ${w.description || ''} ${tags.join(' ')} ${w.id || ''}`.toLowerCase();
       const queryOk = !q || hay.includes(q);
 
@@ -114,7 +114,7 @@ export default function ExplorePage() {
             </nav>
           </div>
           <div className="header-right">
-            <div className="search-bar-compact">
+            <div className="search-bar-compact header-search-hidden">
               <input
                 type="text"
                 className="search-input-compact"
@@ -195,7 +195,7 @@ export default function ExplorePage() {
               Object.entries(widgetsByCategory)
                 .filter(([cat]) => cat !== 'all' && widgetsByCategory[cat].length > 0)
                 .map(([categoryId, categoryWidgets]) => {
-                  const categoryInfo = CATEGORIES.find(c => c.id === categoryId) || 
+                  const categoryInfo = CATEGORIES.find(c => c.id === categoryId) ||
                     { id: categoryId, label: categoryId.charAt(0).toUpperCase() + categoryId.slice(1), icon: '📦' };
                   return (
                     <CategoryRow
@@ -219,7 +219,7 @@ export default function ExplorePage() {
               ) : (
                 <div className="empty-state">
                   {!user ? (
-                    <SignUpPrompt 
+                    <SignUpPrompt
                       title="Sign in to Explore Projects"
                       description="Discover amazing projects from creators around the world"
                       showBenefits={true}
@@ -239,7 +239,7 @@ export default function ExplorePage() {
             {selectedCategory === 'all' && Object.keys(widgetsByCategory).length === 0 && (
               <div className="empty-state">
                 {!user ? (
-                  <SignUpPrompt 
+                  <SignUpPrompt
                     title="Join inQ to Share Your Projects"
                     description="Create and share your interactive widgets with the community"
                     showBenefits={true}
@@ -282,14 +282,14 @@ export default function ExplorePage() {
   );
 }
 
-function CategoryRow({ 
-  category, 
-  widgets, 
-  onOpenFullscreen, 
-  currentUserId 
-}: { 
-  category: { id: string; label: string; icon: string }; 
-  widgets: Widget[]; 
+function CategoryRow({
+  category,
+  widgets,
+  onOpenFullscreen,
+  currentUserId
+}: {
+  category: { id: string; label: string; icon: string };
+  widgets: Widget[];
   onOpenFullscreen: (w: Widget) => void;
   currentUserId?: string;
 }) {
@@ -318,17 +318,17 @@ function CategoryRow({
   );
 }
 
-function FeaturedCard({ 
-  widget, 
-  onOpenFullscreen, 
-  currentUserId 
-}: { 
-  widget: Widget; 
+function FeaturedCard({
+  widget,
+  onOpenFullscreen,
+  currentUserId
+}: {
+  widget: Widget;
   onOpenFullscreen: (w: Widget) => void;
   currentUserId?: string;
 }) {
   const social = useBundleSocial(widget?.id, currentUserId, 'widget');
-  
+
   return (
     <div className="featured-card">
       <div className="featured-card-preview">
@@ -350,17 +350,17 @@ function FeaturedCard({
   );
 }
 
-function WidgetCard({ 
-  widget, 
-  onOpenFullscreen, 
-  currentUserId 
-}: { 
-  widget: Widget; 
+function WidgetCard({
+  widget,
+  onOpenFullscreen,
+  currentUserId
+}: {
+  widget: Widget;
   onOpenFullscreen: (w: Widget) => void;
   currentUserId?: string;
 }) {
   const social = useBundleSocial(widget?.id, currentUserId, 'widget');
-  
+
   return (
     <div className="category-widget-card">
       <div className="category-widget-preview">

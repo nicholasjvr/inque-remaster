@@ -31,35 +31,41 @@ export default function UsersPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
-      {/* Header */}
-      <header className="users-header">
-        <div className="header-content">
-          <div className="header-title">
-            <span className="title-icon">👥</span>
-            <h1>Creators</h1>
+      {/* Seamless Header */}
+      <header className="explore-header-seamless">
+        <div className="header-gradient-overlay"></div>
+        <div className="header-content-seamless">
+          <div className="header-left">
+            <div className="header-title-seamless">
+              <span className="title-icon">👥</span>
+              <h1>Creators</h1>
+            </div>
+            <nav className="header-nav">
+              <a href="/" className="nav-link">Home</a>
+              <a href="/explore" className="nav-link">Explore</a>
+              <a href="/showcase" className="nav-link">Showcase</a>
+            </nav>
           </div>
-          <div className="header-actions">
-            <a href="/" className="action-btn">
-              <span>🏠</span>
-              <span className="btn-text">Home</span>
-            </a>
-            <a href="/explore" className="action-btn">
-              <span>🔍</span>
-              <span className="btn-text">Explore</span>
-            </a>
-            <a href="/showcase" className="action-btn">
-              <span>🏆</span>
-              <span className="btn-text">Showcase</span>
-            </a>
+          <div className="header-right">
+            <div className="search-bar-compact header-search-hidden">
+              <input
+                type="text"
+                className="search-input-compact"
+                placeholder="Search creators..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <span className="search-icon-compact">🔍</span>
+            </div>
+            <div className="header-profile-compact">
+              <ProfileHub variant="billboard" />
+            </div>
           </div>
-        </div>
-        <div className="header-profile-hub">
-          <ProfileHub variant="billboard" />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="users-main">
+      <main className="explore-main-seamless">
         {/* Controls Section */}
         <div className="users-controls">
           <div className="search-container">
@@ -257,11 +263,11 @@ export default function UsersPage() {
       {/* Toast Container */}
       <div id="toastContainer" className="toast-container"></div>
 
-      {/* Import users styles */}
+      {/* Import explore styles */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
       `}</style>
-      <link rel="stylesheet" href="/users.css" />
+      <link rel="stylesheet" href="/explore.css" />
     </div>
   );
 }

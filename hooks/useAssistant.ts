@@ -84,7 +84,7 @@ export function useAssistant(options: UseAssistantOptions = {}) {
         const response = await fetch('/api/assistant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, history })
+          body: JSON.stringify({ message: text, history, userName })
         });
 
         const data = response.ok ? await response.json() : null;

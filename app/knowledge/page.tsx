@@ -6,6 +6,7 @@ import { useThreads, Thread, usePublicUserById } from '@/hooks/useFirestore';
 import ProtectedRoute from '../components/ProtectedRoute';
 import CreateThreadModal from '../components/CreateThreadModal';
 import ThreadDetailView from '../components/ThreadDetailView';
+import ProfileHub from '../components/ProfileHub';
 import '../knowledge.css';
 
 export default function KnowledgePage() {
@@ -13,6 +14,7 @@ export default function KnowledgePage() {
   const [sortBy, setSortBy] = useState<'createdAt' | 'lastPostAt' | 'postsCount'>('lastPostAt');
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { threads, loading, error } = useThreads({ limitCount: 50, orderByField: sortBy });
 
   const handleThreadClick = (thread: Thread) => {
@@ -22,6 +24,17 @@ export default function KnowledgePage() {
   const handleBackToList = () => {
     setSelectedThread(null);
   };
+
+  // Filter threads by search query
+  const filteredThreads = threads.filter(thread => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      thread.title.toLowerCase().includes(query) ||
+      thread.content.toLowerCase().includes(query) ||
+      thread.tags?.some(tag => tag.toLowerCase().includes(query))
+    );
+  });
 
   if (selectedThread) {
     return (
@@ -33,32 +46,53 @@ export default function KnowledgePage() {
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
-      <main className="knowledge-main">
-        {/* Header */}
-        <header className="knowledge-header">
-          <div className="knowledge-header-content">
-            <div className="knowledge-header-left">
-              <h1 className="knowledge-title">
-                <span className="knowledge-icon">📚</span>
-                Knowledge Board
-              </h1>
-              <p className="knowledge-subtitle">Discuss projects, share ideas, and collaborate</p>
+      {/* Seamless Header */}
+      <header className="knowledge-header-seamless">
+        <div className="header-gradient-overlay"></div>
+        <div className="header-content-seamless">
+          <div className="header-left">
+            <div className="header-title-seamless">
+              <span className="title-icon">📚</span>
+              <h1>Knowledge Board</h1>
             </div>
-            <div className="knowledge-header-right">
-              <ProtectedRoute requireAuth={false}>
-                {user && (
-                  <button
-                    className="knowledge-create-btn"
-                    onClick={() => setShowCreateModal(true)}
-                  >
-                    <span>+</span>
-                    <span>New Thread</span>
-                  </button>
-                )}
-              </ProtectedRoute>
+            <nav className="header-nav">
+              <a href="/" className="nav-link">Home</a>
+              <a href="/explore" className="nav-link">Explore</a>
+              <a href="/showcase" className="nav-link">Showcase</a>
+              <a href="/projects" className="nav-link">Projects</a>
+            </nav>
+          </div>
+          <div className="header-right">
+            <div className="search-bar-compact header-search-hidden">
+              <input
+                type="text"
+                className="search-input-compact"
+                placeholder="Search threads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <span className="search-icon-compact">🔍</span>
+            </div>
+            <ProtectedRoute requireAuth={false}>
+              {user && (
+                <button
+                  className="knowledge-create-btn-header"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  <span>+</span>
+                  <span>New Thread</span>
+                </button>
+              )}
+            </ProtectedRoute>
+            <div className="header-profile-compact">
+              <ProfileHub variant="billboard" />
             </div>
           </div>
-        </header>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="knowledge-main">
 
         {/* Controls */}
         <div className="knowledge-controls">
@@ -111,15 +145,25 @@ export default function KnowledgePage() {
           )}
 
           {!loading && !error && threads.length > 0 && (
-            <div className="knowledge-threads">
-              {threads.map((thread) => (
-                <ThreadCard
-                  key={thread.id}
-                  thread={thread}
-                  onClick={() => handleThreadClick(thread)}
-                />
-              ))}
-            </div>
+            <>
+              {filteredThreads.length === 0 ? (
+                <div className="knowledge-empty">
+                  <div className="knowledge-empty-icon">🔍</div>
+                  <h3>No threads match your search</h3>
+                  <p>Try adjusting your search query</p>
+                </div>
+              ) : (
+                <div className="knowledge-threads">
+                  {filteredThreads.map((thread) => (
+                    <ThreadCard
+                      key={thread.id}
+                      thread={thread}
+                      onClick={() => handleThreadClick(thread)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -133,6 +177,11 @@ export default function KnowledgePage() {
           }}
         />
       )}
+
+      {/* Import fonts */}
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+      `}</style>
     </div>
   );
 }

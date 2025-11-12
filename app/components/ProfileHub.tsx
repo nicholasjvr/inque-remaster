@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PublicUser, UserProfile, RepRackItem, Widget } from '@/hooks/useFirestore';
@@ -82,6 +82,7 @@ const THEME_MAP: Record<HubTheme, string> = {
 };
 
 const storageKey = 'profile-hub-preferences';
+const FIRST_VISIT_KEY = 'inqu-first-visit-completed';
 
 type StoredPreferences = {
   theme: HubTheme;
@@ -276,6 +277,45 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Track if this is a first visit for tutorial mode
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
+
+  // Detect first-time visitor and auto-open chatbot (only run once on mount)
+  const hasCheckedFirstVisit = useRef(false);
+  useEffect(() => {
+    // Only check once
+    if (hasCheckedFirstVisit.current) return;
+    hasCheckedFirstVisit.current = true;
+
+    // Only auto-open for non-public views and if not already set
+    if (isPublicView || variant === 'billboard') return;
+
+    // Don't override if initialState is explicitly provided
+    if (initialState && initialState !== 'minimized') return;
+
+    // Check if this is a first visit
+    const hasVisited = typeof window !== 'undefined'
+      ? localStorage.getItem(FIRST_VISIT_KEY)
+      : null;
+
+    // If first visit, open chatbot
+    if (!hasVisited) {
+      setIsFirstVisit(true);
+      // Mark as visited after a short delay to allow state to set
+      const timer = setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(FIRST_VISIT_KEY, 'true');
+        }
+        setState('chatbot');
+        if (onStateChange) {
+          onStateChange('chatbot');
+        }
+      }, 1000); // Small delay to ensure component is mounted
+
+      return () => clearTimeout(timer);
+    }
+  }, [isPublicView, variant, initialState, onStateChange]);
 
   const openFullscreen = useCallback((id: string) => {
     setFullscreenSection(id);
@@ -791,7 +831,7 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
                   title="Toggle chat"
                   onClick={() => setState(prev => (prev === 'chatbot' ? 'minimized' : 'chatbot'))}
                 >
-                  🤖
+                  ⚪
                 </button>
               )}
               {!isPublicView && (
@@ -1349,7 +1389,13 @@ const ProfileHub = ({ mode = 'edit', profileUser, initialState = 'minimized', va
           )}
           {!isPublicView && isChatbot && (
             <div className="hub-chatbot" role="dialog" aria-label="Profile hub messenger">
-              <AIBot onClose={() => setState('minimized')} />
+              <AIBot
+                onClose={() => {
+                  setState('minimized');
+                  setIsFirstVisit(false); // Clear tutorial mode when closing
+                }}
+                isTutorialMode={isFirstVisit}
+              />
             </div>
           )}
           {!isPublicView && isDM && (

@@ -53,7 +53,7 @@
     pointer-events: auto !important;
 }
 
-/* Fix billboard wrapper styling conflicts */
+/* Billboard variant wrapper styling - consolidated */
 .profile-hub-wrapper[data-variant="billboard"] {
     position: relative !important;
     top: auto !important;
@@ -63,13 +63,13 @@
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    /* Reset any inherited text styles */
     font-size: inherit !important;
     line-height: inherit !important;
     text-align: inherit !important;
     color: inherit !important;
     font-family: inherit !important;
     z-index: 1100 !important;
+    pointer-events: auto;
 }
 
 /* Ensure billboard hub remains interactive inside hero */
@@ -96,19 +96,6 @@
     visibility: visible;
 }
 
-.profile-hub-wrapper[data-variant="billboard"] {
-    position: relative;
-    top: auto;
-    right: auto;
-    bottom: auto;
-    left: auto;
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    /* Allow interactions when embedded in hero */
-    pointer-events: auto;
-}
-
 .profile-hub-wrapper[data-variant="billboard"] .profile-hub {
     width: 100%;
     min-width: auto;
@@ -132,7 +119,6 @@
 
 .profile-hub-shell {
     display: flex;
-    gap: 20px;
     align-items: stretch;
 }
 
@@ -150,7 +136,6 @@
 
 .profile-hub-shell[data-variant="billboard"] .hub-button,
 .profile-hub-shell[data-variant="billboard"] .hub-toggle {
-    width: clamp(40px, 4.6vw, 46px);
     height: clamp(40px, 4.6vw, 46px);
 }
 
@@ -165,6 +150,16 @@
     max-width: min(96vw, 1280px);
     width: min(96vw, 1280px);
     min-height: clamp(680px, 82vh, 1100px);
+}
+
+/* Mobile: Full width for billboard variant */
+@media (max-width: 768px) {
+
+    .profile-hub-wrapper[data-variant="billboard"].profile-hub-wrapper--expanded,
+    .profile-hub-wrapper[data-variant="billboard"][data-expanded="true"] {
+        width: 100%;
+        max-width: 100%;
+    }
 }
 
 .profile-hub-shell.profile-hub-shell--expanded .hub-expanded-content,
@@ -204,6 +199,8 @@
 .profile-hub[data-state="minimized"] .hub-core {
     border-radius: 16px;
 }
+
+/* Mobile: Minimized state uses same styling as expanded (handled in @media (max-width: 480px) block) */
 
 .profile-hub[data-state="minimized"] .hub-controls .hub-button,
 .profile-hub[data-state="minimized"] .hub-controls .hub-toggle {
@@ -312,7 +309,7 @@
     box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.04);
     min-height: 112px;
     /* Ensure hub-core doesn't overflow its container */
-    overflow: hidden;
+    /* overflow: hidden; */
     width: 100%;
     box-sizing: border-box;
 }
@@ -1758,11 +1755,6 @@ button.hub-action-button {
 }
 
 @media (max-width: 768px) {
-    .profile-hub-wrapper[data-variant="billboard"] {
-        max-width: none;
-        margin: clamp(18px, 2.6vw, 24px) 0 0 0;
-    }
-
     .profile-hub-wrapper--expanded {
         top: 0;
         left: 0;
@@ -1775,25 +1767,13 @@ button.hub-action-button {
         justify-content: center;
     }
 
-    /* Billboard variant should NOT use fixed positioning on mobile either */
-    .profile-hub-wrapper[data-variant="billboard"].profile-hub-wrapper--expanded {
-        position: relative !important;
-        top: auto !important;
-        left: auto !important;
-        right: auto !important;
-        bottom: auto !important;
-        width: 100% !important;
-        height: auto !important;
-        display: block !important;
-        align-items: stretch !important;
-        justify-content: flex-start !important;
-    }
+    /* Billboard variant expanded - uses global billboard styles */
 
     .profile-hub-shell--expanded .profile-hub {
-        width: calc(100vw - 24px);
-        max-width: calc(100vw - 24px);
         margin: 12px;
         min-height: calc(100vh - 24px);
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
     }
 
     .profile-hub-shell--expanded .hub-expanded-content {
@@ -2264,33 +2244,13 @@ button.hub-action-button {
         left: 12px;
         right: 12px;
         bottom: auto;
-        width: calc(100vw - 24px);
-        /* ENSURE: Full width minus padding */
-        max-width: calc(100vw - 24px);
-        /* ADDED: Cap maximum width */
-        position: fixed;
+        width: calc(100vw);
         z-index: 1000;
         box-sizing: border-box;
         /* ADDED: Include padding in width calculation */
     }
 
-    .profile-hub-wrapper[data-variant="billboard"] {
-        position: relative;
-        width: 100%;
-        max-width: 100%;
-        /* ADDED: Prevent overflow */
-        left: auto;
-        right: auto;
-        top: auto;
-        margin: clamp(16px, 4vw, 24px) auto 0;
-        padding: 0 12px;
-        /* ADDED: Add padding instead */
-        box-sizing: border-box;
-    }
-
-    .profile-hub-wrapper[data-variant="billboard"]::before {
-        display: none;
-    }
+    /* Billboard variant already handled globally - no need for duplicate */
 
     .profile-hub-shell[data-variant="billboard"] {
         justify-content: center;
@@ -2300,38 +2260,23 @@ button.hub-action-button {
         box-sizing: border-box;
     }
 
+    /* Billboard hub-core - full width on mobile */
     .profile-hub-shell[data-variant="billboard"] .hub-core {
-        padding: 12px 14px;
-        /* CHANGED: Reduced padding */
         width: 100%;
+        max-width: 100%;
         box-sizing: border-box;
+    }
+
+    /* Expanded hub - uses unified mobile styling (already handled above) */
+    .profile-hub-shell--expanded .profile-hub {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
     }
 
     /* Mobile modal styles handled by main modal CSS */
 
-    .profile-hub-shell--expanded .hub-expanded-content {
-        grid-template-columns: 1fr;
-        gap: 10px;
-        padding: 12px 16px 16px;
-        overflow: visible;
-    }
-
-    .profile-hub-shell--expanded .hub-section {
-        min-height: auto;
-        height: auto;
-        padding: 12px 12px 16px;
-    }
-
-    .profile-hub-shell--expanded .hub-section--rep-rack {
-        padding: 16px;
-        flex: 1;
-    }
-
-    /* Mobile Expanded Navigation */
-    .expanded-nav-buttons {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
+    /* Mobile expanded content styles consolidated with 768px breakpoint */
 
     .expanded-nav-btn {
         padding: 16px 12px;
@@ -2476,37 +2421,32 @@ button.hub-action-button {
             inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
-    /* Mobile Header Core Styling */
+    /* Mobile: Unified styling - use expanded style for both minimized and expanded */
     .hub-core {
-        padding: 16px 14px;
-        /* IMPROVED: Better padding for touch targets */
+        width: 100%;
+        max-width: 100%;
+        padding: 16px;
         min-height: auto;
-        /* CHANGED: Allow height to fit content */
         max-height: none;
-        /* REMOVED: Allow natural height */
-        border-radius: 12px;
+        border-radius: 16px;
         background: linear-gradient(140deg,
                 rgba(0, 240, 255, 0.1),
                 rgba(0, 240, 255, 0.02));
         box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.08);
         gap: 14px;
-        /* IMPROVED: Better gap between sections */
+        margin: 0;
+        box-sizing: border-box;
     }
 
-    /* Mobile Header User Section */
+    /* Mobile: Unified user section spacing */
     .hub-user-section {
-        gap: 12px;
-        /* IMPROVED: Better gap between avatar and info */
-        padding: 4px 0;
-        /* IMPROVED: Slightly more padding */
+        gap: 20px;
+        padding: 10px 0;
         min-width: 0;
-        /* CHANGED: Allow shrinking */
-        max-width: calc(100% - 150px);
-        /* IMPROVED: Account for 3 buttons (42px each) + gaps (10px * 2) + padding-left (4px) */
         flex: 1 1 auto;
-        /* ADDED: Allow flexible growth */
         overflow: hidden;
-        /* ADDED: Prevent overflow */
+        /* Account for: 3 buttons (42px each = 126px) + gaps (10px * 2 = 20px) + controls padding-left (8px) + safety margin (4px) = 158px */
+        max-width: calc(100% - 158px);
     }
 
     .hub-avatar {
@@ -2521,11 +2461,10 @@ button.hub-action-button {
 
     .hub-user-info {
         min-width: 0;
-        /* ADDED: Allow proper text truncation */
-        gap: 3px;
-        /* IMPROVED: Slightly more spacing */
+        gap: 4px;
         flex: 1 1 auto;
-        /* ADDED: Allow flexible growth */
+        overflow: hidden;
+        /* Better spacing between user info elements */
     }
 
     .hub-user-name {
@@ -2573,12 +2512,10 @@ button.hub-action-button {
 
     .hub-controls {
         gap: 10px;
-        /* IMPROVED: Better gap between buttons for easier tapping */
         flex-shrink: 0;
         align-items: center;
-        /* ADDED: Ensure vertical alignment */
-        padding-left: 4px;
-        /* ADDED: Extra spacing from user section */
+        padding-left: 8px;
+        /* Better spacing from user section for full-width layout */
     }
 
     .hub-button,
@@ -2616,34 +2553,7 @@ button.hub-action-button {
         }
     }
 
-    /* Mobile-specific user section improvements */
-    .hub-user-section {
-        gap: 12px;
-        padding: 6px 0;
-        min-width: 100px;
-    }
-
-    .hub-user-info {
-        min-width: 60px;
-    }
-
-    .hub-avatar {
-        width: 48px;
-        height: 48px;
-        font-size: 1rem;
-    }
-
-    .hub-user-name {
-        font-size: 0.9rem;
-    }
-
-    .hub-user-status {
-        font-size: 0.75rem;
-    }
-
-    .hub-user-level {
-        font-size: 0.7rem;
-    }
+    /* Mobile-specific user section improvements - consolidated above */
 }
 
 /* Rep Rack Grid System */
@@ -3614,65 +3524,6 @@ button.hub-action-button {
         min-width: auto;
         min-height: auto;
     }
-
-    /* Edit mode mobile adjustments */
-    .profile-hub[data-state="expanded"][data-customizing="true"] {
-        height: 100% !important;
-        max-height: 100% !important;
-        border-radius: 0 !important;
-        margin: 0 !important;
-        border: none !important;
-    }
-
-    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout {
-        gap: 12px;
-        padding: 12px;
-    }
-
-    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-content {
-        /* Use viewport units for mobile */
-        max-height: 65vh !important;
-        gap: 12px;
-    }
-
-    .profile-hub[data-state="expanded"][data-customizing="true"] .hub-expanded-layout .hub-modules {
-        width: 100%;
-        min-width: auto;
-        flex-direction: column;
-        gap: 12px;
-        max-height: none;
-    }
-
-    .profile-hub-shell--expanded .hub-section {
-        padding: 14px;
-        border-radius: 12px;
-    }
-
-    .profile-hub-shell--expanded .hub-section--rep-rack {
-        padding: 16px;
-        flex: 1;
-    }
-
-    .profile-hub-shell--expanded .hub-section h3 {
-        font-size: 1rem;
-    }
-
-    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] {
-        pointer-events: auto !important;
-        z-index: 1100 !important;
-    }
-
-    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-controls,
-    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-button,
-    .hero-profile-integration .profile-hub-wrapper[data-variant="billboard"] .hub-toggle {
-        pointer-events: auto !important;
-        cursor: pointer;
-    }
-
-    .hero-profile-integration .profile-hub-overlay {
-        display: none !important;
-        pointer-events: none !important;
-    }
 }
 
 /* New Profile Hub Sections Styles */
@@ -4060,7 +3911,7 @@ button.hub-action-button {
 .hub-user-level {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 6px;
     margin-top: 4px;
 }
 
@@ -4079,6 +3930,8 @@ button.hub-action-button {
     font-size: 0.7rem;
     color: var(--hub-text-secondary);
     opacity: 0.7;
+    width: auto;
+    padding-left: 6px;
 }
 
 /* Customization Shop Wrapper */
@@ -5919,7 +5772,6 @@ button.hub-action-button {
     }
 
     .customization-shop.fullscreen .shop-content {
-        padding: 20px;
         gap: 20px;
         width: 100%;
         max-width: 100%;
@@ -5963,7 +5815,6 @@ button.hub-action-button {
     }
 
     .expanded-nav-btn {
-        padding: 20px 16px;
         border-radius: 12px;
         min-height: 80px;
     }

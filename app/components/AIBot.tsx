@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChatMessage, useAssistant } from '@/hooks/useAssistant';
-import { DEFAULT_GREETING } from '@/lib/assistantFallbacks';
+import { DEFAULT_GREETING, TUTORIAL_GREETING } from '@/lib/assistantFallbacks';
 
 interface AIBotProps {
   onClose?: () => void;
+  isTutorialMode?: boolean; // New prop for tutorial mode
 }
 
-export default function AIBot({ onClose }: AIBotProps) {
+export default function AIBot({ onClose, isTutorialMode = false }: AIBotProps) {
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -19,14 +20,15 @@ export default function AIBot({ onClose }: AIBotProps) {
     [user?.displayName, user?.email]
   );
 
+  // Use tutorial greeting if in tutorial mode, otherwise use default
   const greetingMessage: ChatMessage = useMemo(
     () => ({
       id: `ai-greeting-${user?.uid ?? 'guest'}`,
       sender: 'ai',
-      text: DEFAULT_GREETING,
+      text: isTutorialMode ? TUTORIAL_GREETING : DEFAULT_GREETING,
       timestamp: new Date()
     }),
-    [user?.uid]
+    [user?.uid, isTutorialMode]
   );
 
   const initialMessages = useMemo(() => [greetingMessage], [greetingMessage]);
@@ -69,8 +71,8 @@ export default function AIBot({ onClose }: AIBotProps) {
     <div className="ai-bot-container">
       <div className="ai-bot-header">
         <div className="ai-bot-title">
-          <span className="ai-bot-icon">🤖</span>
-          <span>AI Assistant</span>
+          <span className="ai-bot-icon">⚪</span>
+          <span>Robert</span>
         </div>
         {onClose && (
           <button className="ai-bot-close" onClick={onClose} aria-label="Close">
