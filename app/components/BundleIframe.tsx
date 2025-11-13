@@ -14,84 +14,107 @@ type BundleIframeProps = {
 
 export default function BundleIframe({ bundle, className, title, height = 200, sandbox = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-presentation' }: BundleIframeProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { buildBundleFileMap, findHtmlEntry } = useStorage();
+  const { resolveWidgetEntry, buildBundleFileMap, validateAndRefreshFileUrls } = useStorage();
 
   useEffect(() => {
     if (!bundle || !iframeRef.current) return;
     const iframe = iframeRef.current;
 
-    const load = async () => {
+    const load = async (retryCount = 0) => {
+      const MAX_RETRIES = 2;
+      
       try {
-        let fileMap: Record<string, string> = {};
+        console.log(`[BundleIframe] Loading bundle ${bundle.id || 'unknown'} (attempt ${retryCount + 1})`);
+        
+        // Use unified entry resolution
+        const entryResult = await resolveWidgetEntry(bundle);
+        
+        if (!entryResult) {
+          console.error(`[BundleIframe] No entry point found for bundle ${bundle.id || 'unknown'}`);
+          showError(iframe, 'No entry point found. Include index.html or set entry in manifest.json');
+          return;
+        }
 
-        // Check if this is a Widget with files array or a WidgetBundle with storagePath
+        const { entry, downloadURL } = entryResult;
+        console.log(`[BundleIframe] Resolved entry: ${entry}`);
+
+        // Build file map for asset resolution
+        let fileMap: Record<string, string> = {};
+        
         if ('files' in bundle && Array.isArray(bundle.files)) {
-          // Widget type - build file map from files array
-          bundle.files.forEach((f) => {
-            if (f?.fileName && f?.downloadURL) {
-              fileMap[f.fileName] = f.downloadURL;
-              // Also map just the filename without path
-              const basename = f.fileName.split('/').pop();
-              if (basename) fileMap[basename] = f.downloadURL;
+          // Widget type - prefer storagePath if available
+          if (bundle.storagePath) {
+            try {
+              console.log(`[BundleIframe] Building fileMap from storagePath: ${bundle.storagePath}`);
+              fileMap = await buildBundleFileMap(bundle.storagePath);
+            } catch (error) {
+              console.warn(`[BundleIframe] Failed to build from storagePath, using files array:`, error);
+              bundle.files.forEach((f) => {
+                if (f?.fileName && f?.downloadURL) {
+                  fileMap[f.fileName] = f.downloadURL;
+                  const basename = f.fileName.split('/').pop();
+                  if (basename) fileMap[basename] = f.downloadURL;
+                }
+              });
             }
-          });
+          } else {
+            // Build from files array
+            bundle.files.forEach((f) => {
+              if (f?.fileName && f?.downloadURL) {
+                fileMap[f.fileName] = f.downloadURL;
+                const basename = f.fileName.split('/').pop();
+                if (basename) fileMap[basename] = f.downloadURL;
+                const normalized = f.fileName.replace(/^\.\//, '').replace(/^\//, '');
+                if (normalized !== f.fileName) fileMap[normalized] = f.downloadURL;
+              }
+            });
+          }
         } else {
-          // WidgetBundle type - build file map from storage path
+          // WidgetBundle type - build from storage path
           const basePath = (bundle as WidgetBundle).storagePath ||
             (bundle.uploadId ? `uploads/${bundle.uploadId}` : `uploads/${bundle.id}`);
           fileMap = await buildBundleFileMap(basePath);
         }
 
-        // Prefer explicit entry on the document if provided
-        const explicitEntry = (bundle as any)?.entry as string | undefined;
-        let entry: string | null = null;
-        if (explicitEntry) {
-          const norm = explicitEntry.replace(/^\.\//, '').replace(/^\//, '');
-          entry = fileMap[norm] ? norm : null;
-        }
-        if (!entry) {
-          entry = findHtmlEntry(fileMap);
-        }
-
-        // Fallback: read manifest.json for custom entry
-        if (!entry && fileMap['manifest.json']) {
+        // Validate and refresh entry URL if needed
+        let entryUrl = downloadURL;
+        const basePath = (bundle as any).storagePath || 
+          ((bundle as any).uploadId ? `uploads/${(bundle as any).uploadId}` : 
+           bundle.id ? `uploads/${bundle.id}` : null);
+        
+        if (basePath) {
           try {
-            const res = await fetch(fileMap['manifest.json'], {
-              mode: 'cors',
-              cache: 'no-cache',
-            });
-            if (res.ok) {
-              const manifest = await res.json();
-              const candidate: string | undefined = manifest.entry || manifest.index || manifest.main;
-              const norm = candidate ? candidate.replace(/^\.\//, '').replace(/^\//, '') : '';
-              if (norm && fileMap[norm]) entry = norm;
-            }
-          } catch (err) {
-            console.warn('Failed to fetch manifest.json:', err);
-            // Continue without manifest - will show error below if no entry found
+            const refreshedMap = await validateAndRefreshFileUrls({ [entry]: downloadURL }, basePath);
+            entryUrl = refreshedMap[entry] || downloadURL;
+          } catch (error) {
+            console.warn(`[BundleIframe] Failed to validate/refresh URL, using original:`, error);
           }
         }
 
-        if (!entry) {
-          console.warn('Bundle files available:', Object.keys(fileMap));
-          showError(iframe, 'No entry point found. Include index.html or set entry in manifest.json');
-          return;
+        console.log(`[BundleIframe] Fetching entry file: ${entry} from URL: ${entryUrl}`);
+
+        // Fetch HTML with retry logic
+        let res: Response;
+        try {
+          res = await fetch(entryUrl, {
+            mode: 'cors',
+            cache: 'no-cache',
+          });
+        } catch (fetchError) {
+          // If fetch fails and we have basePath, try regenerating URL
+          if (basePath && retryCount < MAX_RETRIES) {
+            console.log(`[BundleIframe] Fetch failed, retrying with fresh URL (attempt ${retryCount + 1})`);
+            return load(retryCount + 1);
+          }
+          throw fetchError;
         }
-
-        // Debug logging
-        console.log('Fetching entry file:', entry, 'from URL:', fileMap[entry]);
-
-        if (!fileMap[entry]) {
-          console.error('Entry file URL not found in fileMap:', entry);
-          showError(iframe, `Entry file "${entry}" not found in bundle. Available files: ${Object.keys(fileMap).join(', ')}`);
-          return;
-        }
-
-        const res = await fetch(fileMap[entry], {
-          mode: 'cors',
-          cache: 'no-cache',
-        });
+        
         if (!res.ok) {
+          // If 404/403 and we have basePath, try regenerating URL
+          if ((res.status === 404 || res.status === 403) && basePath && retryCount < MAX_RETRIES) {
+            console.log(`[BundleIframe] Got ${res.status}, retrying with fresh URL (attempt ${retryCount + 1})`);
+            return load(retryCount + 1);
+          }
           showError(iframe, `Failed to fetch HTML file: ${res.status} ${res.statusText}`);
           return;
         }
@@ -100,6 +123,9 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
 
         const resolveMappedUrl = (path: string) => {
           if (!path) return null;
+          // Ignore absolute URLs and data URIs
+          if (/^(?:https?:)?\/\//i.test(path) || /^data:/i.test(path)) return null;
+          
           const cleaned = path.replace(/^\.\//, '').replace(/^\//, '');
           return fileMap[cleaned] || fileMap[cleaned.split('/').pop() || ''] || null;
         };
@@ -116,14 +142,29 @@ export default function BundleIframe({ bundle, className, title, height = 200, s
 
         const blob = new Blob([processedHtml], { type: 'text/html' });
         iframe.src = URL.createObjectURL(blob);
+        console.log(`[BundleIframe] Successfully loaded bundle ${bundle.id || 'unknown'}`);
       } catch (err) {
-        console.error('Bundle iframe load error:', err);
+        console.error(`[BundleIframe] Bundle iframe load error for ${bundle.id || 'unknown'}:`, err);
+        
+        // Retry on network errors
+        if (retryCount < MAX_RETRIES && err instanceof Error && 
+            (err.message.includes('Failed to fetch') || err.message.includes('Network'))) {
+          console.log(`[BundleIframe] Retrying due to network error (attempt ${retryCount + 1})`);
+          setTimeout(() => {
+            load(retryCount + 1);
+          }, 1000 * (retryCount + 1)); // Exponential backoff
+          return;
+        }
+        
         let errorMessage = 'Unknown error while loading bundle';
+        const availableFiles = 'files' in bundle && Array.isArray(bundle.files) 
+          ? bundle.files.map(f => f.fileName).join(', ')
+          : 'Unknown';
 
         if (err instanceof Error) {
           if (err.message.includes('Failed to fetch')) {
-            errorMessage = 'Network error: Unable to load bundle files. Check if files exist in storage and URLs are valid.';
-            console.error('Fetch failed. This may be a CORS issue or network connectivity problem.');
+            errorMessage = `Network error: Unable to load bundle files. Check if files exist in storage and URLs are valid. Available files: ${availableFiles}`;
+            console.error('[BundleIframe] Fetch failed. This may be a CORS issue or network connectivity problem.');
           } else if (err.message.includes('CORS')) {
             errorMessage = 'CORS error: Unable to fetch files. Check Firebase Storage CORS configuration.';
           } else {

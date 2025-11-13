@@ -134,39 +134,90 @@ export function useStorage() {
 
   // Build a file map for a bundle folder: fileName -> downloadURL
   const buildBundleFileMap = async (bundleBasePath: string): Promise<Record<string, string>> => {
-    const allRefs = await listAllFilesRecursive(bundleBasePath);
-    const entries = await Promise.all(
-      allRefs.map(async (r) => {
-        const url = await getDownloadURL(r);
-        // Normalize key to be relative to base
-        const key = r.fullPath.replace(new RegExp(`^${bundleBasePath.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/?`), '');
-        return [key, url] as const;
-      })
-    );
-    // Prefer flat keys ("index.html") alongside nested ("public/index.html")
-    const map: Record<string, string> = {};
-    for (const [key, url] of entries) {
-      map[key] = url;
-      const flat = key.split('/').pop();
-      if (flat) map[flat] = url;
+    try {
+      console.log(`[buildBundleFileMap] Building file map for path: ${bundleBasePath}`);
+      const allRefs = await listAllFilesRecursive(bundleBasePath);
+      console.log(`[buildBundleFileMap] Found ${allRefs.length} files`);
+      
+      const entries = await Promise.all(
+        allRefs.map(async (r) => {
+          try {
+            const url = await getDownloadURL(r);
+            // Normalize key to be relative to base
+            const key = r.fullPath.replace(new RegExp(`^${bundleBasePath.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/?`), '');
+            return [key, url] as const;
+          } catch (error) {
+            console.error(`[buildBundleFileMap] Failed to get URL for ${r.fullPath}:`, error);
+            throw error;
+          }
+        })
+      );
+      
+      // Prefer flat keys ("index.html") alongside nested ("public/index.html")
+      const map: Record<string, string> = {};
+      for (const [key, url] of entries) {
+        map[key] = url;
+        const flat = key.split('/').pop();
+        if (flat) map[flat] = url;
+        // Also add normalized version without leading ./
+        const normalized = key.replace(/^\.\//, '').replace(/^\//, '');
+        if (normalized !== key) map[normalized] = url;
+      }
+      
+      console.log(`[buildBundleFileMap] Built file map with ${Object.keys(map).length} entries`);
+      return map;
+    } catch (error) {
+      console.error(`[buildBundleFileMap] Error building file map for ${bundleBasePath}:`, error);
+      throw error;
     }
-    return map;
   };
 
   // Find an entry HTML file from the file map
   const findHtmlEntry = (fileMap: Record<string, string>): string | null => {
     const keys = Object.keys(fileMap);
-    // Common candidates ordered by priority
+    if (keys.length === 0) return null;
+    
+    // Normalize all keys for better matching
+    const normalizedMap: Record<string, string> = {};
+    keys.forEach(key => {
+      const normalized = key.replace(/^\.\//, '').replace(/^\//, '').toLowerCase();
+      normalizedMap[normalized] = key; // Map normalized -> original key
+    });
+    
+    // Common candidates ordered by priority (check normalized versions)
     const candidates = [
       'index.html',
-      'Index.html',
+      'index.htm',
       'public/index.html',
+      'public/index.htm',
       'dist/index.html',
+      'dist/index.htm',
       'build/index.html',
-      keys.find((k) => /index\.html?$/i.test(k)),
-      keys.find((k) => /\.html?$/i.test(k)),
-    ].filter(Boolean) as string[];
-    return candidates.length ? candidates[0] : null;
+      'build/index.htm',
+      'src/index.html',
+      'src/index.htm',
+    ];
+    
+    // Try exact matches first
+    for (const candidate of candidates) {
+      if (normalizedMap[candidate]) {
+        return normalizedMap[candidate]; // Return original key
+      }
+    }
+    
+    // Fallback: find any file matching index.html pattern
+    const indexMatch = keys.find((k) => {
+      const normalized = k.replace(/^\.\//, '').replace(/^\//, '').toLowerCase();
+      return /(^|\/)(index|main|app)\.html?$/i.test(normalized);
+    });
+    if (indexMatch) return indexMatch;
+    
+    // Last resort: find any HTML file
+    const htmlMatch = keys.find((k) => {
+      const normalized = k.replace(/^\.\//, '').replace(/^\//, '').toLowerCase();
+      return normalized.endsWith('.html') || normalized.endsWith('.htm');
+    });
+    return htmlMatch || null;
   };
 
   const getFileURL = async (path: string): Promise<string> => {
@@ -176,6 +227,152 @@ export function useStorage() {
     } catch (error) {
       console.error('Error getting file URL:', error);
       throw error;
+    }
+  };
+
+  // Validate and refresh file URLs if they're expired
+  const validateAndRefreshFileUrls = async (
+    fileMap: Record<string, string>,
+    basePath?: string
+  ): Promise<Record<string, string>> => {
+    const refreshedMap: Record<string, string> = {};
+    const urlChecks = Object.entries(fileMap).map(async ([key, url]) => {
+      try {
+        // Try to fetch the URL to see if it's still valid
+        const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+        // If we can't check (no-cors), assume it's valid
+        refreshedMap[key] = url;
+      } catch (error) {
+        // URL might be expired, try to regenerate if we have basePath
+        if (basePath) {
+          try {
+            console.log(`[validateAndRefreshFileUrls] Regenerating URL for ${key} from ${basePath}`);
+            const filePath = `${basePath}/${key}`;
+            const newUrl = await getFileURL(filePath);
+            refreshedMap[key] = newUrl;
+            console.log(`[validateAndRefreshFileUrls] Successfully regenerated URL for ${key}`);
+          } catch (refreshError) {
+            console.warn(`[validateAndRefreshFileUrls] Could not refresh URL for ${key}:`, refreshError);
+            // Keep original URL as fallback
+            refreshedMap[key] = url;
+          }
+        } else {
+          // No basePath, keep original URL
+          refreshedMap[key] = url;
+        }
+      }
+    });
+    
+    await Promise.all(urlChecks);
+    return refreshedMap;
+  };
+
+  // Resolve widget entry point - unified function for both Widget and WidgetBundle
+  const resolveWidgetEntry = async (
+    bundle: { files?: Array<{ fileName: string; downloadURL: string }>; storagePath?: string; uploadId?: string; id?: string; entry?: string },
+    fileMap?: Record<string, string>
+  ): Promise<{ entry: string; downloadURL: string } | null> => {
+    try {
+      console.log('[resolveWidgetEntry] Resolving entry for bundle:', bundle.id || 'unknown');
+      
+      let map: Record<string, string> = {};
+      
+      // Build file map if not provided
+      if (!fileMap) {
+        if ('files' in bundle && Array.isArray(bundle.files) && bundle.files.length > 0) {
+          // Widget type - build from files array
+          console.log('[resolveWidgetEntry] Building fileMap from files array');
+          bundle.files.forEach((f) => {
+            if (f?.fileName && f?.downloadURL) {
+              map[f.fileName] = f.downloadURL;
+              const basename = f.fileName.split('/').pop();
+              if (basename) map[basename] = f.downloadURL;
+              // Also add normalized version
+              const normalized = f.fileName.replace(/^\.\//, '').replace(/^\//, '');
+              if (normalized !== f.fileName) map[normalized] = f.downloadURL;
+            }
+          });
+          
+          // If widget has storagePath, prefer building from storage for fresh URLs
+          if (bundle.storagePath) {
+            try {
+              console.log('[resolveWidgetEntry] Widget has storagePath, building from storage');
+              const storageMap = await buildBundleFileMap(bundle.storagePath);
+              // Merge storage map (preferred) with files array map
+              map = { ...map, ...storageMap };
+            } catch (error) {
+              console.warn('[resolveWidgetEntry] Failed to build from storagePath, using files array:', error);
+            }
+          }
+        } else {
+          // WidgetBundle type - build from storage path
+          const basePath = bundle.storagePath || 
+            (bundle.uploadId ? `uploads/${bundle.uploadId}` : bundle.id ? `uploads/${bundle.id}` : null);
+          
+          if (!basePath) {
+            console.error('[resolveWidgetEntry] No storage path available');
+            return null;
+          }
+          
+          console.log('[resolveWidgetEntry] Building fileMap from storage path:', basePath);
+          map = await buildBundleFileMap(basePath);
+        }
+      } else {
+        map = fileMap;
+      }
+      
+      // Check explicit entry field first
+      const explicitEntry = bundle.entry;
+      if (explicitEntry) {
+        const normalized = explicitEntry.replace(/^\.\//, '').replace(/^\//, '');
+        if (map[normalized]) {
+          console.log('[resolveWidgetEntry] Using explicit entry:', normalized);
+          return { entry: normalized, downloadURL: map[normalized] };
+        }
+        // Try original entry path
+        if (map[explicitEntry]) {
+          console.log('[resolveWidgetEntry] Using explicit entry (original):', explicitEntry);
+          return { entry: explicitEntry, downloadURL: map[explicitEntry] };
+        }
+        console.warn('[resolveWidgetEntry] Explicit entry not found in fileMap:', explicitEntry);
+      }
+      
+      // Fallback: read manifest.json for custom entry
+      if (map['manifest.json']) {
+        try {
+          console.log('[resolveWidgetEntry] Checking manifest.json');
+          const res = await fetch(map['manifest.json'], {
+            mode: 'cors',
+            cache: 'no-cache',
+          });
+          if (res.ok) {
+            const manifest = await res.json();
+            const candidate: string | undefined = manifest.entry || manifest.index || manifest.main;
+            if (candidate) {
+              const norm = candidate.replace(/^\.\//, '').replace(/^\//, '');
+              if (map[norm]) {
+                console.log('[resolveWidgetEntry] Using manifest entry:', norm);
+                return { entry: norm, downloadURL: map[norm] };
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[resolveWidgetEntry] Failed to fetch manifest.json:', err);
+        }
+      }
+      
+      // Use findHtmlEntry utility
+      const foundEntry = findHtmlEntry(map);
+      if (foundEntry && map[foundEntry]) {
+        console.log('[resolveWidgetEntry] Using found HTML entry:', foundEntry);
+        return { entry: foundEntry, downloadURL: map[foundEntry] };
+      }
+      
+      console.warn('[resolveWidgetEntry] No entry point found. Available files:', Object.keys(map));
+      return null;
+    } catch (error) {
+      console.error('[resolveWidgetEntry] Error resolving entry:', error);
+      return null;
     }
   };
 
@@ -304,6 +501,8 @@ export function useStorage() {
     addFileToWidget,
     removeFileFromWidget,
     generateThumbnail,
+    validateAndRefreshFileUrls,
+    resolveWidgetEntry,
   };
 }
 
