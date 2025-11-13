@@ -231,39 +231,36 @@ export function useStorage() {
   };
 
   // Validate and refresh file URLs if they're expired
+  // Note: We can't actually validate URLs with CORS restrictions, so this function
+  // will regenerate URLs from storage if basePath is provided, otherwise return original map
   const validateAndRefreshFileUrls = async (
     fileMap: Record<string, string>,
     basePath?: string
   ): Promise<Record<string, string>> => {
+    // If no basePath, can't refresh - return original map
+    if (!basePath) {
+      return fileMap;
+    }
+
+    // Only refresh URLs if we have storage path - don't try to validate with fetch
+    // as CORS restrictions prevent us from checking response status
     const refreshedMap: Record<string, string> = {};
-    const urlChecks = Object.entries(fileMap).map(async ([key, url]) => {
+    
+    // Regenerate URLs from storage for fresh tokens (but don't validate first)
+    const refreshPromises = Object.entries(fileMap).map(async ([key, url]) => {
       try {
-        // Try to fetch the URL to see if it's still valid
-        const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-        // If we can't check (no-cors), assume it's valid
+        const filePath = `${basePath}/${key}`;
+        const newUrl = await getFileURL(filePath);
+        refreshedMap[key] = newUrl;
+        console.log(`[validateAndRefreshFileUrls] Refreshed URL for ${key}`);
+      } catch (refreshError) {
+        console.warn(`[validateAndRefreshFileUrls] Could not refresh URL for ${key}, keeping original:`, refreshError);
+        // Keep original URL as fallback
         refreshedMap[key] = url;
-      } catch (error) {
-        // URL might be expired, try to regenerate if we have basePath
-        if (basePath) {
-          try {
-            console.log(`[validateAndRefreshFileUrls] Regenerating URL for ${key} from ${basePath}`);
-            const filePath = `${basePath}/${key}`;
-            const newUrl = await getFileURL(filePath);
-            refreshedMap[key] = newUrl;
-            console.log(`[validateAndRefreshFileUrls] Successfully regenerated URL for ${key}`);
-          } catch (refreshError) {
-            console.warn(`[validateAndRefreshFileUrls] Could not refresh URL for ${key}:`, refreshError);
-            // Keep original URL as fallback
-            refreshedMap[key] = url;
-          }
-        } else {
-          // No basePath, keep original URL
-          refreshedMap[key] = url;
-        }
       }
     });
     
-    await Promise.all(urlChecks);
+    await Promise.all(refreshPromises);
     return refreshedMap;
   };
 

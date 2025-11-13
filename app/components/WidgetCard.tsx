@@ -12,7 +12,7 @@ interface WidgetCardProps {
 
 export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { resolveWidgetEntry, buildBundleFileMap, validateAndRefreshFileUrls } = useStorage();
+  const { resolveWidgetEntry, buildBundleFileMap, getFileURL } = useStorage();
 
   useEffect(() => {
     if (widget && iframeRef.current) {
@@ -22,19 +22,19 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
 
   const loadWidgetIntoIframe = async (widget: Widget, iframeEl: HTMLIFrameElement, retryCount = 0) => {
     const MAX_RETRIES = 2;
-    
+
     try {
       console.log(`[WidgetCard] Loading widget ${widget.id} into iframe (attempt ${retryCount + 1})`);
-      
+
       const files = widget.files || [];
       if (files.length === 0) {
         showError(iframeEl, "No files found in widget");
         return;
       }
 
-      // Build file map - prefer storagePath if available for fresh URLs
+      // Build file map - on retry, always rebuild from storage if available for fresh URLs
       let fileMap: Record<string, string> = {};
-      
+
       if (widget.storagePath) {
         try {
           console.log(`[WidgetCard] Building fileMap from storagePath: ${widget.storagePath}`);
@@ -66,7 +66,7 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
 
       // Use unified entry resolution
       const entryResult = await resolveWidgetEntry(widget, fileMap);
-      
+
       if (!entryResult) {
         console.error(`[WidgetCard] No entry point found for widget ${widget.id}`);
         showError(iframeEl, "No entry point found. Include index.html or set entry in widget settings.");
@@ -76,16 +76,8 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
       const { entry, downloadURL } = entryResult;
       console.log(`[WidgetCard] Resolved entry: ${entry}`);
 
-      // Validate and refresh URL if needed
+      // Use the downloadURL directly - if it fails, retry logic will regenerate it
       let entryUrl = downloadURL;
-      if (widget.storagePath) {
-        try {
-          const refreshedMap = await validateAndRefreshFileUrls({ [entry]: downloadURL }, widget.storagePath);
-          entryUrl = refreshedMap[entry] || downloadURL;
-        } catch (error) {
-          console.warn(`[WidgetCard] Failed to validate/refresh URL, using original:`, error);
-        }
-      }
 
       // Fetch HTML with retry logic
       let res: Response;
@@ -95,19 +87,27 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
           cache: 'no-cache',
         });
       } catch (fetchError) {
-        // If fetch fails and we have storagePath, try regenerating URL
+        // If fetch fails and we have storagePath, rebuild fileMap and retry
         if (widget.storagePath && retryCount < MAX_RETRIES) {
-          console.log(`[WidgetCard] Fetch failed, retrying with fresh URL (attempt ${retryCount + 1})`);
-          return loadWidgetIntoIframe(widget, iframeEl, retryCount + 1);
+          console.log(`[WidgetCard] Fetch failed, rebuilding from storage (attempt ${retryCount + 1})`);
+          // Retry will rebuild fileMap from storage
+          setTimeout(() => {
+            loadWidgetIntoIframe(widget, iframeEl, retryCount + 1);
+          }, 500 * (retryCount + 1)); // Short delay before retry
+          return;
         }
         throw fetchError;
       }
-      
+
       if (!res.ok) {
-        // If 404/403 and we have storagePath, try regenerating URL
+        // If 404/403 and we have storagePath, rebuild fileMap and retry
         if ((res.status === 404 || res.status === 403) && widget.storagePath && retryCount < MAX_RETRIES) {
-          console.log(`[WidgetCard] Got ${res.status}, retrying with fresh URL (attempt ${retryCount + 1})`);
-          return loadWidgetIntoIframe(widget, iframeEl, retryCount + 1);
+          console.log(`[WidgetCard] Got ${res.status}, rebuilding from storage (attempt ${retryCount + 1})`);
+          // Retry will rebuild fileMap from storage
+          setTimeout(() => {
+            loadWidgetIntoIframe(widget, iframeEl, retryCount + 1);
+          }, 500 * (retryCount + 1)); // Short delay before retry
+          return;
         }
         showError(iframeEl, `Failed to fetch HTML file: ${res.status} ${res.statusText}`);
         return;
@@ -119,7 +119,7 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
         if (!path) return null;
         // Ignore absolute URLs and data URIs
         if (/^(?:https?:)?\/\//i.test(path) || /^data:/i.test(path)) return null;
-        
+
         const cleaned = path.replace(/^\.\//, "").replace(/^\//, "");
         return fileMap[cleaned] || fileMap[cleaned.split("/").pop() || ''] || null;
       };
@@ -139,29 +139,33 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
       console.log(`[WidgetCard] Successfully loaded widget ${widget.id}`);
     } catch (error) {
       console.error(`[WidgetCard] Failed to load widget ${widget.id} into iframe:`, error);
-      
+
       // Retry on network errors
-      if (retryCount < MAX_RETRIES && error instanceof Error && 
-          (error.message.includes('Failed to fetch') || error.message.includes('Network'))) {
+      if (retryCount < MAX_RETRIES && error instanceof Error &&
+        (error.message.includes('Failed to fetch') || error.message.includes('Network'))) {
         console.log(`[WidgetCard] Retrying due to network error (attempt ${retryCount + 1})`);
         setTimeout(() => {
           loadWidgetIntoIframe(widget, iframeEl, retryCount + 1);
         }, 1000 * (retryCount + 1)); // Exponential backoff
         return;
       }
-      
-      let errorMessage = 'Unknown error while loading widget';
-      if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch')) {
-          errorMessage = 'Network error: Unable to load widget files. Check if files exist in storage and URLs are valid.';
-        } else if (error.message.includes('CORS')) {
-          errorMessage = 'CORS error: Unable to fetch files. Check Firebase Storage CORS configuration.';
-        } else {
-          errorMessage = error.message;
+
+      // Only show error if we've exhausted retries
+      if (retryCount >= MAX_RETRIES) {
+        let errorMessage = 'Unknown error while loading widget';
+        if (error instanceof Error) {
+          const errMsg = error.message.toLowerCase();
+          if (errMsg.includes('failed to fetch') || errMsg.includes('networkerror')) {
+            errorMessage = `Network error: Unable to load widget files after ${MAX_RETRIES + 1} attempts. This may be a CORS configuration issue with Firebase Storage. Check Firebase Console > Storage > Settings > CORS configuration.`;
+          } else if (errMsg.includes('cors')) {
+            errorMessage = 'CORS error: Unable to fetch files. Check Firebase Storage CORS configuration in Firebase Console.';
+          } else {
+            errorMessage = error.message;
+          }
         }
+
+        showError(iframeEl, errorMessage);
       }
-      
-      showError(iframeEl, errorMessage);
     }
   };
 
@@ -196,7 +200,7 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
   };
 
   return (
-    <div 
+    <div
       className={`slot-card ${widget ? 'filled' : 'empty'}`}
       onClick={onFocus}
     >
@@ -217,8 +221,8 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
             <h4>{widget.title}</h4>
             <p>{widget.description}</p>
             <div className="slot-actions">
-              <button 
-                className="slot-btn interact-btn" 
+              <button
+                className="slot-btn interact-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleInteract();
@@ -226,8 +230,8 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
               >
                 🎮 Interact
               </button>
-              <button 
-                className="slot-btn edit-btn" 
+              <button
+                className="slot-btn edit-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleEdit();
@@ -248,8 +252,8 @@ export default function WidgetCard({ slot, widget, onFocus }: WidgetCardProps) {
             <h4>Slot {slot} Available</h4>
             <p>Upload a widget to fill this slot</p>
             <div className="slot-actions">
-              <button 
-                className="slot-btn upload-btn" 
+              <button
+                className="slot-btn upload-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleUpload();

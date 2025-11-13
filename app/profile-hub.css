@@ -6912,6 +6912,7 @@ button.hub-action-button {
 .sign-up-prompt-content {
     text-align: center;
     max-width: 400px;
+    align-items: center;
     width: 100%;
 }
 
@@ -6944,7 +6945,7 @@ button.hub-action-button {
     flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
-    text-align: left;
+    text-align: center;
 }
 
 .benefit-item {

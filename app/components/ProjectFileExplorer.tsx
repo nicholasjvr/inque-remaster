@@ -45,7 +45,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
   const [deletingProject, setDeletingProject] = useState(false);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const fileTreeContainerRef = useRef<HTMLDivElement>(null);
-  const { buildBundleFileMap, uploadFile, removeFileFromWidget, validateAndRefreshFileUrls, getFileURL } = useStorage();
+  const { buildBundleFileMap, uploadFile, removeFileFromWidget, getFileURL } = useStorage();
   const { updateWidget, deleteWidget } = useWidgets(widget.userId);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
 
   const loadFileContent = useCallback(async (url: string, filePath?: string, retryCount = 0) => {
     const MAX_RETRIES = 2;
-    
+
     try {
       setLoadingContent(true);
       console.log(`[ProjectFileExplorer] Loading file content from ${url} (attempt ${retryCount + 1})`);
@@ -94,8 +94,8 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
 
       if (!response.ok) {
         // If 404/403, try to regenerate URL from storage
-        if ((response.status === 404 || response.status === 403) && 
-            retryCount < MAX_RETRIES && widget.storagePath && filePath) {
+        if ((response.status === 404 || response.status === 403) &&
+          retryCount < MAX_RETRIES && widget.storagePath && filePath) {
           console.log(`[ProjectFileExplorer] Got ${response.status}, trying to regenerate URL`);
           try {
             const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
@@ -116,17 +116,17 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
     } catch (error) {
       console.error(`[ProjectFileExplorer] Error loading file content:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       // Retry on network errors
-      if (retryCount < MAX_RETRIES && error instanceof Error && 
-          (errorMessage.includes('Failed to fetch') || errorMessage.includes('Network'))) {
+      if (retryCount < MAX_RETRIES && error instanceof Error &&
+        (errorMessage.includes('Failed to fetch') || errorMessage.includes('Network'))) {
         console.log(`[ProjectFileExplorer] Retrying due to network error (attempt ${retryCount + 1})`);
         setTimeout(() => {
           loadFileContent(url, filePath, retryCount + 1);
         }, 1000 * (retryCount + 1));
         return;
       }
-      
+
       setFileContent(`Error loading file content: ${errorMessage}\n\nURL: ${url}\n\nIf this file exists, it may have been moved or the URL expired. Try refreshing the file tree.`);
       showToast(`Failed to load file: ${errorMessage}`, 'error');
     } finally {
@@ -351,7 +351,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
     try {
       console.log(`[ProjectFileExplorer] Building file tree for widget ${widget.id}`);
       const basePath = widget.storagePath || `uploads/${widget.uploadId || widget.id}`;
-      
+
       let map: Record<string, string> = {};
       try {
         // Try to build from storage first for fresh URLs
@@ -369,14 +369,7 @@ export default function ProjectFileExplorer({ widget, onClose }: ProjectFileExpl
         });
       }
 
-      // Validate and refresh URLs if needed
-      try {
-        const refreshedMap = await validateAndRefreshFileUrls(map, basePath);
-        map = refreshedMap;
-        console.log(`[ProjectFileExplorer] Validated and refreshed URLs`);
-      } catch (error) {
-        console.warn(`[ProjectFileExplorer] Failed to validate/refresh URLs, using original:`, error);
-      }
+      // URLs from buildBundleFileMap are already fresh, no need to validate/refresh
 
       setFileMap(map);
 
