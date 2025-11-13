@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProfileHub from '@/app/components/ProfileHub';
+import ChatModal from '@/app/components/ChatModal';
 import { usePublicUsers } from '@/hooks/useFirestore';
 
 
@@ -12,6 +13,8 @@ export default function UsersPage() {
   const [filterBy, setFilterBy] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [query, setQuery] = useState('');
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -171,7 +174,17 @@ export default function UsersPage() {
                   </div>
                 </div>
                 <div className="user-card-actions">
-                  <button className="chat-btn">
+                  <button
+                    className="chat-btn"
+                    onClick={() => {
+                      if (user) {
+                        setSelectedRecipientId(u.id);
+                        setChatModalOpen(true);
+                      } else {
+                        alert('Please sign in to start a chat');
+                      }
+                    }}
+                  >
                     <span className="btn-icon">💬</span>
                     <span className="btn-text">Chat</span>
                   </button>
@@ -186,20 +199,6 @@ export default function UsersPage() {
                 </div>
               </div>
             ))}
-            <div className="user-card-actions">
-              <button className="chat-btn">
-                <span className="btn-icon">💬</span>
-                <span className="btn-text">Chat</span>
-              </button>
-              <a href="/u/sample" className="view-profile-btn">
-                <span className="btn-icon">👤</span>
-                <span className="btn-text">Profile</span>
-              </a>
-              <button className="follow-btn">
-                <span className="btn-icon">➕</span>
-                <span className="btn-text">Follow</span>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -224,28 +223,16 @@ export default function UsersPage() {
 
 
       {/* Chat Modal */}
-      <div id="chatModal" className="chat-modal" style={{ display: 'none' }}>
-        <div className="modal-content">
-          <div className="modal-header">
-            <h2 id="chat-with-user">Chat with User</h2>
-            <button id="closeChat" className="close-button">&times;</button>
-          </div>
-          <div className="modal-body">
-            <div id="chat-messages" className="chat-messages">
-              {/* Messages will be dynamically inserted here */}
-            </div>
-          </div>
-          <div className="modal-footer">
-            <input
-              type="text"
-              id="chat-message-input"
-              placeholder="Type your message..."
-              maxLength={500}
-            />
-            <button id="chat-send-btn" className="chat-send-btn">Send</button>
-          </div>
-        </div>
-      </div>
+      {selectedRecipientId && (
+        <ChatModal
+          isOpen={chatModalOpen}
+          onClose={() => {
+            setChatModalOpen(false);
+            setSelectedRecipientId(null);
+          }}
+          recipientId={selectedRecipientId}
+        />
+      )}
 
       {/* Error Modal */}
       <div id="errorModal" className="error-modal" style={{ display: 'none' }}>

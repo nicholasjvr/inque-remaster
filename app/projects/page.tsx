@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProtectedRoute from '../components/ProtectedRoute';
 import ProjectGrid from '../components/ProjectGrid';
-import ProjectFileExplorer from '../components/ProjectFileExplorer';
+import FullscreenWorkspace from '../components/FullscreenWorkspace';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWidgets, Widget } from '@/hooks/useFirestore';
 import '../projects.css';
@@ -19,7 +19,7 @@ function ProjectsContent() {
   useEffect(() => {
     const widgetId = searchParams.get('id');
     const editMode = searchParams.get('edit') === 'true';
-    
+
     if (widgetId && widgets.length > 0 && !selectedWidget) {
       const widget = widgets.find(w => w.id === widgetId);
       if (widget) {
@@ -30,49 +30,39 @@ function ProjectsContent() {
 
   return (
     <div className="min-h-screen w-full bg-[#04060d] text-white">
-      <main className="flex min-h-screen w-full flex-col px-6 py-8 sm:px-10">
-        <ProtectedRoute>
-          <div className="projects-page">
-            {/* Header */}
-            <header className="projects-header">
-              <div className="header-content">
-                <div className="header-left">
-                  <a href="/" className="back-btn">
-                    <span>←</span>
-                    <span>Back to Home</span>
-                  </a>
-                  <h1 className="page-title">📊 My Projects</h1>
-                </div>
-                <div className="header-right">
-                  {selectedWidget && (
-                    <button 
-                      className="back-to-grid-btn"
-                      onClick={() => setSelectedWidget(null)}
-                    >
+      <ProtectedRoute>
+        {selectedWidget ? (
+          <FullscreenWorkspace
+            widget={selectedWidget}
+            widgets={widgets}
+            onClose={() => setSelectedWidget(null)}
+          />
+        ) : (
+          <main className="flex min-h-screen w-full flex-col px-6 py-8 sm:px-10">
+            <div className="projects-page">
+              {/* Header */}
+              <header className="projects-header">
+                <div className="header-content">
+                  <div className="header-left">
+                    <a href="/" className="back-btn">
                       <span>←</span>
-                      <span>Back to Projects</span>
-                    </button>
-                  )}
+                      <span>Back to Home</span>
+                    </a>
+                    <h1 className="page-title">📊 My Projects</h1>
+                  </div>
                 </div>
-              </div>
-            </header>
+              </header>
 
-            {/* Main Content */}
-            {selectedWidget ? (
-              <ProjectFileExplorer 
-                widget={selectedWidget}
-                onClose={() => setSelectedWidget(null)}
-              />
-            ) : (
-              <ProjectGrid 
+              {/* Main Content */}
+              <ProjectGrid
                 widgets={widgets}
                 loading={loading}
                 onSelectWidget={setSelectedWidget}
               />
-            )}
-          </div>
-        </ProtectedRoute>
-      </main>
+            </div>
+          </main>
+        )}
+      </ProtectedRoute>
     </div>
   );
 }

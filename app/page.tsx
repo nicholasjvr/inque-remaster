@@ -12,11 +12,16 @@ import { useEffect, useState, useCallback } from 'react';
 
 // Different slogans to cycle through
 const SLOGANS = [
-  "showcase, communicate, create your way. the orb is our navigation pulse.",
-  "connect, collaborate, create together. discover the power of our floating interface.",
-  "express yourself through interactive widgets. join the creative revolution today.",
-  "build, share, inspire. your digital canvas awaits in the floating orb.",
-  "seamlessly navigate your creative journey. the future of social platforms is here."
+  "upload anything display anything",
+  "connect, collaborate, create together.",
+  "check out the explore page, go play some of the games there.",
+  "follow inqu on instagram",
+  "bitches love the gram",
+  "Click on the orb in the profile hub to chat with your new homeboy robert",
+  "Create your own chatrooms and invite your friends to join you.",
+  "upload your own webbased game and play it with your friends.",
+  "upload and demo your own interactive widgets, and share it.",
+  "Manage your own Creative Projects and their files in your own workspace."
 ];
 
 export default function Home() {

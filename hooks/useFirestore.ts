@@ -1053,6 +1053,28 @@ export function useUserStats(userId?: string) {
 }
 
 // ---------------------
+// Direct Messaging: Chats and Messages
+// ---------------------
+
+export type Chat = {
+  id: string;
+  participants: [string, string]; // Array of exactly 2 user IDs
+  lastMessage?: string;
+  lastMessageAt?: any;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type Message = {
+  id: string;
+  chatId: string;
+  senderId: string;
+  text: string;
+  createdAt: any;
+  readAt?: any;
+};
+
+// ---------------------
 // Knowledge Board: Threads and Posts
 // ---------------------
 
